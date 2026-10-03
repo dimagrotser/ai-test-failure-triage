@@ -134,3 +134,14 @@ def test_stale_selector_case_fails_on_the_missing_testid(tmp_path: Path) -> None
     assert failed.test_id == "tests.test_receipt::test_receipt_shows_the_amount"
     assert failed.attempts[0].message is not None
     assert "no element with data-testid='amount'" in failed.attempts[0].message
+
+
+def test_fixture_leak_case_fails_tests_that_run_after_the_leaking_one(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "test-bug-fixture-leak", tmp_path)
+
+    results = parse_junit(case / "junit.xml")
+    failed_files = {r.test_id.split("::")[0] for r in results if r.status is Status.FAILED}
+    assert failed_files == {"tests.test_receipt", "tests.test_transfers"}
+    assert all(
+        r.status is Status.PASSED for r in results if r.test_id.startswith("tests.test_fees::")
+    )
