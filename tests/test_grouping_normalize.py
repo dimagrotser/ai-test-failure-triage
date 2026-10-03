@@ -23,6 +23,9 @@ from failtriage.grouping.normalize import normalize
         ("[Errno 61] Connection refused", "[Errno <NUM>] Connection refused"),
         ("assert 90 == 95", "assert <NUM> == <NUM>"),
         ("fee 1.49 is not 1.50", "fee <NUM> is not <NUM>"),
+        ("Timeout 30000ms exceeded", "Timeout <NUM>ms exceeded"),
+        ("took 1.5s, then 120ms", "took <NUM>s, then <NUM>ms"),
+        ("connect to 10.0.0.1 failed", "connect to <NUM> failed"),
     ],
 )
 def test_normalize_replaces_volatile_values(raw: str, expected: str) -> None:

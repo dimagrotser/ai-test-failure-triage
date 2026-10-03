@@ -16,7 +16,8 @@ _RULES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"(?<![\w<>/.:-])/(?:[\w.@+-]+/)*[\w.@+-]+"), "<PATH>"),
     # An apostrophe inside a word never opens a literal.
     (re.compile(r"""(?<!\w)(?P<q>['"])(?:(?!(?P=q))[^\r\n]){0,200}(?P=q)"""), "<STR>"),
-    (re.compile(r"\b\d+(?:\.\d+)?\b"), "<NUM>"),
+    # Digits that touch a unit (`30000ms`) count, digits inside an identifier (`user_123`) do not.
+    (re.compile(r"(?<![\w.])\d+(?:\.\d+)*"), "<NUM>"),
 ]
 
 
