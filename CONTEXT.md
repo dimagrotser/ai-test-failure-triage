@@ -31,7 +31,7 @@ Exact-match key of a Failure group: exception type, normalized first message lin
 _Avoid_: Fingerprint, hash
 
 **Signal**:
-A named, deterministic observation about a Failure group (for example `passed_on_retry`, `network_error`, `touches_changed_file`) with a quote as proof. Has no weight.
+A named, deterministic observation about a Failure group (for example `passed_on_retry` or `network_error`) with a quote as proof. Has no weight.
 _Avoid_: Feature, flag
 
 **Heuristic verdict**:
