@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+  <testsuite name="pytest" tests="2">
+    <testcase classname="tests.test_cart" name="test_total" time="0.01">
+      <failure message="assert 1 == 2">tests/test_cart.py:9: Asser
