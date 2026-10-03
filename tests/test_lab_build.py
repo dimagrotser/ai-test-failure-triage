@@ -339,9 +339,9 @@ UNKNOWN_CASES = [
         "InvalidOperation",
     ),
     (
-        "unknown-limit-lowered",
-        "tests.test_limits::test_transfer_up_to_the_limit_is_allowed",
-        "LimitExceeded",
+        "unknown-interest-rate-mismatch",
+        "tests.test_interest::test_monthly_interest_on_a_thousand",
+        "Decimal('2.50')",
     ),
 ]
 
@@ -368,7 +368,7 @@ def test_unknown_case_fails_without_passing_on_retry(
     [
         ("unknown-dormant-new-account", True),
         ("unknown-amount-with-comma", True),
-        ("unknown-limit-lowered", False),
+        ("unknown-interest-rate-mismatch", False),
     ],
 )
 def test_history_is_empty_only_when_the_scenario_says_none(
