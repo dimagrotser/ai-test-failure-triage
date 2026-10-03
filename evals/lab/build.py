@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -17,6 +18,7 @@ class LabError(Exception):
 
 
 def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
+    scenario_dir = scenario_dir.resolve()
     patch = scenario_dir / "diff.patch"
     _reject_test_edits(patch)
     with tempfile.TemporaryDirectory() as tmp:
@@ -43,11 +45,19 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
 
         case = cases_dir / scenario_dir.name
         case.mkdir(parents=True)
-        shutil.copy(junit, case / "junit.xml")
+        (case / "junit.xml").write_text(_normalize_junit(junit.read_text()))
         shutil.copy(patch, case / "diff.patch")
         shutil.copy(scenario_dir / "scenario.yaml", case / "label.yaml")
         (case / "history.json").write_text(json.dumps(history, indent=2) + "\n")
     return case
+
+
+def _normalize_junit(xml: str) -> str:
+    # Timings, the start time and the host name change on every run and would break
+    # byte-identical rebuilds. Messages and tracebacks stay as pytest wrote them.
+    xml = re.sub(r' time="[^"]*"', ' time="0.000"', xml)
+    xml = re.sub(r' timestamp="[^"]*"', ' timestamp="2026-01-01T00:00:00+00:00"', xml)
+    return re.sub(r' hostname="[^"]*"', ' hostname="lab"', xml)
 
 
 def _reject_test_edits(patch: Path) -> None:

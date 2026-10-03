@@ -77,3 +77,11 @@ def test_scenario_that_edits_the_tests_is_rejected(tmp_path: Path) -> None:
         build_case(FIXTURES / "edits-tests", tmp_path)
 
     assert list(tmp_path.iterdir()) == []
+
+
+def test_two_builds_produce_byte_identical_files(tmp_path: Path) -> None:
+    first = build_case(SCENARIO, tmp_path / "first")
+    second = build_case(SCENARIO, tmp_path / "second")
+
+    for name in ["junit.xml", "diff.patch", "history.json", "label.yaml"]:
+        assert (first / name).read_bytes() == (second / name).read_bytes(), name
