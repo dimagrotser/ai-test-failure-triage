@@ -1,0 +1,7 @@
+category: test_bug
+source: injected
+scenario: expected balance assumes a 2% fee
+notes: >-
+  The test expects the sender to end up with 98.00, as if the fee were 2%. The wallet
+  charges 1.5% and its fee tests agree, so 98.50 is correct. Reverting the patch, which
+  only touches the test, makes the run green and the app code is untouched.

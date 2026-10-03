@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="17" time="0.000" timestamp="2026-01-01T00:00:00+00:00" hostname="lab"><testcase classname="tests.test_balance" name="test_new_account_has_the_opening_balance" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_increases_the_balance" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_rejects_non_positive_amounts[amount0]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_rejects_non_positive_amounts[amount1]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[100.00-1.50]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[99.00-1.49]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[10.00-0.15]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[0.01-0.00]" time="0.000" /><testcase classname="tests.test_fees" name="test_zero_fee_rate_makes_transfers_free" time="0.000" /><testcase classname="tests.test_limits" name="test_transfer_up_to_the_limit_is_allowed" time="0.000" /><testcase classname="tests.test_limits" name="test_transfer_above_the_limit_is_rejected" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_amount" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_fee" time="0.000"><failure message="AssertionError: assert '0.00' == '1.50'&#10;  &#10;  - 1.50&#10;  + 0.00">receipt = '&lt;h1&gt;Transfer to bob&lt;/h1&gt;\n&lt;p&gt;Amount: &lt;span data-testid="transfer-amount"&gt;100.00&lt;/span&gt;&lt;/p&gt;\n&lt;p&gt;Fee: &lt;span data-testid="transfer-fee"&gt;0.00&lt;/span&gt;&lt;/p&gt;\n&lt;p&gt;Balance: &lt;span data-testid="sender-balance"&gt;100.00&lt;/span&gt;&lt;/p&gt;\n'
+
+    def test_receipt_shows_the_fee(receipt: str) -&gt; None:
+&gt;       assert text_by_testid(receipt, "transfer-fee") == "1.50"
+E       AssertionError: assert '0.00' == '1.50'
+E         
+E         - 1.50
+E         + 0.00
+
+tests/test_receipt.py:49: AssertionError</failure></testcase><testcase classname="tests.test_receipt" name="test_receipt_shows_the_sender_balance_after_the_transfer" time="0.000"><failure message="AssertionError: assert '100.00' == '98.50'&#10;  &#10;  - 98.50&#10;  + 100.00">receipt = '&lt;h1&gt;Transfer to bob&lt;/h1&gt;\n&lt;p&gt;Amount: &lt;span data-testid="transfer-amount"&gt;100.00&lt;/span&gt;&lt;/p&gt;\n&lt;p&gt;Fee: &lt;span data-testid="transfer-fee"&gt;0.00&lt;/span&gt;&lt;/p&gt;\n&lt;p&gt;Balance: &lt;span data-testid="sender-balance"&gt;100.00&lt;/span&gt;&lt;/p&gt;\n'
+
+    def test_receipt_shows_the_sender_balance_after_the_transfer(receipt: str) -&gt; None:
+&gt;       assert text_by_testid(receipt, "sender-balance") == "98.50"
+E       AssertionError: assert '100.00' == '98.50'
+E         
+E         - 98.50
+E         + 100.00
+
+tests/test_receipt.py:53: AssertionError</failure></testcase><testcase classname="tests.test_transfers" name="test_transfer_moves_the_amount_and_charges_the_fee_to_the_sender" time="0.000"><failure message="AssertionError: assert Decimal('100.00') == Decimal('98.50')&#10; +  where Decimal('100.00') = &lt;wallet.accounts.Account object at 0x0000000000&gt;.balance&#10; +  and   Decimal('98.50') = Decimal('98.50')">def test_transfer_moves_the_amount_and_charges_the_fee_to_the_sender() -&gt; None:
+        source = Account("alice", Decimal("200.00"))
+        target = Account("bob", Decimal("10.00"))
+    
+        transfer(source, target, Decimal("100.00"))
+    
+&gt;       assert source.balance == Decimal("98.50")
+E       AssertionError: assert Decimal('100.00') == Decimal('98.50')
+E        +  where Decimal('100.00') = &lt;wallet.accounts.Account object at 0x0000000000&gt;.balance
+E        +  and   Decimal('98.50') = Decimal('98.50')
+
+tests/test_transfers.py:15: AssertionError</failure></testcase><testcase classname="tests.test_transfers" name="test_transfer_needs_enough_money_for_the_fee_too" time="0.000"><failure message="Failed: DID NOT RAISE InsufficientFunds">def test_transfer_needs_enough_money_for_the_fee_too() -&gt; None:
+        source = Account("alice", Decimal("100.00"))
+        target = Account("bob")
+    
+&gt;       with pytest.raises(InsufficientFunds):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE InsufficientFunds
+
+tests/test_transfers.py:23: Failed</failure></testcase><testcase classname="tests.test_transfers" name="test_transfer_rejects_non_positive_amounts" time="0.000" /></testsuite></testsuites>
