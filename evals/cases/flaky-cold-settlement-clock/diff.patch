@@ -1,0 +1,45 @@
+diff --git a/wallet/settlement.py b/wallet/settlement.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/settlement.py
+@@ -0,0 +1,19 @@
++from typing import Protocol
++
++DEADLINE = 0.5
++
++_connected = False
++
++
++class Clock(Protocol):
++    def now(self) -> float: ...
++
++    def sleep(self, seconds: float) -> None: ...
++
++
++def settled_in_time(clock: Clock) -> bool:
++    global _connected
++    started = clock.now()
++    clock.sleep(0.05 if _connected else 0.6)
++    _connected = True
++    return clock.now() - started <= DEADLINE
+diff --git a/tests/test_settlement.py b/tests/test_settlement.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_settlement.py
+@@ -0,0 +1,16 @@
++from wallet.settlement import settled_in_time
++
++
++class FakeClock:
++    def __init__(self) -> None:
++        self.time = 0.0
++
++    def now(self) -> float:
++        return self.time
++
++    def sleep(self, seconds: float) -> None:
++        self.time += seconds
++
++
++def test_settlement_is_confirmed_before_the_deadline() -> None:
++    assert settled_in_time(FakeClock())

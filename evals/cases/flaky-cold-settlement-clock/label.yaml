@@ -1,0 +1,6 @@
+category: flaky
+source: injected
+kind: timing
+scenario: first settlement lookup misses the deadline
+notes: >-
+  The first lookup opens a connection and takes 0.6 s against a 0.5 s deadline, later lookups take 0.05 s. The test runs on a fake clock, so the timing is exact: the first Attempt is too slow and fails, the retry reuses the open connection and passes.

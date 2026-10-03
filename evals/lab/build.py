@@ -12,6 +12,7 @@ from pathlib import Path
 import yaml
 
 from evals.lab.environment import CONDITIONS, lab_environment
+from failtriage.models import Status
 from failtriage.parsers.junit import parse_junit
 
 LAB = Path(__file__).parent
@@ -22,12 +23,15 @@ CASES = LAB.parent / "cases"
 # Per category: the directory a patch may change and the one that must stay as it was.
 # That is what makes the counterfactual meaningful: a product_bug is fixed in the app
 # alone, a test_bug in the tests alone. An environment case keeps its patch (an unrelated
-# change to the app) and is fixed by restoring the environment instead.
-SCOPES = {
-    "product_bug": ("wallet", "tests"),
-    "test_bug": ("tests", "wallet"),
-    "environment": ("wallet", "tests"),
+# change to the app) and is fixed by restoring the environment instead. A flaky case adds
+# both app code and a test, and is checked by running it with and without retries.
+SCOPES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "product_bug": (("wallet",), ("tests",)),
+    "test_bug": (("tests",), ("wallet",)),
+    "environment": (("wallet",), ("tests",)),
+    "flaky": (("wallet", "tests"), ()),
 }
+KINDS = ("timing", "randomness", "order_dependence")
 ENVIRONMENT_VARIABLES = ("WALLET_LEDGER_URL", "WALLET_STATEMENTS_DIR")
 LABEL_FIELDS = ("category", "source", "scenario", "notes")
 
@@ -45,7 +49,7 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
     with tempfile.TemporaryDirectory() as tmp:
         app = Path(tmp) / "app"
         shutil.copytree(WALLET, app, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
-        protected_sha = _tree_sha(app / protected)
+        protected_sha = _protected_sha(app, protected)
 
         history = _run_baseline(app, Path(tmp) / "baseline.xml")
         if any(entry["status"] != "passed" for entry in history):
@@ -54,10 +58,11 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
         _git_apply(app, patch)
         junit = Path(tmp) / "junit.xml"
         condition = label.get("condition")
-        if _run_pytest(app, junit, condition).returncode != 1:
+        if label["category"] == "flaky":
+            history = _check_flaky(app, junit, scenario_dir.name)
+        elif _run_pytest(app, junit, condition).returncode != 1:
             raise LabError(f"scenario {scenario_dir.name} does not fail the wallet tests")
-
-        if condition:
+        elif condition:
             if _run_pytest(app, Path(tmp) / "restored.xml").returncode != 0:
                 raise LabError(
                     f"restoring the environment of {scenario_dir.name} does not turn the run green"
@@ -68,8 +73,8 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
                 raise LabError(
                     f"reverting the patch of {scenario_dir.name} does not turn the run green"
                 )
-        if _tree_sha(app / protected) != protected_sha:
-            raise LabError(f"scenario {scenario_dir.name} changed {protected}/")
+        if _protected_sha(app, protected) != protected_sha:
+            raise LabError(f"scenario {scenario_dir.name} changed {', '.join(protected)}/")
 
         case = cases_dir / scenario_dir.name
         shutil.rmtree(case, ignore_errors=True)
@@ -113,17 +118,19 @@ def _load_label(scenario_dir: Path) -> dict[str, str]:
             raise LabError(f"scenario {scenario_dir.name} has no condition in scenario.yaml")
         if condition not in CONDITIONS:
             raise LabError(f"scenario {scenario_dir.name} has unsupported condition {condition}")
+    if label["category"] == "flaky" and label.get("kind") not in KINDS:
+        raise LabError(f"scenario {scenario_dir.name} has unsupported kind {label.get('kind')}")
     return dict(label)
 
 
-def _check_patch_scope(patch: Path, category: str, editable: str) -> None:
+def _check_patch_scope(patch: Path, category: str, editable: tuple[str, ...]) -> None:
     for line in patch.read_text().splitlines():
         if line.startswith(("--- a/", "+++ b/")):
             path = line[6:]
-            if not path.startswith(f"{editable}/"):
+            if not path.startswith(tuple(f"{directory}/" for directory in editable)):
                 raise LabError(
                     f"the patch of {patch.parent.name} edits {path}, "
-                    f"but a {category} case may only change {editable}/"
+                    f"but a {category} case may only change {' and '.join(editable)}/"
                 )
 
 
@@ -136,17 +143,45 @@ def _git_apply(app: Path, patch: Path, reverse: bool = False) -> None:
 
 def _run_baseline(app: Path, junit: Path) -> list[dict[str, object]]:
     _run_pytest(app, junit)
+    return _history_entries(junit, _tree_sha(app), run_id=1)
+
+
+def _check_flaky(app: Path, junit: Path, name: str) -> list[dict[str, object]]:
+    """Run the patched tree twice and return both runs as history.
+
+    Without retries the flaky tests fail; with one retry they pass on the second Attempt.
+    """
     sha = _tree_sha(app)
+    first = junit.with_name("no-retries.xml")
+    if _run_pytest(app, first).returncode != 1:
+        raise LabError(f"scenario {name} does not fail the wallet tests")
+    failed = {r.test_id for r in parse_junit(first) if r.status in (Status.FAILED, Status.ERROR)}
+    if not failed:
+        raise LabError(f"scenario {name} does not fail the wallet tests")
+
+    if _run_pytest(app, junit, retries=1).returncode != 0:
+        raise LabError(f"scenario {name} does not pass on retry")
+    results = {r.test_id: r.status for r in parse_junit(junit)}
+    if any(results[test_id] is not Status.PASSED_ON_RETRY for test_id in failed):
+        raise LabError(f"scenario {name} does not pass on retry")
+    return [*_history_entries(first, sha, run_id=1), *_history_entries(junit, sha, run_id=2)]
+
+
+def _history_entries(junit: Path, sha: str, run_id: int) -> list[dict[str, object]]:
     return [
         {
             "test_id": result.test_id,
             "status": result.status.value,
             "attempts": len(result.attempts),
             "sha": sha,
-            "run_id": 1,
+            "run_id": run_id,
         }
         for result in parse_junit(junit)
     ]
+
+
+def _protected_sha(app: Path, protected: tuple[str, ...]) -> str:
+    return hashlib.sha1("".join(_tree_sha(app / name) for name in protected).encode()).hexdigest()
 
 
 def _tree_sha(app: Path) -> str:
@@ -159,10 +194,14 @@ def _tree_sha(app: Path) -> str:
 
 
 def _run_pytest(
-    app: Path, junit: Path, condition: str | None = None
+    app: Path, junit: Path, condition: str | None = None, retries: int = 0
 ) -> subprocess.CompletedProcess[str]:
     base = {k: v for k, v in os.environ.items() if k not in ENVIRONMENT_VARIABLES}
-    base |= {"PYTHONHASHSEED": "0", "PYTHONDONTWRITEBYTECODE": "1"}
+    base |= {
+        "PYTHONHASHSEED": "0",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "WALLET_RETRIES": str(retries),
+    }
     with lab_environment(junit.parent / f"{junit.stem}-env", condition) as env:
         return subprocess.run(
             [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", f"--junitxml={junit}"],

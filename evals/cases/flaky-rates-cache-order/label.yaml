@@ -1,0 +1,6 @@
+category: flaky
+source: injected
+kind: order_dependence
+scenario: exchange rate cache must be warm
+notes: >-
+  convert fills its rate cache on the first lookup of a currency but raises on that same call. The first test to ask for EUR fails and the retry passes. test_convert_again passes without retries only because the failed test ran before it and warmed the cache, so the outcome depends on test order.
