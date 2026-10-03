@@ -24,12 +24,15 @@ CASES = LAB.parent / "cases"
 # That is what makes the counterfactual meaningful: a product_bug is fixed in the app
 # alone, a test_bug in the tests alone. An environment case keeps its patch (an unrelated
 # change to the app) and is fixed by restoring the environment instead. A flaky case adds
-# both app code and a test, and is checked by running it with and without retries.
+# both app code and a test, and is checked by running it with and without retries. An
+# unknown case may change either side, because the ambiguity is the point. It has no
+# counterfactual, but it must fail and must not pass on retry, which would be evidence.
 SCOPES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "product_bug": (("wallet",), ("tests",)),
     "test_bug": (("tests",), ("wallet",)),
     "environment": (("wallet",), ("tests",)),
     "flaky": (("wallet", "tests"), ()),
+    "unknown": (("wallet", "tests"), ()),
 }
 KINDS = ("timing", "randomness", "order_dependence")
 ENVIRONMENT_VARIABLES = ("WALLET_LEDGER_URL", "WALLET_STATEMENTS_DIR")
@@ -62,6 +65,8 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
             history = _check_flaky(app, junit, scenario_dir.name)
         elif _run_pytest(app, junit, condition).returncode != 1:
             raise LabError(f"scenario {scenario_dir.name} does not fail the wallet tests")
+        elif label["category"] == "unknown":
+            _check_unknown(app, junit, scenario_dir.name)
         elif condition:
             if _run_pytest(app, Path(tmp) / "restored.xml").returncode != 0:
                 raise LabError(
@@ -82,6 +87,8 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
         (case / "junit.xml").write_text(_normalize_junit(junit.read_text(), Path(tmp)))
         shutil.copy(patch, case / "diff.patch")
         shutil.copy(scenario_dir / "scenario.yaml", case / "label.yaml")
+        if label.get("history") == "none":
+            history = []
         (case / "history.json").write_text(json.dumps(history, indent=2) + "\n")
     return case
 
@@ -120,6 +127,8 @@ def _load_label(scenario_dir: Path) -> dict[str, str]:
             raise LabError(f"scenario {scenario_dir.name} has unsupported condition {condition}")
     if label["category"] == "flaky" and label.get("kind") not in KINDS:
         raise LabError(f"scenario {scenario_dir.name} has unsupported kind {label.get('kind')}")
+    if label.get("history", "none") != "none":
+        raise LabError(f"scenario {scenario_dir.name} has unsupported history {label['history']}")
     return dict(label)
 
 
@@ -165,6 +174,13 @@ def _check_flaky(app: Path, junit: Path, name: str) -> list[dict[str, object]]:
     if any(results[test_id] is not Status.PASSED_ON_RETRY for test_id in failed):
         raise LabError(f"scenario {name} does not pass on retry")
     return [*_history_entries(first, sha, run_id=1), *_history_entries(junit, sha, run_id=2)]
+
+
+def _check_unknown(app: Path, junit: Path, name: str) -> None:
+    retried = junit.with_name("retried.xml")
+    _run_pytest(app, retried, retries=1)
+    if any(r.status is Status.PASSED_ON_RETRY for r in parse_junit(retried)):
+        raise LabError(f"scenario {name} passes on retry, which is evidence of flakiness")
 
 
 def _history_entries(junit: Path, sha: str, run_id: int) -> list[dict[str, object]]:

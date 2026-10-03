@@ -308,3 +308,20 @@ def test_order_dependent_test_passes_without_retries_only_after_the_failing_one(
     first_run = {e["test_id"]: e["status"] for e in history if e["run_id"] == 1}
     assert first_run["tests.test_rates::test_convert_to_euros"] == "failed"
     assert first_run["tests.test_rates::test_convert_again"] == "passed"
+
+
+@pytest.mark.parametrize(
+    ("fixture", "message"),
+    [
+        ("unknown-passes-on-retry", "passes on retry"),
+        ("unknown-never-fails", "does not fail"),
+        ("unknown-bad-history", "unsupported history"),
+    ],
+)
+def test_unknown_scenario_that_hides_a_provable_cause_is_rejected(
+    tmp_path: Path, fixture: str, message: str
+) -> None:
+    with pytest.raises(LabError, match=message):
+        build_case(FIXTURES / fixture, tmp_path)
+
+    assert list(tmp_path.iterdir()) == []

@@ -1,0 +1,4 @@
+category: unknown
+source: injected
+scenario: comment only change
+notes: The patch only adds a comment, so no test ever fails.
