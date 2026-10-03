@@ -54,7 +54,7 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
 
         history = _run_baseline(app, Path(tmp) / "baseline.xml")
         if any(entry["status"] != "passed" for entry in history):
-            raise LabError("the wallet tests fail without the scenario applied")
+            raise LabError(f"the wallet tests fail without {scenario_dir.name} applied")
 
         _git_apply(app, patch)
         junit = Path(tmp) / "junit.xml"
@@ -112,7 +112,7 @@ def build_all(scenarios_dir: Path = SCENARIOS, cases_dir: Path = CASES) -> None:
     cases_dir.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=".cases-", dir=cases_dir.parent))
     try:
-        for scenario in sorted(scenarios_dir.iterdir()):
+        for scenario in sorted(p for p in scenarios_dir.iterdir() if p.is_dir()):
             build_case(scenario, staging)
         shutil.rmtree(cases_dir, ignore_errors=True)
         staging.rename(cases_dir)
@@ -243,4 +243,4 @@ if __name__ == "__main__":
     try:
         build_all()
     except LabError as exc:
-        sys.exit(f"lab: {exc}\nlab: {CASES.relative_to(Path.cwd())} was left unchanged")
+        sys.exit(f"lab: {exc}\nlab: evals/cases was left unchanged")

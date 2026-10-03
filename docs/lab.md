@@ -42,7 +42,7 @@ Two runs on the same machine give byte-identical files. Timings, temp paths, por
 | `flaky` | `wallet/` and `tests/` | Fails without retries, passes on the first retry. Needs `kind`. |
 | `unknown` | either | Fails and does not pass on retry. No counterfactual exists, by design. |
 
-An `environment` scenario needs a `condition` from `evals/lab/environment.py`: `service_down`, `dns_failure`, `timeout`, `missing_env_var` or `read_only_dir`. A `flaky` scenario needs a `kind`: `timing`, `randomness` or `order_dependence`. An `unknown` scenario can set `history: none` to model a cold start, with no earlier runs to compare against.
+An `environment` scenario needs a `condition` from `evals/lab/environment.py`: `service_down`, `dns_failure`, `timeout`, `missing_env_var` or `read_only_dir`. A `flaky` scenario needs a `kind` that says where the nondeterminism comes from: `timing`, `randomness` or `order_dependence`. An `unknown` scenario can set `history: none` to model a cold start, with no earlier runs to compare against.
 
 The build also rejects a patch that touches a directory its category must leave alone, and a wallet that already fails before the patch is applied.
 
