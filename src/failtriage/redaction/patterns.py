@@ -8,6 +8,16 @@ PRIVATE_KEY = re.compile(
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----(?:.*?-----END [A-Z ]*PRIVATE KEY-----|.*\Z)", re.DOTALL
 )
 JWT = re.compile(r"\beyJ[\w-]+\.[\w-]+\.[\w-]*")
+# Header values are removed whole: a Cookie holds several secrets and Basic auth has no prefix.
+AUTH_HEADER = re.compile(
+    r"""((?:proxy-)?authorization|set-cookie|cookie)(['"]?\s*[:=]\s*)(?:(['"]).*?\3|[^\r\n]+)""",
+    re.IGNORECASE,
+)
+TOKEN = re.compile(
+    r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|(?:AKIA|ASIA)[A-Z0-9]{16}"
+    r"|xox[abprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{20,})"
+)
+URL_PASSWORD = re.compile(r"(\b[a-z][a-z0-9+.-]*://[^\s/:@]*:)[^\s/]+(@)", re.IGNORECASE)
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 CARD = re.compile(r"\b\d(?:[ -]?\d){12,18}\b")
 
@@ -31,6 +41,9 @@ def _card(match: re.Match[str]) -> str:
 RULES: list[tuple[re.Pattern[str], Replacement]] = [
     (PRIVATE_KEY, "<PRIVATE_KEY>"),
     (JWT, "<JWT>"),
+    (AUTH_HEADER, r"\1\2<SECRET>"),
+    (TOKEN, "<TOKEN>"),
+    (URL_PASSWORD, r"\1<SECRET>\2"),
     (EMAIL, "<EMAIL>"),
     (CARD, _card),
 ]

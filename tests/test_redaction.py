@@ -41,3 +41,39 @@ def test_truncated_private_key_is_removed_to_the_end() -> None:
 )
 def test_leaves_ordinary_text_alone(text: str) -> None:
     assert redact(text) == text
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("pushing with ghp_" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8", "pushing with <TOKEN>"),
+        ("github_pat_" + "11ABCDEFG0abcdefghij_klmnopqrstuvwxyz0123", "<TOKEN>"),
+        ("using AKIAIOSFODNN7EXAMPLE here", "using <TOKEN> here"),
+        ("xo" + "xb-123456789012-abcdefghijklmnop failed", "<TOKEN> failed"),
+        ("sk-ant-api03-" + "abcdefghijklmnopqrstuvwxyz0123", "<TOKEN>"),
+        ("Authorization: Bearer abc.def", "Authorization: <SECRET>"),
+        ("authorization: Basic dXNlcjpwYXNz\nnext line", "authorization: <SECRET>\nnext line"),
+        ("Cookie: session=abc123; theme=dark\nHost: x", "Cookie: <SECRET>\nHost: x"),
+        ("Set-Cookie: sid=1; HttpOnly", "Set-Cookie: <SECRET>"),
+        (
+            "headers={'Authorization': 'Bearer abc', 'Accept': 'json'}",
+            "headers={'Authorization': <SECRET>, 'Accept': 'json'}",
+        ),
+        (
+            "connect postgres://app:hunter2@db.internal:5432/wallet",
+            "connect postgres://app:<SECRET>@db.internal:5432/wallet",
+        ),
+        (
+            "GET https://user:p%40ss@host/path failed",
+            "GET https://user:<SECRET>@host/path failed",
+        ),
+    ],
+)
+def test_redacts_tokens_headers_and_url_passwords(text: str, expected: str) -> None:
+    assert redact(text) == expected
+
+
+def test_url_without_password_is_kept() -> None:
+    text = "GET https://api.example.com:8443/v1/rates failed"
+
+    assert redact(text) == text
