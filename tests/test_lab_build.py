@@ -125,3 +125,12 @@ def test_scenario_with_an_incomplete_or_unknown_label_is_rejected(
         build_case(FIXTURES / fixture, tmp_path)
 
     assert list(tmp_path.iterdir()) == []
+
+
+def test_stale_selector_case_fails_on_the_missing_testid(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "test-bug-stale-selector", tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert failed.test_id == "tests.test_receipt::test_receipt_shows_the_amount"
+    assert failed.attempts[0].message is not None
+    assert "no element with data-testid='amount'" in failed.attempts[0].message

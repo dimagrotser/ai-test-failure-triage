@@ -1,0 +1,10 @@
+diff --git a/tests/test_receipt.py b/tests/test_receipt.py
+--- a/tests/test_receipt.py
++++ b/tests/test_receipt.py
+@@ -42,5 +42,5 @@
+ 
+ 
+ def test_receipt_shows_the_amount(receipt: str) -> None:
+-    assert text_by_testid(receipt, "transfer-amount") == "100.00"
++    assert text_by_testid(receipt, "amount") == "100.00"
+ 
