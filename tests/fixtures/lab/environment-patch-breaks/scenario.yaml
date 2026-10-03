@@ -1,0 +1,5 @@
+category: environment
+source: injected
+condition: service_down
+scenario: patch breaks the app too
+notes: The patch itself fails the tests, so restoring the environment cannot help.

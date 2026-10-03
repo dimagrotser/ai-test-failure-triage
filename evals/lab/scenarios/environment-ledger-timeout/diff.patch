@@ -1,0 +1,11 @@
+diff --git a/wallet/ledger.py b/wallet/ledger.py
+--- a/wallet/ledger.py
++++ b/wallet/ledger.py
+@@ -12,6 +12,7 @@
+     request = urllib.request.Request(
+         url, data=body.encode(), headers={"Content-Type": "application/json"}, method="POST"
+     )
++    # the ledger answers with {"id": "..."}
+     with urllib.request.urlopen(request, timeout=0.5) as response:
+         entry_id: str = json.load(response)["id"]
+     return entry_id

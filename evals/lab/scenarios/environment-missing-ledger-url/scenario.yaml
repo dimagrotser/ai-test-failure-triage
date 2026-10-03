@@ -1,0 +1,6 @@
+category: environment
+source: injected
+condition: missing_env_var
+scenario: WALLET_LEDGER_URL is not set
+notes: >-
+  The runner has no WALLET_LEDGER_URL, so record_transfer raises KeyError and test_ledger fails. The patch only rewords an error message. With the variable set the same tree passes.

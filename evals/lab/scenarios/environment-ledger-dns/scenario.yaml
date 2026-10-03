@@ -1,0 +1,6 @@
+category: environment
+source: injected
+condition: dns_failure
+scenario: ledger host name does not resolve
+notes: >-
+  The ledger URL points at ledger.invalid, which never resolves, so urlopen raises a URLError about the host name and test_ledger fails. The patch only adds a repr to Account. With the real URL the same tree passes.

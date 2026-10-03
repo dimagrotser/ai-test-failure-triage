@@ -1,0 +1,11 @@
+diff --git a/wallet/transfers.py b/wallet/transfers.py
+--- a/wallet/transfers.py
++++ b/wallet/transfers.py
+@@ -21,6 +21,6 @@
+         raise LimitExceeded(f"{amount} is above the limit of {TRANSFER_LIMIT}")
+     total = amount + transfer_fee(amount)
+     if source.balance < total:
+-        raise InsufficientFunds(f"{source.owner} has {source.balance}, needs {total}")
++        raise InsufficientFunds(f"{source.owner} has {source.balance}, requires {total}")
+     source.balance -= total
+     target.balance += amount

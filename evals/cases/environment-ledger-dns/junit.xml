@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="19" time="0.000" timestamp="2026-01-01T00:00:00+00:00" hostname="lab"><testcase classname="tests.test_balance" name="test_new_account_has_the_opening_balance" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_increases_the_balance" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_rejects_non_positive_amounts[amount0]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_rejects_non_positive_amounts[amount1]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[100.00-1.50]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[99.00-1.49]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[10.00-0.15]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[0.01-0.00]" time="0.000" /><testcase classname="tests.test_fees" name="test_zero_fee_rate_makes_transfers_free" time="0.000" /><testcase classname="tests.test_ledger" name="test_transfer_is_recorded_in_the_ledger" time="0.000"><failure message="urllib.error.URLError: &lt;urlopen error [Errno 8] nodename nor servname provided, or not known&gt;">self = &lt;urllib.request.HTTPHandler object at 0x0000000000&gt;
+http_class = &lt;class 'http.client.HTTPConnection'&gt;
+req = &lt;urllib.request.Request object at 0x0000000000&gt;, http_conn_args = {}
+
+    def do_open(self, http_class, req, **http_conn_args):
+        """Return an HTTPResponse object for the request, using http_class.
+    
+        http_class must implement the HTTPConnection API from http.client.
+        """
+        host = req.host
+        if not host:
+            raise URLError('no host given')
+    
+        # will parse host:port
+        h = http_class(host, timeout=req.timeout, **http_conn_args)
+        h.set_debuglevel(self._debuglevel)
+    
+        headers = dict(req.unredirected_hdrs)
+        headers.update({k: v for k, v in req.headers.items()
+                        if k not in headers})
+    
+        # TODO(jhylton): Should this be redesigned to handle
+        # persistent connections?
+    
+        # We want to make an HTTP/1.1 request, but the addinfourl
+        # class isn't prepared to deal with a persistent connection.
+        # It will try to read all remaining data from the socket,
+        # which will block while the server waits for the next request.
+        # So make sure the connection gets closed after the (only)
+        # request.
+        headers["Connection"] = "close"
+        headers = {name.title(): val for name, val in headers.items()}
+    
+        if req._tunnel_host:
+            tunnel_headers = {}
+            proxy_auth_hdr = "Proxy-Authorization"
+            if proxy_auth_hdr in headers:
+                tunnel_headers[proxy_auth_hdr] = headers[proxy_auth_hdr]
+                # Proxy-Authorization should not be sent to origin
+                # server.
+                del headers[proxy_auth_hdr]
+            h.set_tunnel(req._tunnel_host, headers=tunnel_headers)
+    
+        try:
+            try:
+&gt;               h.request(req.get_method(), req.selector, req.data, headers,
+                          encode_chunked=req.has_header('Transfer-encoding'))
+
+/stdlib/urllib/request.py:1344: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/stdlib/http/client.py:1358: in request
+    self._send_request(method, url, body, headers, encode_chunked)
+/stdlib/http/client.py:1404: in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+/stdlib/http/client.py:1353: in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+/stdlib/http/client.py:1113: in _send_output
+    self.send(msg)
+/stdlib/http/client.py:1057: in send
+    self.connect()
+/stdlib/http/client.py:1023: in connect
+    self.sock = self._create_connection(
+/stdlib/socket.py:841: in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+host = 'ledger.invalid', port = 80, family = 0
+type = &lt;SocketKind.SOCK_STREAM: 1&gt;, proto = 0, flags = 0
+
+    def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        """Resolve host and port into list of address info entries.
+    
+        Translate the host/port argument into a sequence of 5-tuples that contain
+        all the necessary arguments for creating a socket connected to that service.
+        host is a domain name, a string representation of an IPv4/v6 address or
+        None. port is a string service name such as 'http', a numeric port number or
+        None. By passing None as the value of host and port, you can pass NULL to
+        the underlying C API.
+    
+        The family, type and proto arguments can be optionally specified in order to
+        narrow the list of addresses returned. Passing zero as a value for each of
+        these arguments selects the full range of results.
+        """
+        # We override this function since we want to translate the numeric family
+        # and socket type values to enum constants.
+        addrlist = []
+&gt;       for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+/stdlib/socket.py:978: gaierror
+
+During handling of the above exception, another exception occurred:
+
+    def test_transfer_is_recorded_in_the_ledger() -&gt; None:
+&gt;       entry_id = record_transfer(Account("alice"), Account("bob"), Decimal("100.00"))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_ledger.py:8: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+wallet/ledger.py:15: in record_transfer
+    with urllib.request.urlopen(request, timeout=0.5) as response:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/stdlib/urllib/request.py:215: in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/stdlib/urllib/request.py:515: in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+/stdlib/urllib/request.py:532: in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+/stdlib/urllib/request.py:492: in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+/stdlib/urllib/request.py:1373: in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;urllib.request.HTTPHandler object at 0x0000000000&gt;
+http_class = &lt;class 'http.client.HTTPConnection'&gt;
+req = &lt;urllib.request.Request object at 0x0000000000&gt;, http_conn_args = {}
+
+    def do_open(self, http_class, req, **http_conn_args):
+        """Return an HTTPResponse object for the request, using http_class.
+    
+        http_class must implement the HTTPConnection API from http.client.
+        """
+        host = req.host
+        if not host:
+            raise URLError('no host given')
+    
+        # will parse host:port
+        h = http_class(host, timeout=req.timeout, **http_conn_args)
+        h.set_debuglevel(self._debuglevel)
+    
+        headers = dict(req.unredirected_hdrs)
+        headers.update({k: v for k, v in req.headers.items()
+                        if k not in headers})
+    
+        # TODO(jhylton): Should this be redesigned to handle
+        # persistent connections?
+    
+        # We want to make an HTTP/1.1 request, but the addinfourl
+        # class isn't prepared to deal with a persistent connection.
+        # It will try to read all remaining data from the socket,
+        # which will block while the server waits for the next request.
+        # So make sure the connection gets closed after the (only)
+        # request.
+        headers["Connection"] = "close"
+        headers = {name.title(): val for name, val in headers.items()}
+    
+        if req._tunnel_host:
+            tunnel_headers = {}
+            proxy_auth_hdr = "Proxy-Authorization"
+            if proxy_auth_hdr in headers:
+                tunnel_headers[proxy_auth_hdr] = headers[proxy_auth_hdr]
+                # Proxy-Authorization should not be sent to origin
+                # server.
+                del headers[proxy_auth_hdr]
+            h.set_tunnel(req._tunnel_host, headers=tunnel_headers)
+    
+        try:
+            try:
+                h.request(req.get_method(), req.selector, req.data, headers,
+                          encode_chunked=req.has_header('Transfer-encoding'))
+            except OSError as err: # timeout error
+&gt;               raise URLError(err)
+E               urllib.error.URLError: &lt;urlopen error [Errno 8] nodename nor servname provided, or not known&gt;
+
+/stdlib/urllib/request.py:1347: URLError</failure></testcase><testcase classname="tests.test_limits" name="test_transfer_up_to_the_limit_is_allowed" time="0.000" /><testcase classname="tests.test_limits" name="test_transfer_above_the_limit_is_rejected" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_amount" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_fee" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_sender_balance_after_the_transfer" time="0.000" /><testcase classname="tests.test_statements" name="test_statement_lists_the_owner_and_balance" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_moves_the_amount_and_charges_the_fee_to_the_sender" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_needs_enough_money_for_the_fee_too" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_rejects_non_positive_amounts" time="0.000" /></testsuite></testsuites>

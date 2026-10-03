@@ -1,0 +1,6 @@
+category: environment
+source: injected
+condition: service_down
+scenario: ledger service is not running
+notes: >-
+  The patch adds a comment to ledger.py. The ledger stub is not listening, so the POST gets Connection refused and test_ledger fails. The patch is unrelated to the connection. With the stub running the same tree passes.

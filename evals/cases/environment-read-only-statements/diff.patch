@@ -1,0 +1,11 @@
+diff --git a/wallet/statements.py b/wallet/statements.py
+--- a/wallet/statements.py
++++ b/wallet/statements.py
+@@ -5,6 +5,6 @@
+ 
+ 
+ def export_statement(account: Account) -> Path:
+-    path = Path(os.environ["WALLET_STATEMENTS_DIR"]) / f"{account.owner}.csv"
++    path = Path(os.environ["WALLET_STATEMENTS_DIR"]) / f"{account.owner.lower()}.csv"
+     path.write_text(f"owner,balance\n{account.owner},{account.balance}\n")
+     return path

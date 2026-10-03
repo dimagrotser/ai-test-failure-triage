@@ -1,0 +1,11 @@
+diff --git a/wallet/ledger.py b/wallet/ledger.py
+--- a/wallet/ledger.py
++++ b/wallet/ledger.py
+@@ -9,6 +9,7 @@
+ def record_transfer(source: Account, target: Account, amount: Decimal) -> str:
+     url = os.environ["WALLET_LEDGER_URL"]
+     body = json.dumps({"from": source.owner, "to": target.owner, "amount": str(amount)})
++    # the ledger speaks JSON both ways
+     request = urllib.request.Request(
+         url, data=body.encode(), headers={"Content-Type": "application/json"}, method="POST"
+     )

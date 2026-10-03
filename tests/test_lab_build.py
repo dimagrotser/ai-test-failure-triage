@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 import sys
@@ -8,6 +9,7 @@ import pytest
 import yaml
 
 from evals.lab.build import LabError, build_all, build_case
+from evals.lab.environment import lab_environment
 from failtriage.models import Status
 from failtriage.parsers.junit import parse_junit
 
@@ -18,12 +20,14 @@ SCENARIOS = ROOT / "evals" / "lab" / "scenarios"
 SCENARIO = SCENARIOS / "product-bug-fee-rounding"
 
 
-def test_wallet_tests_pass_without_any_scenario() -> None:
-    result = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(WALLET)],
-        capture_output=True,
-        text=True,
-    )
+def test_wallet_tests_pass_without_any_scenario(tmp_path: Path) -> None:
+    with lab_environment(tmp_path, None) as env:
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(WALLET)],
+            capture_output=True,
+            text=True,
+            env={**os.environ, **env},
+        )
 
     assert result.returncode == 0, result.stdout
 
@@ -154,3 +158,67 @@ def test_junit_with_object_reprs_is_still_byte_identical_across_builds(tmp_path:
     second = build_case(scenario, tmp_path / "second")
 
     assert (first / "junit.xml").read_bytes() == (second / "junit.xml").read_bytes()
+
+
+@pytest.mark.parametrize(
+    ("fixture", "message"),
+    [
+        ("environment-no-condition", "no condition"),
+        ("environment-unknown-condition", "unsupported condition"),
+        ("environment-edits-tests", "may only change wallet/"),
+        ("environment-patch-breaks", "restoring the environment"),
+    ],
+)
+def test_environment_scenario_that_cannot_be_trusted_is_rejected(
+    tmp_path: Path, fixture: str, message: str
+) -> None:
+    with pytest.raises(LabError, match=message):
+        build_case(FIXTURES / fixture, tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("scenario", "condition", "failed_test", "marker"),
+    [
+        ("environment-ledger-down", "service_down", "test_ledger", "Connection refused"),
+        ("environment-ledger-dns", "dns_failure", "test_ledger", "urlopen error"),
+        ("environment-ledger-timeout", "timeout", "test_ledger", "timed out"),
+        ("environment-missing-ledger-url", "missing_env_var", "test_ledger", "WALLET_LEDGER_URL"),
+        (
+            "environment-read-only-statements",
+            "read_only_dir",
+            "test_statements",
+            "Permission denied",
+        ),
+    ],
+)
+def test_environment_case_fails_only_where_the_environment_is_broken(
+    tmp_path: Path, scenario: str, condition: str, failed_test: str, marker: str
+) -> None:
+    case = build_case(SCENARIOS / scenario, tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert failed.test_id.startswith(f"tests.{failed_test}::")
+    assert failed.attempts[0].message is not None
+    assert marker in failed.attempts[0].message
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "environment"
+    assert label["condition"] == condition
+    assert (case / "diff.patch").read_text() == (SCENARIOS / scenario / "diff.patch").read_text()
+
+
+@pytest.mark.parametrize(
+    "scenario", ["environment-ledger-down", "environment-read-only-statements"]
+)
+def test_environment_junit_with_ports_and_temp_paths_is_byte_identical(
+    tmp_path: Path, scenario: str
+) -> None:
+    first = build_case(SCENARIOS / scenario, tmp_path / "first")
+    second = build_case(SCENARIOS / scenario, tmp_path / "second")
+
+    junit = (first / "junit.xml").read_text()
+    assert junit == (second / "junit.xml").read_text()
+    assert "/var/folders" not in junit
+    assert "/private" not in junit
+    assert not re.search(r"127\.0\.0\.1(:|', )(?!0\b)\d+", junit)
