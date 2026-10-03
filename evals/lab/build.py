@@ -66,7 +66,7 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
         elif _run_pytest(app, junit, condition).returncode != 1:
             raise LabError(f"scenario {scenario_dir.name} does not fail the wallet tests")
         elif label["category"] == "unknown":
-            _check_unknown(app, junit, scenario_dir.name)
+            _check_not_flaky(app, junit, scenario_dir.name)
         elif condition:
             if _run_pytest(app, Path(tmp) / "restored.xml").returncode != 0:
                 raise LabError(
@@ -176,7 +176,7 @@ def _check_flaky(app: Path, junit: Path, name: str) -> list[dict[str, object]]:
     return [*_history_entries(first, sha, run_id=1), *_history_entries(junit, sha, run_id=2)]
 
 
-def _check_unknown(app: Path, junit: Path, name: str) -> None:
+def _check_not_flaky(app: Path, junit: Path, name: str) -> None:
     retried = junit.with_name("retried.xml")
     _run_pytest(app, retried, retries=1)
     if any(r.status is Status.PASSED_ON_RETRY for r in parse_junit(retried)):

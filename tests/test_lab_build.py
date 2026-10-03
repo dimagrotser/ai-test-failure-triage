@@ -363,12 +363,21 @@ def test_unknown_case_fails_without_passing_on_retry(
     assert len(label["notes"]) > 100
 
 
-def test_only_the_case_without_history_has_an_empty_history(tmp_path: Path) -> None:
-    for scenario, _, _ in UNKNOWN_CASES:
-        case = build_case(SCENARIOS / scenario, tmp_path)
-        history = json.loads((case / "history.json").read_text())
+@pytest.mark.parametrize(
+    ("scenario", "has_history"),
+    [
+        ("unknown-dormant-new-account", True),
+        ("unknown-amount-with-comma", True),
+        ("unknown-limit-lowered", False),
+    ],
+)
+def test_history_is_empty_only_when_the_scenario_says_none(
+    tmp_path: Path, scenario: str, has_history: bool
+) -> None:
+    case = build_case(SCENARIOS / scenario, tmp_path)
 
-        assert (history == []) is (scenario == "unknown-limit-lowered")
+    history = json.loads((case / "history.json").read_text())
+    assert bool(history) is has_history
 
 
 @pytest.mark.parametrize("scenario", [case[0] for case in UNKNOWN_CASES])
