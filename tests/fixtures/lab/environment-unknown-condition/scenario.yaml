@@ -1,0 +1,5 @@
+category: environment
+source: injected
+condition: disk_full
+scenario: disk is full
+notes: The condition is not one the lab can create.

@@ -1,0 +1,5 @@
+category: environment
+source: injected
+condition: service_down
+scenario: test edited
+notes: An environment case must leave the tests alone.

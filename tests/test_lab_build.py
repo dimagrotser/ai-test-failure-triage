@@ -158,3 +158,21 @@ def test_junit_with_object_reprs_is_still_byte_identical_across_builds(tmp_path:
     second = build_case(scenario, tmp_path / "second")
 
     assert (first / "junit.xml").read_bytes() == (second / "junit.xml").read_bytes()
+
+
+@pytest.mark.parametrize(
+    ("fixture", "message"),
+    [
+        ("environment-no-condition", "no condition"),
+        ("environment-unknown-condition", "unsupported condition"),
+        ("environment-edits-tests", "may only change wallet/"),
+        ("environment-patch-breaks", "restoring the environment"),
+    ],
+)
+def test_environment_scenario_that_cannot_be_trusted_is_rejected(
+    tmp_path: Path, fixture: str, message: str
+) -> None:
+    with pytest.raises(LabError, match=message):
+        build_case(FIXTURES / fixture, tmp_path)
+
+    assert list(tmp_path.iterdir()) == []

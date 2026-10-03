@@ -1,0 +1,5 @@
+category: environment
+source: injected
+
+scenario: service is down
+notes: The scenario names no broken condition.
