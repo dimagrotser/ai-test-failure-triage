@@ -1,0 +1,9 @@
+diff --git a/wallet/accounts.py b/wallet/accounts.py
+--- a/wallet/accounts.py
++++ b/wallet/accounts.py
+@@ -13,4 +13,4 @@ class Account:
+     def deposit(self, amount: Decimal) -> None:
+         if amount <= 0:
+             raise InvalidAmount(f"amount must be positive, got {amount}")
+-        self.balance += amount
++        self.balance += float(amount)

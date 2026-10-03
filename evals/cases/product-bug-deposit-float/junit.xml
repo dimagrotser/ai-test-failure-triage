@@ -1,0 +1,778 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="41" skipped="0" tests="59" time="0.000" timestamp="2026-01-01T00:00:00+00:00" hostname="lab"><testcase classname="tests.test_balance" name="test_new_account_has_the_opening_balance" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_increases_the_balance" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">def test_deposit_increases_the_balance() -&gt; None:
+        account = Account("alice", Decimal("50.00"))
+    
+&gt;       account.deposit(Decimal("25.50"))
+
+tests/test_balance.py:15: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;
+amount = Decimal('25.50')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_rejects_non_positive_amounts[amount0]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_rejects_non_positive_amounts[amount1]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[1]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 1
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.01')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[2]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 2
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.02')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[3]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 3
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.03')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[4]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 4
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.04')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[5]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 5
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.05')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[6]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 6
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.06')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[7]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 7
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.07')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[8]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 8
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.08')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[9]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 9
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.09')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[10]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 10
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.1')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[11]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 11
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.11')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[12]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 12
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.12')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[13]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 13
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.13')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[14]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 14
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.14')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[15]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 15
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.15')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[16]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 16
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.16')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[17]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 17
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.17')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[18]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 18
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.18')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[19]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 19
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.19')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[20]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 20
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.2')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[21]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 21
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.21')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[22]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 22
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.22')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[23]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 23
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.23')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[24]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 24
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.24')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[25]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 25
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.25')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[26]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 26
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.26')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[27]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 27
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.27')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[28]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 28
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.28')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[29]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 29
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.29')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[30]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 30
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.3')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[31]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 31
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.31')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[32]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 32
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.32')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[33]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 33
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.33')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[34]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 34
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.34')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[35]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 35
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.35')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[36]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 36
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.36')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[37]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 37
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.37')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[38]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 38
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.38')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[39]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 39
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.39')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[40]" time="0.000"><failure message="TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'">cents = 40
+
+    @pytest.mark.parametrize("cents", range(1, 41))
+    def test_deposit_keeps_every_cent(cents: int) -&gt; None:
+        account = Account("alice")
+    
+&gt;       account.deposit(Decimal(cents) / 100)
+
+tests/test_balance.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;wallet.accounts.Account object at 0x0000000000&gt;, amount = Decimal('0.4')
+
+    def deposit(self, amount: Decimal) -&gt; None:
+        if amount &lt;= 0:
+            raise InvalidAmount(f"amount must be positive, got {amount}")
+&gt;       self.balance += float(amount)
+E       TypeError: unsupported operand type(s) for +=: 'decimal.Decimal' and 'float'
+
+wallet/accounts.py:16: TypeError</failure></testcase><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[100.00-1.50]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[99.00-1.49]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[10.00-0.15]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[0.01-0.00]" time="0.000" /><testcase classname="tests.test_fees" name="test_zero_fee_rate_makes_transfers_free" time="0.000" /><testcase classname="tests.test_ledger" name="test_transfer_is_recorded_in_the_ledger" time="0.000" /><testcase classname="tests.test_limits" name="test_transfer_up_to_the_limit_is_allowed" time="0.000" /><testcase classname="tests.test_limits" name="test_transfer_above_the_limit_is_rejected" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_amount" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_fee" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_sender_balance_after_the_transfer" time="0.000" /><testcase classname="tests.test_statements" name="test_statement_lists_the_owner_and_balance" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_moves_the_amount_and_charges_the_fee_to_the_sender" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_needs_enough_money_for_the_fee_too" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_rejects_non_positive_amounts" time="0.000" /></testsuite></testsuites>
