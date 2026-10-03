@@ -8,6 +8,7 @@ class Status(StrEnum):
     FAILED = "failed"
     ERROR = "error"
     SKIPPED = "skipped"
+    PASSED_ON_RETRY = "passed_on_retry"
 
 
 class Attempt(BaseModel):

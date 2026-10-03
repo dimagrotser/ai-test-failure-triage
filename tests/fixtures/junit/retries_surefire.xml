@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="com.acme.shop.OrderServiceTest" time="3.218" tests="3" errors="0" skipped="0" failures="1">
+  <testcase name="shouldReserveStock" classname="com.acme.shop.OrderServiceTest" time="0.512">
+    <flakyFailure message="Expected: 3 but was: 2" type="java.lang.AssertionError" time="0.498">
+      <stackTrace>java.lang.AssertionError: Expected: 3 but was: 2
+	at org.junit.Assert.fail(Assert.java:89)
+	at com.acme.shop.OrderServiceTest.shouldReserveStock(OrderServiceTest.java:58)
+</stackTrace>
+      <system-out>reserving 3 units of sku-1042</system-out>
+      <system-err>WARN stock cache miss</system-err>
+    </flakyFailure>
+    <flakyFailure message="Expected: 3 but was: 1" type="java.lang.AssertionError" time="0.301">
+      <stackTrace>java.lang.AssertionError: Expected: 3 but was: 1
+	at com.acme.shop.OrderServiceTest.shouldReserveStock(OrderServiceTest.java:58)
+</stackTrace>
+    </flakyFailure>
+  </testcase>
+  <testcase name="shouldChargeCard" classname="com.acme.shop.OrderServiceTest" time="1.870">
+    <failure message="Connection refused" type="java.net.ConnectException">java.net.ConnectException: Connection refused
+	at com.acme.shop.PaymentClient.charge(PaymentClient.java:77)
+</failure>
+    <rerunFailure message="Connection refused" type="java.net.ConnectException" time="0.640">
+      <stackTrace>java.net.ConnectException: Connection refused
+	at com.acme.shop.PaymentClient.charge(PaymentClient.java:77)
+</stackTrace>
+      <system-out>retrying charge for order 77</system-out>
+    </rerunFailure>
+    <rerunFailure message="Connection refused" type="java.net.ConnectException" time="0.610">
+      <stackTrace>java.net.ConnectException: Connection refused
+	at com.acme.shop.PaymentClient.charge(PaymentClient.java:77)
+</stackTrace>
+    </rerunFailure>
+  </testcase>
+  <testcase name="shouldListOrders" classname="com.acme.shop.OrderServiceTest" time="0.021"/>
+</testsuite>

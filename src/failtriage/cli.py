@@ -38,13 +38,17 @@ def analyze(
         typer.echo(f"warning: no tests found in {junit}", err=True)
         return
 
-    failed = [r for r in results if r.status in (Status.FAILED, Status.ERROR)]
-    for result in failed:
-        attempt = result.attempts[-1]
-        typer.echo(f"{result.status.name} {result.test_id}")
-        if attempt.message:
-            typer.echo(f"  {attempt.message}")
-        if attempt.stack_trace:
-            typer.echo(textwrap.indent(attempt.stack_trace.strip(), "    "))
+    shown = [r for r in results if r.status is not Status.PASSED and r.status is not Status.SKIPPED]
+    for result in shown:
+        last_failure = next(a for a in reversed(result.attempts) if a.status is not Status.PASSED)
+        count = len(result.attempts)
+        noun = "attempt" if count == 1 else "attempts"
+        typer.echo(f"{result.status.name} {result.test_id} ({count} {noun})")
+        if last_failure.message:
+            typer.echo(f"  {last_failure.message}")
+        if last_failure.stack_trace:
+            typer.echo(textwrap.indent(last_failure.stack_trace.strip(), "    "))
         typer.echo()
-    typer.echo(f"{len(failed)} failed, {len(results)} tests total")
+    failed = sum(r.status in (Status.FAILED, Status.ERROR) for r in results)
+    on_retry = sum(r.status is Status.PASSED_ON_RETRY for r in results)
+    typer.echo(f"{failed} failed, {on_retry} passed on retry, {len(results)} tests total")
