@@ -70,8 +70,10 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
 
 
 def _normalize_junit(xml: str) -> str:
-    # Timings, the start time and the host name change on every run and would break
-    # byte-identical rebuilds. Messages and tracebacks stay as pytest wrote them.
+    # Timings, the start time, the host name and object addresses in reprs change on every
+    # run and would break byte-identical rebuilds. The rest of each message and traceback
+    # stays as pytest wrote it.
+    xml = re.sub(r"0x[0-9a-f]{6,}", "0x0000000000", xml)
     xml = re.sub(r' time="[^"]*"', ' time="0.000"', xml)
     xml = re.sub(r' timestamp="[^"]*"', ' timestamp="2026-01-01T00:00:00+00:00"', xml)
     return re.sub(r' hostname="[^"]*"', ' hostname="lab"', xml)

@@ -145,3 +145,12 @@ def test_fixture_leak_case_fails_tests_that_run_after_the_leaking_one(tmp_path: 
     assert all(
         r.status is Status.PASSED for r in results if r.test_id.startswith("tests.test_fees::")
     )
+
+
+def test_junit_with_object_reprs_is_still_byte_identical_across_builds(tmp_path: Path) -> None:
+    scenario = SCENARIOS / "test-bug-expected-value"
+
+    first = build_case(scenario, tmp_path / "first")
+    second = build_case(scenario, tmp_path / "second")
+
+    assert (first / "junit.xml").read_bytes() == (second / "junit.xml").read_bytes()
