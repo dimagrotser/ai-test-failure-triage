@@ -77,3 +77,42 @@ def test_url_without_password_is_kept() -> None:
     text = "GET https://api.example.com:8443/v1/rates failed"
 
     assert redact(text) == text
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("DB_PASSWORD=hunter2", "DB_PASSWORD=<SECRET>"),
+        ("STRIPE_API_KEY=sk_live_abc123", "STRIPE_API_KEY=<SECRET>"),
+        ("AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG", "AWS_SECRET_ACCESS_KEY=<SECRET>"),
+        ("GITHUB_TOKEN=notaprefixedvalue", "GITHUB_TOKEN=<SECRET>"),
+        ("export SERVICE_SECRET='two words'", "export SERVICE_SECRET=<SECRET>"),
+        ("password: s3cret!", "password: <SECRET>"),
+        ('{"password": "s3cret", "user": "bob"}', '{"password": <SECRET>, "user": "bob"}'),
+        ("env={'APP_TOKEN': 'abc', 'MODE': 'test'}", "env={'APP_TOKEN': <SECRET>, 'MODE': 'test'}"),
+        ("api_key=abc&page=2", "api_key=<SECRET>&page=2"),
+        ("db_password = x", "db_password = <SECRET>"),
+    ],
+)
+def test_removes_env_values_by_key_name(text: str, expected: str) -> None:
+    assert redact(text) == expected
+
+
+def test_typed_placeholder_is_not_overwritten_by_key_rule() -> None:
+    text = "API_TOKEN=ghp_a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8"
+
+    assert redact(text) == "API_TOKEN=<TOKEN>"
+
+
+def test_keeps_values_of_ordinary_keys() -> None:
+    text = "DEBUG=1 MODE=test HOSTNAME=ci-runner-3 KEYBOARD=us"
+
+    assert redact(text) == text
+
+
+def test_redaction_is_idempotent() -> None:
+    text = f"DB_PASSWORD=x {JWT} jane@example.com 4111111111111111\nCookie: a=b\n{PRIVATE_KEY}"
+
+    once = redact(text)
+
+    assert redact(once) == once

@@ -18,6 +18,13 @@ TOKEN = re.compile(
     r"|xox[abprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{20,})"
 )
 URL_PASSWORD = re.compile(r"(\b[a-z][a-z0-9+.-]*://[^\s/:@]*:)[^\s/]+(@)", re.IGNORECASE)
+# Env dumps, query strings and dict reprs: the value goes, the key stays so the text still reads.
+# Values that are already a typed placeholder are kept, which also makes the rule idempotent.
+SECRET_KEY_VALUE = re.compile(
+    r"""(?<!\w)([\w.-]*(?:_KEY|_TOKEN|_SECRET|_PASSWORD)|password|passwd|secret|token|api[_-]?key)"""
+    r"""(['"]?\s*[:=]\s*)(?!<[A-Z_]+>)(?:(['"]).*?\3|[^\s,;&}\])]+)""",
+    re.IGNORECASE,
+)
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 CARD = re.compile(r"\b\d(?:[ -]?\d){12,18}\b")
 
@@ -44,6 +51,7 @@ RULES: list[tuple[re.Pattern[str], Replacement]] = [
     (AUTH_HEADER, r"\1\2<SECRET>"),
     (TOKEN, "<TOKEN>"),
     (URL_PASSWORD, r"\1<SECRET>\2"),
+    (SECRET_KEY_VALUE, r"\1\2<SECRET>"),
     (EMAIL, "<EMAIL>"),
     (CARD, _card),
 ]
