@@ -32,8 +32,13 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["wallet"]
+
 [tool.mypy]
 strict = true
+mypy_path = "src:evals/lab/wallet"
+explicit_package_bases = true
 files = ["src", "tests"]
 
 [tool.pytest.ini_options]
