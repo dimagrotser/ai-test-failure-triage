@@ -1,0 +1,6 @@
+category: environment
+source: injected
+condition: read_only_dir
+scenario: statements directory is not writable
+notes: >-
+  The statements directory is read-only, so export_statement raises PermissionError and test_statements fails. The patch only lowercases the file name. With a writable directory the same tree passes.
