@@ -10,7 +10,10 @@ from pathlib import Path
 
 from failtriage.parsers.junit import parse_junit
 
-WALLET = Path(__file__).parent / "wallet"
+LAB = Path(__file__).parent
+WALLET = LAB / "wallet"
+SCENARIOS = LAB / "scenarios"
+CASES = LAB.parent / "cases"
 
 
 class LabError(Exception):
@@ -44,6 +47,7 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
             raise LabError(f"scenario {scenario_dir.name} changed the tests")
 
         case = cases_dir / scenario_dir.name
+        shutil.rmtree(case, ignore_errors=True)
         case.mkdir(parents=True)
         (case / "junit.xml").write_text(_normalize_junit(junit.read_text()))
         shutil.copy(patch, case / "diff.patch")
@@ -58,6 +62,10 @@ def _normalize_junit(xml: str) -> str:
     xml = re.sub(r' time="[^"]*"', ' time="0.000"', xml)
     xml = re.sub(r' timestamp="[^"]*"', ' timestamp="2026-01-01T00:00:00+00:00"', xml)
     return re.sub(r' hostname="[^"]*"', ' hostname="lab"', xml)
+
+
+def build_all(cases_dir: Path = CASES) -> list[Path]:
+    return [build_case(scenario, cases_dir) for scenario in sorted(SCENARIOS.iterdir())]
 
 
 def _reject_test_edits(patch: Path) -> None:
@@ -106,3 +114,10 @@ def _run_pytest(app: Path, junit: Path) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
     )
+
+
+if __name__ == "__main__":
+    try:
+        build_all()
+    except LabError as exc:
+        sys.exit(f"lab: {exc}")

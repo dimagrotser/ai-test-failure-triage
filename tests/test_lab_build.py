@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from evals.lab.build import LabError, build_case
+from evals.lab.build import LabError, build_all, build_case
 from failtriage.models import Status
 from failtriage.parsers.junit import parse_junit
 
@@ -85,3 +85,10 @@ def test_two_builds_produce_byte_identical_files(tmp_path: Path) -> None:
 
     for name in ["junit.xml", "diff.patch", "history.json", "label.yaml"]:
         assert (first / name).read_bytes() == (second / name).read_bytes(), name
+
+
+def test_build_all_rebuilds_into_an_existing_cases_dir(tmp_path: Path) -> None:
+    build_all(tmp_path)
+    build_all(tmp_path)
+
+    assert (tmp_path / "product-bug-fee-rounding" / "label.yaml").is_file()
