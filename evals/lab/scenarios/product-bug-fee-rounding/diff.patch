@@ -1,0 +1,14 @@
+diff --git a/wallet/fees.py b/wallet/fees.py
+--- a/wallet/fees.py
++++ b/wallet/fees.py
+@@ -1,8 +1,8 @@
+-from decimal import ROUND_HALF_UP, Decimal
++from decimal import ROUND_DOWN, Decimal
+ 
+ FEE_RATE = Decimal("0.015")
+ CENT = Decimal("0.01")
+ 
+ 
+ def transfer_fee(amount: Decimal) -> Decimal:
+-    return (amount * FEE_RATE).quantize(CENT, rounding=ROUND_HALF_UP)
++    return (amount * FEE_RATE).quantize(CENT, rounding=ROUND_DOWN)

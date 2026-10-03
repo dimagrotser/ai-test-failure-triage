@@ -1,0 +1,7 @@
+category: product_bug
+source: injected
+scenario: fee rounding truncates instead of rounding half up
+notes: >-
+  The patch switches the transfer fee from ROUND_HALF_UP to ROUND_DOWN, so a 99.00
+  transfer is charged 1.48 instead of 1.49. The wallet tests are untouched and pass
+  again once the patch is reverted.

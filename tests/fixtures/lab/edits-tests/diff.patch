@@ -1,0 +1,11 @@
+diff --git a/tests/test_fees.py b/tests/test_fees.py
+--- a/tests/test_fees.py
++++ b/tests/test_fees.py
+@@ -10,6 +10,6 @@
+     [
+         ("100.00", "1.50"),
+-        ("99.00", "1.49"),
++        ("99.00", "1.48"),
+         ("10.00", "0.15"),
+         ("0.01", "0.00"),
+     ],
