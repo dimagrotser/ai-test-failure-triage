@@ -86,3 +86,38 @@ def test_analyze_prints_redacted_text_only() -> None:
     assert "<EMAIL>" in result.output
     for secret in ["4111", "jane.doe", "hunter2", "abc.def.ghi", "ghp_"]:
         assert secret not in result.output
+
+
+CASES = Path(__file__).parent.parent / "evals" / "cases"
+
+
+def test_analyze_prints_forty_failures_with_one_cause_as_one_group() -> None:
+    junit = CASES / "product-bug-deposit-float" / "junit.xml"
+
+    result = runner.invoke(app, ["analyze", "--junit", str(junit)])
+
+    assert result.exit_code == 0
+    assert result.output.count("Group ") == 1
+    assert "Group 1: 41 tests" in result.output
+    assert "Signature: TypeError | " in result.output
+    assert "| wallet/accounts.py:deposit" in result.output
+    assert result.output.count("FAILED tests.test_balance::test_deposit_keeps_every_cent") == 40
+    assert "41 failed, 0 passed on retry, 59 tests total, 1 group" in result.output
+
+
+def test_analyze_prints_one_group_per_cause_with_a_sample_failure() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "mixed.xml")])
+
+    assert result.output.count("Group ") == 3
+    assert "Group 1: 1 test\n" in result.output
+    assert result.output.index("Group 1") < result.output.index("test_total_with_discount")
+    assert result.output.index("test_total_with_discount") < result.output.index("Group 2")
+    assert "3 failed, 0 passed on retry, 6 tests total, 3 groups" in result.output
+
+
+def test_analyze_prints_the_signature_on_redacted_text() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "secrets.xml")])
+
+    [signature] = [line for line in result.output.splitlines() if "Signature:" in line]
+    assert "card <CARD> declined for <EMAIL>" in signature
+    assert "jane.doe" not in signature

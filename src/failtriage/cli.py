@@ -5,7 +5,8 @@ from typing import Annotated
 
 import typer
 
-from failtriage.models import Status
+from failtriage.grouping import group_failures
+from failtriage.models import FailureGroup, Status
 from failtriage.parsers.junit import ReportParseError, parse_junit
 from failtriage.redaction import redact_result
 
@@ -39,17 +40,34 @@ def analyze(
         typer.echo(f"warning: no tests found in {junit}", err=True)
         return
 
-    shown = [r for r in results if r.status is not Status.PASSED and r.status is not Status.SKIPPED]
-    for result in shown:
-        last_failure = next(a for a in reversed(result.attempts) if a.status is not Status.PASSED)
-        count = len(result.attempts)
-        noun = "attempt" if count == 1 else "attempts"
-        typer.echo(f"{result.status.name} {result.test_id} ({count} {noun})")
-        if last_failure.message:
-            typer.echo(f"  {last_failure.message}")
-        if last_failure.stack_trace:
-            typer.echo(textwrap.indent(last_failure.stack_trace.strip(), "    "))
-        typer.echo()
+    groups = group_failures(results)
+    for number, group in enumerate(groups, start=1):
+        _print_group(number, group)
     failed = sum(r.status in (Status.FAILED, Status.ERROR) for r in results)
     on_retry = sum(r.status is Status.PASSED_ON_RETRY for r in results)
-    typer.echo(f"{failed} failed, {on_retry} passed on retry, {len(results)} tests total")
+    noun = "group" if len(groups) == 1 else "groups"
+    typer.echo(
+        f"{failed} failed, {on_retry} passed on retry, {len(results)} tests total, "
+        f"{len(groups)} {noun}"
+    )
+
+
+def _print_group(number: int, group: FailureGroup) -> None:
+    count = len(group.results)
+    sig = group.signature
+    typer.echo(f"Group {number}: {count} {'test' if count == 1 else 'tests'}")
+    typer.echo(
+        f"  Signature: {sig.exception_type or '-'} | {sig.message or '-'} | {sig.frame or '-'}"
+    )
+    for result in group.results:
+        attempts = len(result.attempts)
+        typer.echo(
+            f"  {result.status.name} {result.test_id} "
+            f"({attempts} {'attempt' if attempts == 1 else 'attempts'})"
+        )
+    sample = next(a for a in reversed(group.results[0].attempts) if a.status is not Status.PASSED)
+    if sample.message:
+        typer.echo(f"  {sample.message}")
+    if sample.stack_trace:
+        typer.echo(textwrap.indent(sample.stack_trace.strip(), "    "))
+    typer.echo()
