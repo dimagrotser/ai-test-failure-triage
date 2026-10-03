@@ -92,3 +92,35 @@ def test_parametrized_variants_are_not_collapsed_as_retries() -> None:
     converts = [r for r in results if r.test_id == "tests.test_rates::test_convert"]
     assert len(converts) == 3
     assert all(len(r.attempts) == 1 for r in converts)
+
+
+def test_flaky_failures_become_attempts_before_the_final_pass() -> None:
+    results = {r.test_id: r for r in parse_junit(FIXTURES / "retries_surefire.xml")}
+
+    result = results["com.acme.shop.OrderServiceTest::shouldReserveStock"]
+    assert result.status is Status.PASSED_ON_RETRY
+    assert [a.status for a in result.attempts] == [Status.FAILED, Status.FAILED, Status.PASSED]
+    first = result.attempts[0]
+    assert first.message == "Expected: 3 but was: 2"
+    assert first.stack_trace is not None
+    assert "OrderServiceTest.java:58" in first.stack_trace
+    assert first.stdout == "reserving 3 units of sku-1042"
+    assert first.stderr == "WARN stock cache miss"
+
+
+def test_rerun_failures_become_attempts_after_the_first_failure() -> None:
+    results = {r.test_id: r for r in parse_junit(FIXTURES / "retries_surefire.xml")}
+
+    result = results["com.acme.shop.OrderServiceTest::shouldChargeCard"]
+    assert result.status is Status.FAILED
+    assert [a.status for a in result.attempts] == [Status.FAILED] * 3
+    assert result.attempts[0].duration == 1.87
+    assert result.attempts[1].stdout == "retrying charge for order 77"
+    assert result.attempts[2].message == "Connection refused"
+
+
+def test_rerun_errors_keep_the_error_status() -> None:
+    [result] = parse_junit(FIXTURES / "retries_errors.xml")
+
+    assert result.status is Status.ERROR
+    assert [a.status for a in result.attempts] == [Status.ERROR, Status.ERROR]

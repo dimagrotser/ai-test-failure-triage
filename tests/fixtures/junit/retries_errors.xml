@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.acme.shop.InventoryTest" tests="1" errors="1" failures="0" skipped="0" time="0.9">
+  <testcase name="shouldSyncWarehouse" classname="com.acme.shop.InventoryTest" time="0.4">
+    <error message="java.net.SocketTimeoutException: Read timed out" type="java.net.SocketTimeoutException">java.net.SocketTimeoutException: Read timed out
+	at com.acme.shop.WarehouseClient.sync(WarehouseClient.java:31)
+</error>
+    <rerunError message="java.net.SocketTimeoutException: Read timed out" type="java.net.SocketTimeoutException" time="0.5">
+      <stackTrace>java.net.SocketTimeoutException: Read timed out
+	at com.acme.shop.WarehouseClient.sync(WarehouseClient.java:31)
+</stackTrace>
+    </rerunError>
+  </testcase>
+</testsuite>

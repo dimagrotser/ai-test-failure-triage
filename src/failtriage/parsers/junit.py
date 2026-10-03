@@ -11,6 +11,12 @@ OUTCOME_TAGS = {
 }
 
 
+# Surefire writes a retried test as one testcase: flaky* elements are failed attempts before
+# the final pass, rerun* elements are failed attempts after the first failure.
+FLAKY_TAGS = {"flakyFailure": Status.FAILED, "flakyError": Status.ERROR}
+RERUN_TAGS = {"rerunFailure": Status.FAILED, "rerunError": Status.ERROR}
+
+
 class ReportParseError(Exception):
     """The report file is missing, unreadable or not valid XML."""
 
@@ -23,7 +29,7 @@ def parse_junit(path: Path) -> list[TestResult]:
     attempts_by_case: dict[tuple[str, str, str], list[Attempt]] = {}
     for case in root.iter("testcase"):
         key = (case.get("file") or "", case.get("classname") or "", case.get("name") or "")
-        attempts_by_case.setdefault(key, []).append(_parse_attempt(case))
+        attempts_by_case.setdefault(key, []).extend(_parse_attempts(case))
     return [
         TestResult(test_id=_test_id(*key), status=_final_status(attempts), attempts=attempts)
         for key, attempts in attempts_by_case.items()
@@ -36,6 +42,23 @@ def _final_status(attempts: list[Attempt]) -> Status:
     if final is Status.PASSED and earlier_failed:
         return Status.PASSED_ON_RETRY
     return final
+
+
+def _parse_attempts(case: ET.Element) -> list[Attempt]:
+    before = [_parse_retry(el, st) for tag, st in FLAKY_TAGS.items() for el in case.findall(tag)]
+    after = [_parse_retry(el, st) for tag, st in RERUN_TAGS.items() for el in case.findall(tag)]
+    return [*before, _parse_attempt(case), *after]
+
+
+def _parse_retry(element: ET.Element, status: Status) -> Attempt:
+    return Attempt(
+        status=status,
+        message=element.get("message"),
+        stack_trace=element.findtext("stackTrace") or element.text,
+        stdout=element.findtext("system-out"),
+        stderr=element.findtext("system-err"),
+        duration=_parse_duration(element.get("time")),
+    )
 
 
 def _parse_attempt(case: ET.Element) -> Attempt:
