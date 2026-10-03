@@ -1,0 +1,13 @@
+diff --git a/wallet/accounts.py b/wallet/accounts.py
+--- a/wallet/accounts.py
++++ b/wallet/accounts.py
+@@ -10,6 +10,9 @@
+         self.owner = owner
+         self.balance = balance
+ 
++    def __repr__(self) -> str:
++        return f"Account({self.owner!r})"
++
+     def deposit(self, amount: Decimal) -> None:
+         if amount <= 0:
+             raise InvalidAmount(f"amount must be positive, got {amount}")

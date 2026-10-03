@@ -176,3 +176,48 @@ def test_environment_scenario_that_cannot_be_trusted_is_rejected(
         build_case(FIXTURES / fixture, tmp_path)
 
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("scenario", "condition", "failed_test", "marker"),
+    [
+        ("environment-ledger-down", "service_down", "test_ledger", "Connection refused"),
+        ("environment-ledger-dns", "dns_failure", "test_ledger", "urlopen error"),
+        ("environment-ledger-timeout", "timeout", "test_ledger", "timed out"),
+        ("environment-missing-ledger-url", "missing_env_var", "test_ledger", "WALLET_LEDGER_URL"),
+        (
+            "environment-read-only-statements",
+            "read_only_dir",
+            "test_statements",
+            "Permission denied",
+        ),
+    ],
+)
+def test_environment_case_fails_only_where_the_environment_is_broken(
+    tmp_path: Path, scenario: str, condition: str, failed_test: str, marker: str
+) -> None:
+    case = build_case(SCENARIOS / scenario, tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert failed.test_id.startswith(f"tests.{failed_test}::")
+    assert failed.attempts[0].message is not None
+    assert marker in failed.attempts[0].message
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "environment"
+    assert label["condition"] == condition
+    assert (case / "diff.patch").read_text() == (SCENARIOS / scenario / "diff.patch").read_text()
+
+
+@pytest.mark.parametrize(
+    "scenario", ["environment-ledger-down", "environment-read-only-statements"]
+)
+def test_environment_junit_with_ports_and_temp_paths_is_byte_identical(
+    tmp_path: Path, scenario: str
+) -> None:
+    first = build_case(SCENARIOS / scenario, tmp_path / "first")
+    second = build_case(SCENARIOS / scenario, tmp_path / "second")
+
+    junit = (first / "junit.xml").read_text()
+    assert junit == (second / "junit.xml").read_text()
+    assert "/var/folders" not in junit
+    assert not re.search(r"127\.0\.0\.1(:|', )(?!0\b)\d+", junit)

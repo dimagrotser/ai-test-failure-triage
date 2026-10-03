@@ -1,0 +1,6 @@
+category: environment
+source: injected
+condition: timeout
+scenario: ledger answers slower than the client timeout
+notes: >-
+  The ledger stub takes 2 seconds to answer and the client gives up after 0.5, so urlopen raises a timeout and test_ledger fails. The patch only adds a comment. With a ledger that answers in time the same tree passes.

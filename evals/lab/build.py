@@ -89,7 +89,7 @@ def _normalize_junit(xml: str, tmp: Path) -> str:
     for path in {str(tmp), str(tmp.resolve())}:
         xml = xml.replace(path, "/tmp/lab")
     xml = xml.replace(sysconfig.get_paths()["stdlib"], "/stdlib")
-    xml = re.sub(r"127\.0\.0\.1:\d+", "127.0.0.1:0", xml)
+    xml = re.sub(r"127\.0\.0\.1(:|', )\d+", r"127.0.0.1\g<1>0", xml)
     xml = re.sub(r"0x[0-9a-f]{6,}", "0x0000000000", xml)
     xml = re.sub(r' time="[^"]*"', ' time="0.000"', xml)
     xml = re.sub(r' timestamp="[^"]*"', ' timestamp="2026-01-01T00:00:00+00:00"', xml)
