@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Status(StrEnum):
@@ -26,3 +26,16 @@ class TestResult(BaseModel):
     test_id: str
     status: Status
     attempts: list[Attempt]
+
+
+class Signature(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    exception_type: str
+    message: str
+    frame: str | None
+
+
+class FailureGroup(BaseModel):
+    signature: Signature
+    results: list[TestResult]
