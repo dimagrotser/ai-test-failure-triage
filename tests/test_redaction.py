@@ -1,6 +1,7 @@
 import pytest
 
-from failtriage.redaction import redact
+from failtriage.models import Attempt, Status, TestResult
+from failtriage.redaction import redact, redact_result
 
 JWT = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.c2lnbmF0dXJlX3BhcnQ"
 PRIVATE_KEY = """-----BEGIN RSA PRIVATE KEY-----
@@ -116,3 +117,31 @@ def test_redaction_is_idempotent() -> None:
     once = redact(text)
 
     assert redact(once) == once
+
+
+def test_redact_result_cleans_every_text_field_of_every_attempt() -> None:
+    attempts = [
+        Attempt(
+            status=Status.FAILED,
+            message="mail jane@example.com",
+            stack_trace="DB_PASSWORD=x",
+            stdout="Cookie: a=b",
+            stderr=f"jwt {JWT}",
+            duration=1.5,
+        ),
+        Attempt(status=Status.PASSED),
+    ]
+    result = TestResult(test_id="t.py::a", status=Status.PASSED_ON_RETRY, attempts=attempts)
+
+    redacted = redact_result(result)
+
+    assert redacted.test_id == "t.py::a"
+    assert redacted.status is Status.PASSED_ON_RETRY
+    first, second = redacted.attempts
+    assert first.message == "mail <EMAIL>"
+    assert first.stack_trace == "DB_PASSWORD=<SECRET>"
+    assert first.stdout == "Cookie: <SECRET>"
+    assert first.stderr == "jwt <JWT>"
+    assert first.duration == 1.5
+    assert second == Attempt(status=Status.PASSED)
+    assert result.attempts[0].message == "mail jane@example.com"

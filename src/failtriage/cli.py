@@ -7,6 +7,7 @@ import typer
 
 from failtriage.models import Status
 from failtriage.parsers.junit import ReportParseError, parse_junit
+from failtriage.redaction import redact_result
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -29,7 +30,7 @@ def analyze(
 ) -> None:
     """Print the failed tests of a report."""
     try:
-        results = parse_junit(junit)
+        results = [redact_result(r) for r in parse_junit(junit)]
     except ReportParseError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
