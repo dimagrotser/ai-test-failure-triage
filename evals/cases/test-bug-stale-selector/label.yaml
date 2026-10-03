@@ -1,0 +1,8 @@
+category: test_bug
+source: injected
+scenario: test looks for a selector the receipt no longer uses
+notes: >-
+  The test looks up data-testid="amount", an older name. The receipt renders the amount
+  under "transfer-amount" and the other receipt tests find their elements, so the page is
+  fine and the selector is stale. Reverting the patch, which only touches the test, makes
+  the run green.

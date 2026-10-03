@@ -1,0 +1,10 @@
+diff --git a/wallet/fees.py b/wallet/fees.py
+--- a/wallet/fees.py
++++ b/wallet/fees.py
+@@ -1,5 +1,6 @@
+ from decimal import ROUND_HALF_UP, Decimal
+ 
++# fee rate as a share of the amount
+ FEE_RATE = Decimal("0.015")
+ CENT = Decimal("0.01")
+ 

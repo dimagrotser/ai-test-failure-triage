@@ -1,0 +1,9 @@
+category: test_bug
+source: injected
+scenario: fixture sets the fee rate and never restores it
+notes: >-
+  The free_transfers fixture assigns fees.FEE_RATE directly instead of using monkeypatch,
+  so the zero rate leaks into every test that runs after it. test_fees itself passes, but
+  the receipt and transfer tests that run later see no fee and fail. They pass on their
+  own and in the clean run. Reverting the patch, which only touches the test, makes the
+  run green.

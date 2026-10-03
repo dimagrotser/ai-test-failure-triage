@@ -14,7 +14,8 @@ from failtriage.parsers.junit import parse_junit
 ROOT = Path(__file__).parent.parent
 WALLET = ROOT / "evals" / "lab" / "wallet"
 FIXTURES = ROOT / "tests" / "fixtures" / "lab"
-SCENARIO = ROOT / "evals" / "lab" / "scenarios" / "product-bug-fee-rounding"
+SCENARIOS = ROOT / "evals" / "lab" / "scenarios"
+SCENARIO = SCENARIOS / "product-bug-fee-rounding"
 
 
 def test_wallet_tests_pass_without_any_scenario() -> None:
@@ -92,3 +93,64 @@ def test_build_all_rebuilds_into_an_existing_cases_dir(tmp_path: Path) -> None:
     build_all(tmp_path)
 
     assert (tmp_path / "product-bug-fee-rounding" / "label.yaml").is_file()
+
+
+def test_test_bug_case_is_built_from_a_patch_that_only_edits_tests(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "test-bug-expected-value", tmp_path)
+
+    failed = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert [r.test_id for r in failed] == [
+        "tests.test_transfers::test_transfer_moves_the_amount_and_charges_the_fee_to_the_sender"
+    ]
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "test_bug"
+    assert "98.50" in label["notes"]
+
+
+def test_test_bug_scenario_that_edits_app_code_is_rejected(tmp_path: Path) -> None:
+    with pytest.raises(LabError, match="may only change tests/"):
+        build_case(FIXTURES / "test-bug-edits-app", tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("fixture", "message"),
+    [("unknown-category", "unsupported category"), ("no-notes", "no notes")],
+)
+def test_scenario_with_an_incomplete_or_unknown_label_is_rejected(
+    tmp_path: Path, fixture: str, message: str
+) -> None:
+    with pytest.raises(LabError, match=message):
+        build_case(FIXTURES / fixture, tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_stale_selector_case_fails_on_the_missing_testid(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "test-bug-stale-selector", tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert failed.test_id == "tests.test_receipt::test_receipt_shows_the_amount"
+    assert failed.attempts[0].message is not None
+    assert "no element with data-testid='amount'" in failed.attempts[0].message
+
+
+def test_fixture_leak_case_fails_tests_that_run_after_the_leaking_one(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "test-bug-fixture-leak", tmp_path)
+
+    results = parse_junit(case / "junit.xml")
+    failed_files = {r.test_id.split("::")[0] for r in results if r.status is Status.FAILED}
+    assert failed_files == {"tests.test_receipt", "tests.test_transfers"}
+    assert all(
+        r.status is Status.PASSED for r in results if r.test_id.startswith("tests.test_fees::")
+    )
+
+
+def test_junit_with_object_reprs_is_still_byte_identical_across_builds(tmp_path: Path) -> None:
+    scenario = SCENARIOS / "test-bug-expected-value"
+
+    first = build_case(scenario, tmp_path / "first")
+    second = build_case(scenario, tmp_path / "second")
+
+    assert (first / "junit.xml").read_bytes() == (second / "junit.xml").read_bytes()

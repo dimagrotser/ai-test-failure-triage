@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="17" time="0.000" timestamp="2026-01-01T00:00:00+00:00" hostname="lab"><testcase classname="tests.test_balance" name="test_new_account_has_the_opening_balance" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_increases_the_balance" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_rejects_non_positive_amounts[amount0]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_rejects_non_positive_amounts[amount1]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[100.00-1.50]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[99.00-1.49]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[10.00-0.15]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[0.01-0.00]" time="0.000" /><testcase classname="tests.test_fees" name="test_zero_fee_rate_makes_transfers_free" time="0.000" /><testcase classname="tests.test_limits" name="test_transfer_up_to_the_limit_is_allowed" time="0.000" /><testcase classname="tests.test_limits" name="test_transfer_above_the_limit_is_rejected" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_amount" time="0.000"><failure message="LookupError: no element with data-testid='amount'">receipt = '&lt;h1&gt;Transfer to bob&lt;/h1&gt;\n&lt;p&gt;Amount: &lt;span data-testid="transfer-amount"&gt;100.00&lt;/span&gt;&lt;/p&gt;\n&lt;p&gt;Fee: &lt;span data-testid="transfer-fee"&gt;1.50&lt;/span&gt;&lt;/p&gt;\n&lt;p&gt;Balance: &lt;span data-testid="sender-balance"&gt;98.50&lt;/span&gt;&lt;/p&gt;\n'
+
+    def test_receipt_shows_the_amount(receipt: str) -&gt; None:
+&gt;       assert text_by_testid(receipt, "amount") == "100.00"
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_receipt.py:45: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+html = '&lt;h1&gt;Transfer to bob&lt;/h1&gt;\n&lt;p&gt;Amount: &lt;span data-testid="transfer-amount"&gt;100.00&lt;/span&gt;&lt;/p&gt;\n&lt;p&gt;Fee: &lt;span data-testid="transfer-fee"&gt;1.50&lt;/span&gt;&lt;/p&gt;\n&lt;p&gt;Balance: &lt;span data-testid="sender-balance"&gt;98.50&lt;/span&gt;&lt;/p&gt;\n'
+testid = 'amount'
+
+    def text_by_testid(html: str, testid: str) -&gt; str:
+        parser = _TextByTestId()
+        parser.feed(html)
+        if testid not in parser.texts:
+&gt;           raise LookupError(f"no element with data-testid='{testid}'")
+E           LookupError: no element with data-testid='amount'
+
+tests/test_receipt.py:32: LookupError</failure></testcase><testcase classname="tests.test_receipt" name="test_receipt_shows_the_fee" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_sender_balance_after_the_transfer" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_moves_the_amount_and_charges_the_fee_to_the_sender" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_needs_enough_money_for_the_fee_too" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_rejects_non_positive_amounts" time="0.000" /></testsuite></testsuites>
