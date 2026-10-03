@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -92,11 +93,75 @@ def test_two_builds_produce_byte_identical_files(tmp_path: Path) -> None:
         assert (first / name).read_bytes() == (second / name).read_bytes(), name
 
 
-def test_build_all_rebuilds_into_an_existing_cases_dir(tmp_path: Path) -> None:
-    build_all(tmp_path)
-    build_all(tmp_path)
+def _snapshot(root: Path) -> dict[str, bytes]:
+    files = (p for p in sorted(root.rglob("*")) if p.is_file())
+    return {str(p.relative_to(root)): p.read_bytes() for p in files}
 
-    assert (tmp_path / "product-bug-fee-rounding" / "label.yaml").is_file()
+
+def _seed_cases(cases: Path) -> dict[str, bytes]:
+    (cases / "old-case").mkdir(parents=True)
+    (cases / "old-case" / "label.yaml").write_text("category: unknown\n")
+    return _snapshot(cases)
+
+
+def test_build_all_rebuilds_the_whole_dataset_byte_for_byte(tmp_path: Path) -> None:
+    cases = tmp_path / "cases"
+
+    build_all(SCENARIOS, cases)
+    first = _snapshot(cases)
+    build_all(SCENARIOS, cases)
+
+    assert {name.split("/")[0] for name in first} == {p.name for p in SCENARIOS.iterdir()}
+    assert _snapshot(cases) == first
+
+
+def test_case_does_not_depend_on_the_host_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scenario = SCENARIOS / "environment-missing-ledger-url"
+    first = build_case(scenario, tmp_path / "first")
+
+    for name in set(os.environ) - {"PATH", "HOME"}:
+        monkeypatch.delenv(name)
+    monkeypatch.setenv("LAB_HOST_PROBE", "different")
+    second = build_case(scenario, tmp_path / "second")
+
+    assert (first / "junit.xml").read_bytes() == (second / "junit.xml").read_bytes()
+
+
+def test_rebuild_drops_cases_whose_scenario_is_gone(tmp_path: Path) -> None:
+    cases = tmp_path / "cases"
+    _seed_cases(cases)
+    scenarios = tmp_path / "scenarios"
+    shutil.copytree(SCENARIO, scenarios / SCENARIO.name)
+
+    build_all(scenarios, cases)
+
+    assert [p.name for p in cases.iterdir()] == ["product-bug-fee-rounding"]
+
+
+def test_files_next_to_the_scenarios_are_ignored(tmp_path: Path) -> None:
+    scenarios = tmp_path / "scenarios"
+    shutil.copytree(SCENARIO, scenarios / SCENARIO.name)
+    (scenarios / ".DS_Store").write_text("")
+
+    build_all(scenarios, tmp_path / "cases")
+
+    assert [p.name for p in (tmp_path / "cases").iterdir()] == ["product-bug-fee-rounding"]
+
+
+def test_failing_scenario_stops_the_build_and_leaves_the_cases_untouched(tmp_path: Path) -> None:
+    cases = tmp_path / "cases"
+    before = _seed_cases(cases)
+    scenarios = tmp_path / "scenarios"
+    shutil.copytree(SCENARIO, scenarios / "a-fine")
+    shutil.copytree(FIXTURES / "environment-patch-breaks", scenarios / "b-broken")
+
+    with pytest.raises(LabError, match="restoring the environment of b-broken"):
+        build_all(scenarios, cases)
+
+    assert _snapshot(cases) == before
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["cases", "scenarios"]
 
 
 def test_test_bug_case_is_built_from_a_patch_that_only_edits_tests(tmp_path: Path) -> None:

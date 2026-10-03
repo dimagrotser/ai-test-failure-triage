@@ -9,7 +9,7 @@ wallet/ledger.py:10: in record_transfer
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = environ({'CODEX_HOME': '/Users/dima/Library/Application Support/orca/codex-runtime-home/home', 'COLORTERM': 'truecolor...TEST_VERSION': '9.1.1', 'PYTEST_CURRENT_TEST': 'tests/test_ledger.py::test_transfer_is_recorded_in_the_ledger (call)'})
+self = environ({'PATH': '/usr/bin:/bin', 'PYTHONHASHSEED': '0', 'PYTHONDONTWRITEBYTECODE': '1', 'WALLET_RETRIES': '0', 'WALLE...TEST_VERSION': '9.1.1', 'PYTEST_CURRENT_TEST': 'tests/test_ledger.py::test_transfer_is_recorded_in_the_ledger (call)'})
 key = 'WALLET_LEDGER_URL'
 
 &gt;   ???
