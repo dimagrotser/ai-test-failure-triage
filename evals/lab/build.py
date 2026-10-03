@@ -106,8 +106,19 @@ def _normalize_junit(xml: str, tmp: Path) -> str:
     return re.sub(r' hostname="[^"]*"', ' hostname="lab"', xml)
 
 
-def build_all(cases_dir: Path = CASES) -> list[Path]:
-    return [build_case(scenario, cases_dir) for scenario in sorted(SCENARIOS.iterdir())]
+def build_all(scenarios_dir: Path = SCENARIOS, cases_dir: Path = CASES) -> None:
+    # Build next to the target and swap at the end, so a scenario that fails its check
+    # leaves the old dataset alone and a removed scenario does not leave its case behind.
+    cases_dir.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=".cases-", dir=cases_dir.parent))
+    try:
+        for scenario in sorted(scenarios_dir.iterdir()):
+            build_case(scenario, staging)
+        shutil.rmtree(cases_dir, ignore_errors=True)
+        staging.rename(cases_dir)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
 
 
 def _load_label(scenario_dir: Path) -> dict[str, str]:
@@ -232,4 +243,4 @@ if __name__ == "__main__":
     try:
         build_all()
     except LabError as exc:
-        sys.exit(f"lab: {exc}")
+        sys.exit(f"lab: {exc}\nlab: {CASES.relative_to(Path.cwd())} was left unchanged")
