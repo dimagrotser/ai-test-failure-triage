@@ -86,7 +86,7 @@ def _normalize_junit(xml: str, tmp: Path) -> str:
     # stub's port and the interpreter's stdlib path change between runs or machines and
     # would break byte-identical rebuilds. The rest of each message and traceback stays as
     # pytest wrote it.
-    for path in {str(tmp), str(tmp.resolve())}:
+    for path in sorted({str(tmp), str(tmp.resolve())}, key=len, reverse=True):
         xml = xml.replace(path, "/tmp/lab")
     xml = xml.replace(sysconfig.get_paths()["stdlib"], "/stdlib")
     xml = re.sub(r"127\.0\.0\.1(:|', )\d+", r"127.0.0.1\g<1>0", xml)

@@ -220,4 +220,5 @@ def test_environment_junit_with_ports_and_temp_paths_is_byte_identical(
     junit = (first / "junit.xml").read_text()
     assert junit == (second / "junit.xml").read_text()
     assert "/var/folders" not in junit
+    assert "/private" not in junit
     assert not re.search(r"127\.0\.0\.1(:|', )(?!0\b)\d+", junit)
