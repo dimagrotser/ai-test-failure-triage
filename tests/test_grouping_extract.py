@@ -45,11 +45,9 @@ def test_exception_type_comes_from_the_message_prefix(message: str, expected: st
 
 
 def test_exception_type_falls_back_to_the_last_exception_line_of_the_trace() -> None:
-    mixed = failed_attempt(FIXTURES / "mixed.xml", "test_migrations_apply")
-    mixed = attempt(mixed.message, mixed.stack_trace)
-    assert mixed.message is not None and mixed.message.startswith("failed on setup")
+    migration_error = failed_attempt(FIXTURES / "mixed.xml", "test_migrations_apply")
 
-    assert exception_type(mixed) == "sqlalchemy.exc.OperationalError"
+    assert exception_type(migration_error) == "sqlalchemy.exc.OperationalError"
 
 
 def test_exception_type_falls_back_to_the_pytest_location_line() -> None:

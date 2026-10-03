@@ -29,7 +29,7 @@ def version() -> None:
 def analyze(
     junit: Annotated[Path, typer.Option(help="JUnit XML report to analyze.")],
 ) -> None:
-    """Print the failed tests of a report."""
+    """Group the failed tests of a report by cause and print the groups."""
     try:
         results = [redact_result(r) for r in parse_junit(junit)]
     except ReportParseError as exc:

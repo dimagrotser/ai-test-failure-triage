@@ -39,7 +39,7 @@ def test_unrelated_failures_in_one_report_stay_in_separate_groups() -> None:
     ]
 
 
-def test_every_lab_case_with_one_failing_test_has_one_group() -> None:
+def test_every_failing_test_of_every_lab_case_lands_in_a_group() -> None:
     for junit in sorted(CASES.glob("*/junit.xml")):
         results = parse_junit(junit)
         failing = [r for r in results if r.status not in (Status.PASSED, Status.SKIPPED)]
