@@ -56,3 +56,23 @@ def test_analyze_unreadable_report_exits_two(name: str) -> None:
 
     assert result.exit_code == 2
     assert "cannot read" in result.output
+
+
+def test_analyze_shows_attempt_count_per_test() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "retries_surefire.xml")])
+
+    assert result.exit_code == 0
+    assert "com.acme.shop.OrderServiceTest::shouldChargeCard (3 attempts)" in result.output
+    mixed = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "mixed.xml")])
+    assert "tests.test_cart::test_total_with_discount (1 attempt)" in mixed.output
+
+
+def test_analyze_lists_passed_on_retry_with_last_failure_and_counts_it() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "retries_surefire.xml")])
+
+    assert "PASSED_ON_RETRY com.acme.shop.OrderServiceTest::shouldReserveStock (3 attempts)" in (
+        result.output
+    )
+    assert "Expected: 3 but was: 1" in result.output
+    assert "shouldListOrders" not in result.output
+    assert "1 failed, 1 passed on retry, 3 tests total" in result.output
