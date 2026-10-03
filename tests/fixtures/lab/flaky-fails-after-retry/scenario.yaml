@@ -1,0 +1,5 @@
+category: flaky
+source: injected
+kind: timing
+scenario: fails every time
+notes: The patch breaks the fee for good, so the retry fails too.

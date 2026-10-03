@@ -1,0 +1,6 @@
+category: flaky
+source: injected
+kind: randomness
+scenario: transfer ids are drawn from ten values
+notes: >-
+  new_transfer_id picks a digit with random.randrange(10) and the test expects three ids to differ. The lab seeds each Attempt with a fixed seed: the first Attempt draws a repeated id and fails, the second does not and passes. Without retries the test fails on every run.

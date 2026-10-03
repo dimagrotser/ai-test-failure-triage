@@ -1,0 +1,5 @@
+category: flaky
+source: injected
+kind: cosmic_rays
+scenario: unknown kind
+notes: The kind is not one the lab can create.

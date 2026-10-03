@@ -222,3 +222,89 @@ def test_environment_junit_with_ports_and_temp_paths_is_byte_identical(
     assert "/var/folders" not in junit
     assert "/private" not in junit
     assert not re.search(r"127\.0\.0\.1(:|', )(?!0\b)\d+", junit)
+
+
+FLAKY_CASES = [
+    (
+        "flaky-random-transfer-id",
+        "randomness",
+        "tests.test_ids::test_three_transfers_get_different_ids",
+    ),
+    (
+        "flaky-cold-settlement-clock",
+        "timing",
+        "tests.test_settlement::test_settlement_is_confirmed_before_the_deadline",
+    ),
+    (
+        "flaky-rates-cache-order",
+        "order_dependence",
+        "tests.test_rates::test_convert_to_euros",
+    ),
+]
+
+
+@pytest.mark.parametrize(("scenario", "kind", "test_id"), FLAKY_CASES)
+def test_flaky_case_fails_the_first_attempt_and_passes_on_retry(
+    tmp_path: Path, scenario: str, kind: str, test_id: str
+) -> None:
+    case = build_case(SCENARIOS / scenario, tmp_path)
+
+    results = {r.test_id: r for r in parse_junit(case / "junit.xml")}
+    assert results[test_id].status is Status.PASSED_ON_RETRY
+    assert [a.status for a in results[test_id].attempts] == [Status.FAILED, Status.PASSED]
+    assert {r.status for r in results.values()} <= {Status.PASSED, Status.PASSED_ON_RETRY}
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "flaky"
+    assert label["kind"] == kind
+
+
+@pytest.mark.parametrize(("scenario", "kind", "test_id"), FLAKY_CASES)
+def test_flaky_history_has_a_failed_and_a_passed_run_on_the_same_sha(
+    tmp_path: Path, scenario: str, kind: str, test_id: str
+) -> None:
+    case = build_case(SCENARIOS / scenario, tmp_path)
+
+    history = json.loads((case / "history.json").read_text())
+    entries = [e for e in history if e["test_id"] == test_id]
+    assert sorted((e["run_id"], e["status"]) for e in entries) == [
+        (1, "failed"),
+        (2, "passed_on_retry"),
+    ]
+    assert len({e["sha"] for e in entries}) == 1
+
+
+@pytest.mark.parametrize("scenario", [case[0] for case in FLAKY_CASES])
+def test_flaky_case_is_byte_identical_across_builds(tmp_path: Path, scenario: str) -> None:
+    first = build_case(SCENARIOS / scenario, tmp_path / "first")
+    second = build_case(SCENARIOS / scenario, tmp_path / "second")
+
+    for name in ["junit.xml", "diff.patch", "history.json", "label.yaml"]:
+        assert (first / name).read_bytes() == (second / name).read_bytes(), name
+
+
+@pytest.mark.parametrize(
+    ("fixture", "message"),
+    [
+        ("flaky-unknown-kind", "unsupported kind"),
+        ("flaky-never-fails", "does not fail"),
+        ("flaky-fails-after-retry", "does not pass on retry"),
+    ],
+)
+def test_flaky_scenario_that_cannot_be_trusted_is_rejected(
+    tmp_path: Path, fixture: str, message: str
+) -> None:
+    with pytest.raises(LabError, match=message):
+        build_case(FIXTURES / fixture, tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_order_dependent_test_passes_without_retries_only_after_the_failing_one(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "flaky-rates-cache-order", tmp_path)
+
+    history = json.loads((case / "history.json").read_text())
+    first_run = {e["test_id"]: e["status"] for e in history if e["run_id"] == 1}
+    assert first_run["tests.test_rates::test_convert_to_euros"] == "failed"
+    assert first_run["tests.test_rates::test_convert_again"] == "passed"

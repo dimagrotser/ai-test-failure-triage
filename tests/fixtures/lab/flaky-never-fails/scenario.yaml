@@ -1,0 +1,5 @@
+category: flaky
+source: injected
+kind: timing
+scenario: comment only change
+notes: The patch only adds a comment, so no test ever fails.
