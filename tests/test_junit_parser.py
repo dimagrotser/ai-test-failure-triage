@@ -67,3 +67,28 @@ def test_empty_report_has_no_results() -> None:
 def test_unreadable_report_raises(name: str) -> None:
     with pytest.raises(ReportParseError):
         parse_junit(FIXTURES / name)
+
+
+def test_failed_then_passed_testcase_becomes_one_passed_on_retry_result() -> None:
+    results = parse_junit(FIXTURES / "retries_repeated.xml")
+
+    [result] = [r for r in results if r.test_id == "tests.test_checkout::test_pay_with_card"]
+    assert result.status is Status.PASSED_ON_RETRY
+    assert [a.status for a in result.attempts] == [Status.FAILED, Status.PASSED]
+    assert result.attempts[0].message == "TimeoutError: payment gateway did not respond in 5s"
+
+
+def test_failed_twice_stays_failed_with_both_attempts() -> None:
+    results = parse_junit(FIXTURES / "retries_repeated.xml")
+
+    [result] = [r for r in results if r.test_id == "tests.test_checkout::test_apply_coupon"]
+    assert result.status is Status.FAILED
+    assert len(result.attempts) == 2
+
+
+def test_parametrized_variants_are_not_collapsed_as_retries() -> None:
+    results = parse_junit(FIXTURES / "retries_repeated.xml")
+
+    converts = [r for r in results if r.test_id == "tests.test_rates::test_convert"]
+    assert len(converts) == 3
+    assert all(len(r.attempts) == 1 for r in converts)

@@ -20,12 +20,22 @@ def parse_junit(path: Path) -> list[TestResult]:
         root = ET.parse(path).getroot()
     except (OSError, ET.ParseError) as exc:
         raise ReportParseError(f"cannot read {path}: {exc}") from exc
-    results: list[TestResult] = []
+    attempts_by_case: dict[tuple[str, str, str], list[Attempt]] = {}
     for case in root.iter("testcase"):
-        attempt = _parse_attempt(case)
-        test_id = _test_id(case)
-        results.append(TestResult(test_id=test_id, status=attempt.status, attempts=[attempt]))
-    return results
+        key = (case.get("file") or "", case.get("classname") or "", case.get("name") or "")
+        attempts_by_case.setdefault(key, []).append(_parse_attempt(case))
+    return [
+        TestResult(test_id=_test_id(*key), status=_final_status(attempts), attempts=attempts)
+        for key, attempts in attempts_by_case.items()
+    ]
+
+
+def _final_status(attempts: list[Attempt]) -> Status:
+    final = attempts[-1].status
+    earlier_failed = any(a.status in (Status.FAILED, Status.ERROR) for a in attempts[:-1])
+    if final is Status.PASSED and earlier_failed:
+        return Status.PASSED_ON_RETRY
+    return final
 
 
 def _parse_attempt(case: ET.Element) -> Attempt:
@@ -56,7 +66,5 @@ def _parse_duration(raw: str | None) -> float | None:
         return None
 
 
-def _test_id(case: ET.Element) -> str:
-    source = case.get("file") or case.get("classname") or ""
-    name = re.sub(r"\[.*\]$", "", case.get("name") or "")
-    return f"{source}::{name}"
+def _test_id(file: str, classname: str, name: str) -> str:
+    return f"{file or classname}::{re.sub(r'\[.*\]$', '', name)}"

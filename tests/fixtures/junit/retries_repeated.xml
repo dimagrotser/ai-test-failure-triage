@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="0" failures="3" skipped="0" tests="7" time="2.310">
+    <testcase classname="tests.test_checkout" name="test_pay_with_card" time="0.410">
+      <failure message="TimeoutError: payment gateway did not respond in 5s">tests/test_checkout.py:33: TimeoutError</failure>
+    </testcase>
+    <testcase classname="tests.test_checkout" name="test_pay_with_card" time="0.390"/>
+    <testcase classname="tests.test_checkout" name="test_apply_coupon" time="0.020">
+      <failure message="assert 80 == 85">tests/test_checkout.py:51: AssertionError</failure>
+    </testcase>
+    <testcase classname="tests.test_checkout" name="test_apply_coupon" time="0.021">
+      <failure message="assert 80 == 85">tests/test_checkout.py:51: AssertionError</failure>
+    </testcase>
+    <testcase classname="tests.test_rates" name="test_convert[usd]" time="0.003"/>
+    <testcase classname="tests.test_rates" name="test_convert[eur]" time="0.004"/>
+    <testcase classname="tests.test_rates" name="test_convert[gbp]" time="0.003"/>
+  </testsuite>
+</testsuites>
