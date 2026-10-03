@@ -26,6 +26,17 @@ _Avoid_: Flaky (that is a classification, not a status)
 TestResults with the same normalized error signature. The unit that gets classified and reported.
 _Avoid_: Cluster, bucket
 
+**Signature**:
+Exact-match key of a Failure group: exception type, normalized first message line and the top frame from project code (file and function, no line number).
+_Avoid_: Fingerprint, hash
+
+**Signal**:
+A named, deterministic observation about a Failure group (for example `passed_on_retry`, `network_error`, `touches_changed_file`) with a quote as proof. Has no weight.
+_Avoid_: Feature, flag
+
+**Heuristic verdict**:
+The Category that fixed rules derive from Signals, or none. Passed to the LLM, which may disagree with a stated reason.
+
 **Category**:
 One of `product_bug`, `test_bug`, `flaky`, `environment`, `unknown`. Each Failure group gets exactly one.
 _Avoid_: Type, label (label is the ground truth in the failure lab)
@@ -43,5 +54,6 @@ Test statuses from recent runs on main, read from the artifact that the action u
 
 **Lab case**:
 One reproducible failure in `evals/cases/<id>/` with a ground-truth label.
+
 **Label**:
 The ground-truth Category of a Lab case, with its source (injected, mutation, real).
