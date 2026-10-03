@@ -1,0 +1,4 @@
+category: product_bug
+source: injected
+scenario: comment only change
+notes: The patch only adds a comment, so the tests keep passing.
