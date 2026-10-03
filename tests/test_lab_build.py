@@ -225,9 +225,7 @@ def test_deposit_case_fails_every_cent_deposit_the_same_way(tmp_path: Path) -> N
         "tests.test_balance::test_deposit_increases_the_balance",
         "tests.test_balance::test_deposit_keeps_every_cent",
     }
-    assert all(
-        "unsupported operand" in (r.attempts[0].message or "") for r in failed
-    )
+    assert all("unsupported operand" in (r.attempts[0].message or "") for r in failed)
 
 
 def test_junit_with_object_reprs_is_still_byte_identical_across_builds(tmp_path: Path) -> None:
