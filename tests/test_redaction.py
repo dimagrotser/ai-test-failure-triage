@@ -58,7 +58,7 @@ def test_leaves_ordinary_text_alone(text: str) -> None:
         ("Set-Cookie: sid=1; HttpOnly", "Set-Cookie: <SECRET>"),
         (
             "headers={'Authorization': 'Bearer abc', 'Accept': 'json'}",
-            "headers={'Authorization': <SECRET>, 'Accept': 'json'}",
+            "headers={'Authorization': '<SECRET>', 'Accept': 'json'}",
         ),
         (
             "connect postgres://app:hunter2@db.internal:5432/wallet",
@@ -71,6 +71,26 @@ def test_leaves_ordinary_text_alone(text: str) -> None:
     ],
 )
 def test_redacts_tokens_headers_and_url_passwords(text: str, expected: str) -> None:
+    assert redact(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "curl -H 'Authorization: Bearer abc123' http://x",
+            "curl -H 'Authorization: <SECRET>' http://x",
+        ),
+        ('{"Authorization": "Bearer abc"}', '{"Authorization": "<SECRET>"}'),
+        ("retry with Bearer abcdef1234567890 now", "retry with Bearer <SECRET> now"),
+        ("npm_" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8", "<TOKEN>"),
+        ("glpat-" + "a1B2c3D4e5F6g7H8i9J0", "<TOKEN>"),
+        ("AIza" + "SyA1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q", "<TOKEN>"),
+        ("xapp-1-A0123-456789-abcdef0123", "<TOKEN>"),
+        ("ghs_" + "a1B2c3D4e5F6g7H8i9J0", "<TOKEN>"),
+    ],
+)
+def test_redacts_more_token_shapes(text: str, expected: str) -> None:
     assert redact(text) == expected
 
 
@@ -87,16 +107,46 @@ def test_url_without_password_is_kept() -> None:
         ("STRIPE_API_KEY=sk_live_abc123", "STRIPE_API_KEY=<SECRET>"),
         ("AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG", "AWS_SECRET_ACCESS_KEY=<SECRET>"),
         ("GITHUB_TOKEN=notaprefixedvalue", "GITHUB_TOKEN=<SECRET>"),
-        ("export SERVICE_SECRET='two words'", "export SERVICE_SECRET=<SECRET>"),
+        ("export SERVICE_SECRET='two words'", "export SERVICE_SECRET='<SECRET>'"),
         ("password: s3cret!", "password: <SECRET>"),
-        ('{"password": "s3cret", "user": "bob"}', '{"password": <SECRET>, "user": "bob"}'),
-        ("env={'APP_TOKEN': 'abc', 'MODE': 'test'}", "env={'APP_TOKEN': <SECRET>, 'MODE': 'test'}"),
+        ('{"password": "s3cret", "user": "bob"}', '{"password": "<SECRET>", "user": "bob"}'),
+        (
+            "env={'APP_TOKEN': 'abc', 'MODE': 'test'}",
+            "env={'APP_TOKEN': '<SECRET>', 'MODE': 'test'}",
+        ),
         ("api_key=abc&page=2", "api_key=<SECRET>&page=2"),
         ("db_password = x", "db_password = <SECRET>"),
     ],
 )
 def test_removes_env_values_by_key_name(text: str, expected: str) -> None:
     assert redact(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("refreshToken=zzz", "refreshToken=<SECRET>"),
+        ("accessToken: qqq", "accessToken: <SECRET>"),
+        ("clientSecret=abc", "clientSecret=<SECRET>"),
+        (r"password='it\'s' tail", "password='<SECRET>' tail"),
+    ],
+)
+def test_removes_camel_case_and_escaped_values(text: str, expected: str) -> None:
+    assert redact(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "assert token == 'abc'",
+        "token = fetch()",
+        "secret = load_secret(name)",
+        "primary_key=5",
+        "KeyError: 'token'",
+    ],
+)
+def test_keeps_code_and_assertions_that_mention_secret_words(text: str) -> None:
+    assert redact(text) == text
 
 
 def test_typed_placeholder_is_not_overwritten_by_key_rule() -> None:
@@ -145,3 +195,18 @@ def test_redact_result_cleans_every_text_field_of_every_attempt() -> None:
     assert first.duration == 1.5
     assert second == Attempt(status=Status.PASSED)
     assert result.attempts[0].message == "mail jane@example.com"
+
+
+def test_every_text_field_of_attempt_is_redacted() -> None:
+    # Fails when Attempt gains a str field that redact_result does not know about.
+    text_fields = [
+        name for name, info in Attempt.model_fields.items() if info.annotation == (str | None)
+    ]
+    fields = {name: "jane@example.com" for name in text_fields}
+    attempt = Attempt.model_validate({"status": Status.FAILED, **fields})
+    result = TestResult(test_id="t.py::a", status=Status.FAILED, attempts=[attempt])
+
+    redacted = redact_result(result).attempts[0]
+
+    assert text_fields
+    assert all(getattr(redacted, name) == "<EMAIL>" for name in text_fields)

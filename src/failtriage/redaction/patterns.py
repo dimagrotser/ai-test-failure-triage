@@ -8,21 +8,47 @@ PRIVATE_KEY = re.compile(
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----(?:.*?-----END [A-Z ]*PRIVATE KEY-----|.*\Z)", re.DOTALL
 )
 JWT = re.compile(r"\beyJ[\w-]+\.[\w-]+\.[\w-]*")
-# Header values are removed whole: a Cookie holds several secrets and Basic auth has no prefix.
+
+
+def _mask_value(match: re.Match[str]) -> str:
+    quote = match.group("quote") or ""
+    return f"{match.group('head')}{quote}<SECRET>{quote}"
+
+
+def _mask_header(match: re.Match[str]) -> str:
+    quote = match.group("quote") or ""
+    return f"{match.group('head')}{match.group('sep')}{quote}<SECRET>{quote}"
+
+
+# Quoted values keep their quotes so JSON and shell commands stay readable. An unquoted value
+# runs to the end of the line, or to the next quote when it sits inside a quoted command.
 AUTH_HEADER = re.compile(
-    r"""((?:proxy-)?authorization|set-cookie|cookie)(['"]?\s*[:=]\s*)(?:(['"]).*?\3|[^\r\n]+)""",
+    r"""(?P<head>(?:proxy-)?authorization|set-cookie|cookie)(?P<sep>['"]?\s*[:=]\s*)"""
+    r"""(?:(?P<quote>['"])(?:\\.|(?!(?P=quote)).)*(?P=quote)|[^\r\n'"]+)""",
     re.IGNORECASE,
 )
+BEARER = re.compile(r"\b(Bearer\s+)[\w.~+/=-]{8,}", re.IGNORECASE)
 TOKEN = re.compile(
-    r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|(?:AKIA|ASIA)[A-Z0-9]{16}"
-    r"|xox[abprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{20,})"
+    r"\b(?:gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{20,}|(?:AKIA|ASIA)[A-Z0-9]{16}"
+    r"|xox[abprs]-[A-Za-z0-9-]{10,}|xapp-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{20,}"
+    r"|npm_[A-Za-z0-9]{30,}|glpat-[\w-]{20,}|AIza[\w-]{35})"
 )
 URL_PASSWORD = re.compile(r"(\b[a-z][a-z0-9+.-]*://[^\s/:@]*:)[^\s/]+(@)", re.IGNORECASE)
+
 # Env dumps, query strings and dict reprs: the value goes, the key stays so the text still reads.
-# Values that are already a typed placeholder are kept, which also makes the rule idempotent.
-SECRET_KEY_VALUE = re.compile(
-    r"""(?<!\w)([\w.-]*(?:_KEY|_TOKEN|_SECRET|_PASSWORD)|password|passwd|secret|token|api[_-]?key)"""
-    r"""(['"]?\s*[:=]\s*)(?!<[A-Z_]+>)(?:(['"]).*?\3|[^\s,;&}\])]+)""",
+# Values that are already a typed placeholder are kept, which also makes the rules idempotent.
+_VALUE = r"""(?!<[A-Z_]+>)(?:(?P<quote>['"])(?:\\.|(?!(?P=quote)).)*(?P=quote)|[^\s,;&}\])]+)"""
+# *_KEY, *_TOKEN and friends may have spaces around the operator, as in `db_password = x`.
+SUFFIXED_SECRET = re.compile(
+    r"""(?<!\w)(?!(?:primary|foreign)_key\b)(?P<head>[\w.-]*_(?:KEY|TOKEN|SECRET|PASSWORD)"""
+    r"""['"]?\s*[:=]\s*)""" + _VALUE,
+    re.IGNORECASE,
+)
+# Bare words and camelCase names are also common in code, so only the tight `name=value` and
+# `name: value` forms count. `token = fetch()` and `assert token == 'x'` are left alone.
+LOOSE_SECRET = re.compile(
+    r"""(?<!\w)(?P<head>(?:password|passwd|secret|token|api[_-]?key|\w*(?-i:[a-z](?:Key|Token|Secret|Password)))"""
+    r"""['"]?[:=]\s*)(?![=~])""" + _VALUE,
     re.IGNORECASE,
 )
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
@@ -48,10 +74,12 @@ def _card(match: re.Match[str]) -> str:
 RULES: list[tuple[re.Pattern[str], Replacement]] = [
     (PRIVATE_KEY, "<PRIVATE_KEY>"),
     (JWT, "<JWT>"),
-    (AUTH_HEADER, r"\1\2<SECRET>"),
+    (AUTH_HEADER, _mask_header),
+    (BEARER, r"\1<SECRET>"),
     (TOKEN, "<TOKEN>"),
     (URL_PASSWORD, r"\1<SECRET>\2"),
-    (SECRET_KEY_VALUE, r"\1\2<SECRET>"),
+    (SUFFIXED_SECRET, _mask_value),
+    (LOOSE_SECRET, _mask_value),
     (EMAIL, "<EMAIL>"),
     (CARD, _card),
 ]
