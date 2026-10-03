@@ -325,3 +325,56 @@ def test_unknown_scenario_that_hides_a_provable_cause_is_rejected(
         build_case(FIXTURES / fixture, tmp_path)
 
     assert list(tmp_path.iterdir()) == []
+
+
+UNKNOWN_CASES = [
+    (
+        "unknown-dormant-new-account",
+        "tests.test_dormant::test_a_new_account_is_not_dormant",
+        "assert not True",
+    ),
+    (
+        "unknown-amount-with-comma",
+        "tests.test_parse_amount::test_amount_with_a_thousands_separator",
+        "InvalidOperation",
+    ),
+    (
+        "unknown-limit-lowered",
+        "tests.test_limits::test_transfer_up_to_the_limit_is_allowed",
+        "LimitExceeded",
+    ),
+]
+
+
+@pytest.mark.parametrize(("scenario", "test_id", "marker"), UNKNOWN_CASES)
+def test_unknown_case_fails_without_passing_on_retry(
+    tmp_path: Path, scenario: str, test_id: str, marker: str
+) -> None:
+    case = build_case(SCENARIOS / scenario, tmp_path)
+
+    results = parse_junit(case / "junit.xml")
+    [failed] = [r for r in results if r.status is Status.FAILED]
+    assert failed.test_id == test_id
+    assert failed.attempts[0].message is not None
+    assert marker in failed.attempts[0].message
+    assert {r.status for r in results} == {Status.PASSED, Status.FAILED}
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "unknown"
+    assert len(label["notes"]) > 100
+
+
+def test_only_the_case_without_history_has_an_empty_history(tmp_path: Path) -> None:
+    for scenario, _, _ in UNKNOWN_CASES:
+        case = build_case(SCENARIOS / scenario, tmp_path)
+        history = json.loads((case / "history.json").read_text())
+
+        assert (history == []) is (scenario == "unknown-limit-lowered")
+
+
+@pytest.mark.parametrize("scenario", [case[0] for case in UNKNOWN_CASES])
+def test_unknown_case_is_byte_identical_across_builds(tmp_path: Path, scenario: str) -> None:
+    first = build_case(SCENARIOS / scenario, tmp_path / "first")
+    second = build_case(SCENARIOS / scenario, tmp_path / "second")
+
+    for name in ["junit.xml", "diff.patch", "history.json", "label.yaml"]:
+        assert (first / name).read_bytes() == (second / name).read_bytes(), name

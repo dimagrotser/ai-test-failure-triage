@@ -1,0 +1,10 @@
+category: unknown
+source: injected
+scenario: amount with a thousands separator
+notes: >-
+  parse_amount passes the text straight to Decimal, which raises InvalidOperation from
+  C code with ConversionSyntax and no useful message. The only project frame is the line
+  that calls Decimal. Whether the wallet should accept "1,000.00" is a product decision
+  that appears nowhere in the code or the diff. The plain amount test passes, so the
+  parser works for input without a comma. The error alone cannot say whether the parser
+  or the test is wrong.
