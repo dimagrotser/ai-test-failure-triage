@@ -1,0 +1,26 @@
+diff --git a/wallet/amounts.py b/wallet/amounts.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/amounts.py
+@@ -0,0 +1,5 @@
++from decimal import Decimal
++
++
++def parse_amount(text: str) -> Decimal:
++    return Decimal(text)
+diff --git a/tests/test_parse_amount.py b/tests/test_parse_amount.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_parse_amount.py
+@@ -0,0 +1,11 @@
++from decimal import Decimal
++
++from wallet.amounts import parse_amount
++
++
++def test_plain_amount() -> None:
++    assert parse_amount("1000.00") == Decimal("1000.00")
++
++
++def test_amount_with_a_thousands_separator() -> None:
++    assert parse_amount("1,000.00") == Decimal("1000.00")

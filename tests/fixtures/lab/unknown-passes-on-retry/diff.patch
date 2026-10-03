@@ -1,0 +1,37 @@
+diff --git a/wallet/rates.py b/wallet/rates.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/rates.py
+@@ -0,0 +1,16 @@
++from decimal import Decimal
++
++RATES = {"EUR": Decimal("0.92")}
++
++_cache: dict[str, Decimal] = {}
++
++
++class RatesNotLoaded(Exception):
++    pass
++
++
++def convert(amount: Decimal, currency: str) -> Decimal:
++    if currency not in _cache:
++        _cache[currency] = RATES[currency]
++        raise RatesNotLoaded(currency)
++    return amount * _cache[currency]
+diff --git a/tests/test_rates.py b/tests/test_rates.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_rates.py
+@@ -0,0 +1,11 @@
++from decimal import Decimal
++
++from wallet.rates import convert
++
++
++def test_convert_to_euros() -> None:
++    assert convert(Decimal("100.00"), "EUR") == Decimal("92.00")
++
++
++def test_convert_again() -> None:
++    assert convert(Decimal("10.00"), "EUR") == Decimal("9.20")

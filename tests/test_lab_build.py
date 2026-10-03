@@ -308,3 +308,82 @@ def test_order_dependent_test_passes_without_retries_only_after_the_failing_one(
     first_run = {e["test_id"]: e["status"] for e in history if e["run_id"] == 1}
     assert first_run["tests.test_rates::test_convert_to_euros"] == "failed"
     assert first_run["tests.test_rates::test_convert_again"] == "passed"
+
+
+@pytest.mark.parametrize(
+    ("fixture", "message"),
+    [
+        ("unknown-passes-on-retry", "passes on retry"),
+        ("unknown-never-fails", "does not fail"),
+        ("unknown-bad-history", "unsupported history"),
+    ],
+)
+def test_unknown_scenario_that_hides_a_provable_cause_is_rejected(
+    tmp_path: Path, fixture: str, message: str
+) -> None:
+    with pytest.raises(LabError, match=message):
+        build_case(FIXTURES / fixture, tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+UNKNOWN_CASES = [
+    (
+        "unknown-dormant-new-account",
+        "tests.test_dormant::test_a_new_account_is_not_dormant",
+        "assert not True",
+    ),
+    (
+        "unknown-amount-with-comma",
+        "tests.test_parse_amount::test_amount_with_a_thousands_separator",
+        "InvalidOperation",
+    ),
+    (
+        "unknown-interest-rate-mismatch",
+        "tests.test_interest::test_monthly_interest_on_a_thousand",
+        "Decimal('2.50')",
+    ),
+]
+
+
+@pytest.mark.parametrize(("scenario", "test_id", "marker"), UNKNOWN_CASES)
+def test_unknown_case_fails_without_passing_on_retry(
+    tmp_path: Path, scenario: str, test_id: str, marker: str
+) -> None:
+    case = build_case(SCENARIOS / scenario, tmp_path)
+
+    results = parse_junit(case / "junit.xml")
+    [failed] = [r for r in results if r.status is Status.FAILED]
+    assert failed.test_id == test_id
+    assert failed.attempts[0].message is not None
+    assert marker in failed.attempts[0].message
+    assert {r.status for r in results} == {Status.PASSED, Status.FAILED}
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "unknown"
+    assert len(label["notes"]) > 100
+
+
+@pytest.mark.parametrize(
+    ("scenario", "has_history"),
+    [
+        ("unknown-dormant-new-account", True),
+        ("unknown-amount-with-comma", True),
+        ("unknown-interest-rate-mismatch", False),
+    ],
+)
+def test_history_is_empty_only_when_the_scenario_says_none(
+    tmp_path: Path, scenario: str, has_history: bool
+) -> None:
+    case = build_case(SCENARIOS / scenario, tmp_path)
+
+    history = json.loads((case / "history.json").read_text())
+    assert bool(history) is has_history
+
+
+@pytest.mark.parametrize("scenario", [case[0] for case in UNKNOWN_CASES])
+def test_unknown_case_is_byte_identical_across_builds(tmp_path: Path, scenario: str) -> None:
+    first = build_case(SCENARIOS / scenario, tmp_path / "first")
+    second = build_case(SCENARIOS / scenario, tmp_path / "second")
+
+    for name in ["junit.xml", "diff.patch", "history.json", "label.yaml"]:
+        assert (first / name).read_bytes() == (second / name).read_bytes(), name

@@ -1,0 +1,24 @@
+diff --git a/tests/test_interest.py b/tests/test_interest.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_interest.py
+@@ -0,0 +1,7 @@
++from decimal import Decimal
++
++from wallet.interest import monthly_interest
++
++
++def test_monthly_interest_on_a_thousand() -> None:
++    assert monthly_interest(Decimal("1000.00")) == Decimal("2.00")
+diff --git a/wallet/interest.py b/wallet/interest.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/interest.py
+@@ -0,0 +1,7 @@
++from decimal import ROUND_HALF_UP, Decimal
++
++MONTHLY_RATE = Decimal("0.0025")
++
++
++def monthly_interest(balance: Decimal) -> Decimal:
++    return (balance * MONTHLY_RATE).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)

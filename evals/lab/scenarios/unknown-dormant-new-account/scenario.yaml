@@ -1,0 +1,10 @@
+category: unknown
+source: injected
+scenario: dormant check on a brand new account
+notes: >-
+  The patch adds Account.is_dormant, which treats a zero balance as dormant, and a test
+  that expects a new account not to be. The log only says that assert not True failed.
+  Nothing in the repository says whether a new account counts as dormant, so the code
+  and the test are equally likely to be wrong. The failure is deterministic and no
+  history exists for the new test, so there is no proof of a product bug, a test bug or
+  anything else.

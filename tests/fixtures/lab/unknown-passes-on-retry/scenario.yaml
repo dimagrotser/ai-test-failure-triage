@@ -1,0 +1,4 @@
+category: unknown
+source: injected
+scenario: fails once, then passes
+notes: The first attempt fails and the retry passes, which is evidence of flakiness and not an unknown case.

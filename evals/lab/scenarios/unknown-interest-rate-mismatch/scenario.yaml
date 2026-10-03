@@ -1,0 +1,12 @@
+category: unknown
+source: injected
+history: none
+scenario: interest rate in the code and in the test differ, no history
+notes: >-
+  The patch adds monthly_interest with a rate of 0.25 percent and a test that expects 2.00
+  on a balance of 1000.00, which is 0.2 percent. The failure reads Decimal('2.50') ==
+  Decimal('2.00'). Nothing else in the repository mentions an interest rate, so there is
+  no second source to say which number is right, and the diff gives no hint of the
+  intended rate. Both the function and the test are new and no history exists for either,
+  so there is no earlier run to compare with. The report cannot tell a product bug from
+  a test bug.

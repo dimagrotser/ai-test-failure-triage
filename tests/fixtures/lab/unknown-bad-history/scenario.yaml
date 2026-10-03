@@ -1,0 +1,5 @@
+category: unknown
+source: injected
+history: partial
+scenario: history is neither none nor recorded
+notes: Only history none is supported.
