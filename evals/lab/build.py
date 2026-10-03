@@ -155,7 +155,9 @@ def _check_flaky(app: Path, junit: Path, name: str) -> list[dict[str, object]]:
     first = junit.with_name("no-retries.xml")
     if _run_pytest(app, first).returncode != 1:
         raise LabError(f"scenario {name} does not fail the wallet tests")
-    failed = {r.test_id for r in parse_junit(first) if r.status is Status.FAILED}
+    failed = {r.test_id for r in parse_junit(first) if r.status in (Status.FAILED, Status.ERROR)}
+    if not failed:
+        raise LabError(f"scenario {name} does not fail the wallet tests")
 
     if _run_pytest(app, junit, retries=1).returncode != 0:
         raise LabError(f"scenario {name} does not pass on retry")
