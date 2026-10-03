@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="1" failures="2" skipped="1" tests="6" time="1.482" timestamp="2026-10-03T11:42:07.113204" hostname="ci-runner-7">
+    <testcase classname="tests.test_cart" name="test_total_with_discount" time="0.012">
+      <failure message="assert 90 == 95">def test_total_with_discount():
+        cart = Cart(items=[Item("book", 100)])
+        cart.apply_discount(10)
+&gt;       assert cart.total() == 95
+E       assert 90 == 95
+E        +  where 90 = &lt;bound method Cart.total of &lt;Cart items=1&gt;&gt;()
+
+tests/test_cart.py:21: AssertionError</failure>
+      <system-out>cart created with 1 item</system-out>
+      <system-err>WARNING discount rounding is deprecated</system-err>
+    </testcase>
+    <testcase classname="tests.test_cart" name="test_empty_cart" time="0.001"/>
+    <testcase classname="tests.test_api" name="test_fetch_profile[admin]" file="tests/test_api.py" time="0.340">
+      <failure message="requests.exceptions.ConnectionError: HTTPConnectionPool(host='staging.internal', port=8080): Max retries exceeded">self = &lt;urllib3.connection.HTTPConnection object at 0x7f3a1c2b5d90&gt;
+
+    def test_fetch_profile(role):
+&gt;       resp = client.get("/profile", params={"role": role})
+E       requests.exceptions.ConnectionError: HTTPConnectionPool(host='staging.internal', port=8080): Max retries exceeded
+
+tests/test_api.py:44: ConnectionError</failure>
+    </testcase>
+    <testcase classname="tests.test_db" name="test_migrations_apply" time="0.205">
+      <error message="failed on setup with &quot;sqlalchemy.exc.OperationalError: connection refused&quot;">tests/conftest.py:12: in db
+    engine.connect()
+E   sqlalchemy.exc.OperationalError: connection refused</error>
+    </testcase>
+    <testcase classname="tests.test_db" name="test_legacy_import" time="0.000">
+      <skipped type="pytest.skip" message="legacy importer removed">tests/test_db.py:60: legacy importer removed</skipped>
+    </testcase>
+    <testcase classname="tests.test_cart" name="test_add_item" time="0.004"/>
+  </testsuite>
+</testsuites>
