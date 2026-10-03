@@ -1,4 +1,4 @@
-category: test_bug
+category: product_bug
 source: injected
 scenario: expectation edited in the test
 notes: The patch edits a test, which a product_bug case must never do.

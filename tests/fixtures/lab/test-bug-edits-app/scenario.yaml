@@ -1,0 +1,4 @@
+category: test_bug
+source: injected
+scenario: app code edited in a test_bug case
+notes: A test_bug case must leave the app code alone.

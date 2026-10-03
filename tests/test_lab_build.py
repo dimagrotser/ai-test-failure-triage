@@ -14,7 +14,8 @@ from failtriage.parsers.junit import parse_junit
 ROOT = Path(__file__).parent.parent
 WALLET = ROOT / "evals" / "lab" / "wallet"
 FIXTURES = ROOT / "tests" / "fixtures" / "lab"
-SCENARIO = ROOT / "evals" / "lab" / "scenarios" / "product-bug-fee-rounding"
+SCENARIOS = ROOT / "evals" / "lab" / "scenarios"
+SCENARIO = SCENARIOS / "product-bug-fee-rounding"
 
 
 def test_wallet_tests_pass_without_any_scenario() -> None:
@@ -92,3 +93,35 @@ def test_build_all_rebuilds_into_an_existing_cases_dir(tmp_path: Path) -> None:
     build_all(tmp_path)
 
     assert (tmp_path / "product-bug-fee-rounding" / "label.yaml").is_file()
+
+
+def test_test_bug_case_is_built_from_a_patch_that_only_edits_tests(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "test-bug-expected-value", tmp_path)
+
+    failed = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert [r.test_id for r in failed] == [
+        "tests.test_transfers::test_transfer_moves_the_amount_and_charges_the_fee_to_the_sender"
+    ]
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "test_bug"
+    assert "98.50" in label["notes"]
+
+
+def test_test_bug_scenario_that_edits_app_code_is_rejected(tmp_path: Path) -> None:
+    with pytest.raises(LabError, match="may only change tests/"):
+        build_case(FIXTURES / "test-bug-edits-app", tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("fixture", "message"),
+    [("unknown-category", "unsupported category"), ("no-notes", "no notes")],
+)
+def test_scenario_with_an_incomplete_or_unknown_label_is_rejected(
+    tmp_path: Path, fixture: str, message: str
+) -> None:
+    with pytest.raises(LabError, match=message):
+        build_case(FIXTURES / fixture, tmp_path)
+
+    assert list(tmp_path.iterdir()) == []

@@ -8,12 +8,23 @@ import sys
 import tempfile
 from pathlib import Path
 
+import yaml
+
 from failtriage.parsers.junit import parse_junit
 
 LAB = Path(__file__).parent
 WALLET = LAB / "wallet"
 SCENARIOS = LAB / "scenarios"
 CASES = LAB.parent / "cases"
+
+# Per category: the directory a patch may change and the one that must stay as it was.
+# That is what makes the counterfactual meaningful: a product_bug is fixed in the app
+# alone, a test_bug in the tests alone.
+SCOPES = {
+    "product_bug": ("wallet", "tests"),
+    "test_bug": ("tests", "wallet"),
+}
+LABEL_FIELDS = ("category", "source", "scenario", "notes")
 
 
 class LabError(Exception):
@@ -23,11 +34,13 @@ class LabError(Exception):
 def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
     scenario_dir = scenario_dir.resolve()
     patch = scenario_dir / "diff.patch"
-    _reject_test_edits(patch)
+    label = _load_label(scenario_dir)
+    editable, protected = SCOPES[label["category"]]
+    _check_patch_scope(patch, label["category"], editable)
     with tempfile.TemporaryDirectory() as tmp:
         app = Path(tmp) / "app"
         shutil.copytree(WALLET, app, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
-        tests_sha = _tree_sha(app / "tests")
+        protected_sha = _tree_sha(app / protected)
 
         history = _run_baseline(app, Path(tmp) / "baseline.xml")
         if any(entry["status"] != "passed" for entry in history):
@@ -43,8 +56,8 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
             raise LabError(
                 f"reverting the patch of {scenario_dir.name} does not turn the run green"
             )
-        if _tree_sha(app / "tests") != tests_sha:
-            raise LabError(f"scenario {scenario_dir.name} changed the tests")
+        if _tree_sha(app / protected) != protected_sha:
+            raise LabError(f"scenario {scenario_dir.name} changed {protected}/")
 
         case = cases_dir / scenario_dir.name
         shutil.rmtree(case, ignore_errors=True)
@@ -68,10 +81,25 @@ def build_all(cases_dir: Path = CASES) -> list[Path]:
     return [build_case(scenario, cases_dir) for scenario in sorted(SCENARIOS.iterdir())]
 
 
-def _reject_test_edits(patch: Path) -> None:
+def _load_label(scenario_dir: Path) -> dict[str, str]:
+    label = yaml.safe_load((scenario_dir / "scenario.yaml").read_text())
+    for field in LABEL_FIELDS:
+        if not isinstance(label.get(field), str) or not label[field].strip():
+            raise LabError(f"scenario {scenario_dir.name} has no {field} in scenario.yaml")
+    if label["category"] not in SCOPES:
+        raise LabError(f"scenario {scenario_dir.name} has unsupported category {label['category']}")
+    return dict(label)
+
+
+def _check_patch_scope(patch: Path, category: str, editable: str) -> None:
     for line in patch.read_text().splitlines():
-        if line.startswith(("--- a/tests/", "+++ b/tests/")):
-            raise LabError(f"the patch of {patch.parent.name} edits files under tests/")
+        if line.startswith(("--- a/", "+++ b/")):
+            path = line[6:]
+            if not path.startswith(f"{editable}/"):
+                raise LabError(
+                    f"the patch of {patch.parent.name} edits {path}, "
+                    f"but a {category} case may only change {editable}/"
+                )
 
 
 def _git_apply(app: Path, patch: Path, reverse: bool = False) -> None:

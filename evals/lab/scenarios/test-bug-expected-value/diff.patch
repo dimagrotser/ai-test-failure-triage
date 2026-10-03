@@ -1,0 +1,10 @@
+diff --git a/tests/test_transfers.py b/tests/test_transfers.py
+--- a/tests/test_transfers.py
++++ b/tests/test_transfers.py
+@@ -12,5 +12,5 @@
+ 
+     transfer(source, target, Decimal("100.00"))
+ 
+-    assert source.balance == Decimal("98.50")
++    assert source.balance == Decimal("98.00")
+     assert target.balance == Decimal("110.00")
