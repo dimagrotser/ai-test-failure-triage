@@ -76,3 +76,13 @@ def test_analyze_lists_passed_on_retry_with_last_failure_and_counts_it() -> None
     assert "Expected: 3 but was: 1" in result.output
     assert "shouldListOrders" not in result.output
     assert "1 failed, 1 passed on retry, 3 tests total" in result.output
+
+
+def test_analyze_prints_redacted_text_only() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "secrets.xml")])
+
+    assert result.exit_code == 0
+    assert "<CARD>" in result.output
+    assert "<EMAIL>" in result.output
+    for secret in ["4111", "jane.doe", "hunter2", "abc.def.ghi", "ghp_"]:
+        assert secret not in result.output
