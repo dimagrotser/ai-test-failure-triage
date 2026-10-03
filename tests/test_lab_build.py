@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 import sys
@@ -8,6 +9,7 @@ import pytest
 import yaml
 
 from evals.lab.build import LabError, build_all, build_case
+from evals.lab.environment import lab_environment
 from failtriage.models import Status
 from failtriage.parsers.junit import parse_junit
 
@@ -18,12 +20,14 @@ SCENARIOS = ROOT / "evals" / "lab" / "scenarios"
 SCENARIO = SCENARIOS / "product-bug-fee-rounding"
 
 
-def test_wallet_tests_pass_without_any_scenario() -> None:
-    result = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(WALLET)],
-        capture_output=True,
-        text=True,
-    )
+def test_wallet_tests_pass_without_any_scenario(tmp_path: Path) -> None:
+    with lab_environment(tmp_path, None) as env:
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(WALLET)],
+            capture_output=True,
+            text=True,
+            env={**os.environ, **env},
+        )
 
     assert result.returncode == 0, result.stdout
 
