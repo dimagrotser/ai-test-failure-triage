@@ -1,6 +1,5 @@
 import hashlib
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -35,7 +34,6 @@ SCOPES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "unknown": (("wallet", "tests"), ()),
 }
 KINDS = ("timing", "randomness", "order_dependence")
-ENVIRONMENT_VARIABLES = ("WALLET_LEDGER_URL", "WALLET_STATEMENTS_DIR")
 LABEL_FIELDS = ("category", "source", "scenario", "notes")
 
 
@@ -212,8 +210,10 @@ def _tree_sha(app: Path) -> str:
 def _run_pytest(
     app: Path, junit: Path, condition: str | None = None, retries: int = 0
 ) -> subprocess.CompletedProcess[str]:
-    base = {k: v for k, v in os.environ.items() if k not in ENVIRONMENT_VARIABLES}
-    base |= {
+    # A fixed environment, not the host's: pytest prints os.environ in the message of a
+    # missing variable, which would put the host's variables into the case.
+    base = {
+        "PATH": "/usr/bin:/bin",
         "PYTHONHASHSEED": "0",
         "PYTHONDONTWRITEBYTECODE": "1",
         "WALLET_RETRIES": str(retries),

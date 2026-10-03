@@ -99,6 +99,20 @@ def test_build_all_rebuilds_into_an_existing_cases_dir(tmp_path: Path) -> None:
     assert (tmp_path / "product-bug-fee-rounding" / "label.yaml").is_file()
 
 
+def test_case_does_not_depend_on_the_host_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scenario = SCENARIOS / "environment-missing-ledger-url"
+    first = build_case(scenario, tmp_path / "first")
+
+    for name in set(os.environ) - {"PATH", "HOME"}:
+        monkeypatch.delenv(name)
+    monkeypatch.setenv("LAB_HOST_PROBE", "different")
+    second = build_case(scenario, tmp_path / "second")
+
+    assert (first / "junit.xml").read_bytes() == (second / "junit.xml").read_bytes()
+
+
 def test_test_bug_case_is_built_from_a_patch_that_only_edits_tests(tmp_path: Path) -> None:
     case = build_case(SCENARIOS / "test-bug-expected-value", tmp_path)
 

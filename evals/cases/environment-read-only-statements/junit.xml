@@ -12,7 +12,7 @@ wallet/statements.py:9: in export_statement
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 self = PosixPath('/tmp/lab/junit-env/statements/alice.csv')
-mode = 'w', buffering = -1, encoding = 'locale', errors = None, newline = None
+mode = 'w', buffering = -1, encoding = 'utf-8', errors = None, newline = None
 
     def open(self, mode='r', buffering=-1, encoding=None,
              errors=None, newline=None):
