@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuite name="green" tests="4" failures="0" skipped="1">
+  <testcase classname="tests.test_cart" name="test_total" time="0.01"/>
+  <testcase classname="tests.test_cart" name="test_empty_cart" time="0.01"/>
+  <testcase classname="tests.test_api" name="test_health" time="0.02"/>
+  <testcase classname="tests.test_api" name="test_legacy" time="0.00">
+    <skipped message="legacy"/>
+  </testcase>
+</testsuite>
