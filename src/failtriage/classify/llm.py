@@ -4,9 +4,14 @@ from failtriage.classify.payload import GroupPayload
 from failtriage.classify.provider import Provider
 from failtriage.models import Category, Classification, ClassifiedBy, Confidence
 from failtriage.prompts import Prompt
+from failtriage.redaction import redact
 
 
 class InvalidAnswerError(Exception):
+    pass
+
+
+class UnredactedPayloadError(Exception):
     pass
 
 
@@ -21,7 +26,12 @@ class LlmAnswer(BaseModel):
 
 def classify_with_llm(payload: GroupPayload, provider: Provider, prompt: Prompt) -> Classification:
     """Ask the provider to classify a group. The payload must already be redacted."""
-    raw = provider.complete(prompt, payload.model_dump_json(indent=2))
+    text = payload.model_dump_json(indent=2)
+    if redact(text) != text:
+        # Second layer of ADR 0003: redaction already ran, so a change here means it missed
+        # something. Nothing is quoted, the message must not leak the text either.
+        raise UnredactedPayloadError("the payload still contains redactable text, call aborted")
+    raw = provider.complete(prompt, text)
     try:
         answer = LlmAnswer.model_validate_json(raw)
         evidence = _verified(answer.evidence, payload)

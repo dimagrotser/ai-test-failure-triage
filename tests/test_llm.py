@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from failtriage.classify.llm import InvalidAnswerError, classify_with_llm
+from failtriage.classify.llm import InvalidAnswerError, UnredactedPayloadError, classify_with_llm
 from failtriage.classify.payload import GroupPayload, Limits, build_payloads
 from failtriage.grouping import group_failures
 from failtriage.models import Category, ClassifiedBy, Confidence
@@ -11,6 +11,7 @@ from failtriage.parsers.junit import parse_junit
 from failtriage.prompts import Prompt, load_prompt
 
 FIXTURES = Path(__file__).parent / "fixtures" / "evals" / "cases"
+SECRETS = Path(__file__).parent / "fixtures" / "junit" / "secrets.xml"
 
 
 class StubProvider:
@@ -186,3 +187,51 @@ def test_an_unknown_answer_without_evidence_stays_as_it_is() -> None:
 
     assert result.category is Category.UNKNOWN
     assert result.summary == "The ledger service refused the connection."
+
+
+PLANTED = [
+    "hunter2",
+    "ghp_a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8",
+    "jane.doe@example.com",
+    "4111 1111 1111 1111",
+    "abc.def.ghi",
+    "MIIEvQIBADANBgkqhkiG9w0BAQEFAASC",
+]
+
+
+def test_planted_secrets_never_reach_the_provider() -> None:
+    groups = group_failures(parse_junit(SECRETS))
+    [payload] = build_payloads(groups, Limits()).sent
+    reply = answer(
+        category="unknown", confidence="low", evidence=[], disagreement_reason="no proof"
+    )
+    provider = StubProvider(reply)
+
+    classify_with_llm(payload, provider, load_prompt())
+
+    [sent] = provider.payloads
+    assert [secret for secret in PLANTED if secret in sent] == []
+
+
+def test_the_final_check_aborts_the_call_on_an_unredacted_payload() -> None:
+    payload = payload_for("environment-refused").model_copy(
+        update={"stderr": "GITHUB_TOKEN=ghp_a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8"}
+    )
+    provider = StubProvider(answer())
+
+    with pytest.raises(UnredactedPayloadError) as error:
+        classify_with_llm(payload, provider, load_prompt())
+
+    assert provider.payloads == []
+    assert "ghp_" not in str(error.value)
+
+
+def test_an_already_redacted_payload_passes_the_final_check() -> None:
+    payload = payload_for("environment-refused").model_copy(
+        update={"stderr": "GITHUB_TOKEN=<SECRET> for <EMAIL>"}
+    )
+    provider = StubProvider(answer())
+
+    classify_with_llm(payload, provider, load_prompt())
+
+    assert len(provider.payloads) == 1
