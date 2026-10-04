@@ -23,11 +23,18 @@ class HistoryError(Exception):
 _ENTRIES = TypeAdapter(list[HistoryEntry])
 
 
+def parse_history(data: bytes) -> list[HistoryEntry]:
+    try:
+        return _ENTRIES.validate_json(data)
+    except ValidationError:
+        # No cause in the message: a validation error quotes the offending value.
+        raise HistoryError("not a valid history file") from None
+
+
 def load_history(path: Path) -> list[HistoryEntry]:
     try:
-        return _ENTRIES.validate_json(path.read_bytes())
-    except (OSError, ValidationError):
-        # No cause in the message: a validation error quotes the offending value.
+        return parse_history(path.read_bytes())
+    except (OSError, HistoryError):
         raise HistoryError(f"{path} is not a valid history file") from None
 
 
