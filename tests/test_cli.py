@@ -143,7 +143,8 @@ def test_analyze_json_has_version_run_groups_cost_and_no_history() -> None:
     )
 
     assert report.schema_version == 1
-    assert set(raw) == {"schema_version", "run", "groups", "cost", "history"}
+    assert set(raw) == {"schema_version", "run", "groups", "cost", "diff", "history"}
+    assert raw["diff"] is None
     assert raw["history"] is None
     assert report.run.tests == 6
     assert report.run.failed == 3

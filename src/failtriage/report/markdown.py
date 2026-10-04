@@ -1,7 +1,7 @@
 import re
 
 from failtriage.models import ClassifiedBy
-from failtriage.report.json_output import AnalysisReport, GroupReport
+from failtriage.report.json_output import AnalysisReport, DiffInfo, GroupReport
 
 _TESTS_SHOWN = 5
 
@@ -23,8 +23,27 @@ def render_markdown(report: AnalysisReport) -> str:
             "History: none. No earlier runs on main were read, "
             "so nothing here says a test was stable before."
         )
+    if note := _diff_note(report.diff):
+        parts.append(note)
     parts += [_group_section(n, g) for n, g in enumerate(report.groups, start=1)]
     return "\n\n".join(parts) + "\n"
+
+
+def _diff_note(diff: DiffInfo | None) -> str | None:
+    if diff is None:
+        return None
+    if not diff.available:
+        return "Diff: not available. The pull request files could not be read from GitHub."
+    if not diff.files_without_hunks:
+        return None
+    names = diff.files_without_hunks
+    shown = [_code(name) for name in names[:_TESTS_SHOWN]]
+    if len(names) > _TESTS_SHOWN:
+        shown.append(f"and {len(names) - _TESTS_SHOWN} more")
+    return (
+        f"Hunks missing for {', '.join(shown)}: GitHub returned no patch, "
+        "so only the file names were used."
+    )
 
 
 def _group_section(number: int, group: GroupReport) -> str:

@@ -146,6 +146,33 @@
       "title": "Cost",
       "type": "object"
     },
+    "DiffInfo": {
+      "properties": {
+        "available": {
+          "default": true,
+          "title": "Available",
+          "type": "boolean"
+        },
+        "changed_files": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Changed Files",
+          "type": "array"
+        },
+        "files_without_hunks": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Files Without Hunks",
+          "type": "array"
+        }
+      },
+      "title": "DiffInfo",
+      "type": "object"
+    },
     "GroupReport": {
       "properties": {
         "signature": {
@@ -328,6 +355,17 @@
     },
     "cost": {
       "$ref": "#/$defs/Cost"
+    },
+    "diff": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DiffInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "history": {
       "default": null,

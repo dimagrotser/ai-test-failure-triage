@@ -4,9 +4,9 @@ from pathlib import Path
 import pytest
 
 from failtriage.grouping import group_failures
-from failtriage.models import ClassifiedBy
+from failtriage.models import ClassifiedBy, SignalName
 from failtriage.parsers.junit import parse_junit
-from failtriage.report.json_output import AnalysisReport, build_report
+from failtriage.report.json_output import AnalysisReport, DiffInfo, build_report
 from failtriage.report.markdown import render_markdown
 
 JUNIT = Path(__file__).parent / "fixtures" / "junit"
@@ -153,3 +153,56 @@ def test_a_one_test_run_uses_singular_nouns() -> None:
     assert markdown.startswith(
         "**1 failure group**: 1 failed test, 0 passed on retry, 1 test total."
     )
+
+
+def report_with_diff(diff: DiffInfo | None) -> AnalysisReport:
+    results = parse_junit(JUNIT / "mixed.xml")
+    return build_report("0.1.0", ["mixed.xml"], results, group_failures(results), diff=diff)
+
+
+def test_a_run_without_a_pull_request_says_nothing_about_the_diff() -> None:
+    assert "Diff" not in render_markdown(report_with_diff(None))
+
+
+def test_missing_hunks_are_named_in_the_report() -> None:
+    diff = DiffInfo(changed_files=["a.py", "logo.png"], files_without_hunks=["logo.png"])
+
+    markdown = render_markdown(report_with_diff(diff))
+
+    assert "Hunks missing for `logo.png`: GitHub returned no patch" in markdown
+
+
+def test_a_diff_with_every_hunk_has_no_note() -> None:
+    diff = DiffInfo(changed_files=["a.py"], files_without_hunks=[])
+
+    assert "Hunks missing" not in render_markdown(report_with_diff(diff))
+
+
+def test_many_files_without_hunks_are_cut_to_a_few_names() -> None:
+    names = [f"f{n}.png" for n in range(8)]
+    diff = DiffInfo(changed_files=names, files_without_hunks=names)
+
+    markdown = render_markdown(report_with_diff(diff))
+
+    assert "`f4.png`" in markdown
+    assert "`f5.png`" not in markdown
+    assert "and 3 more" in markdown
+
+
+def test_an_unavailable_diff_is_reported() -> None:
+    markdown = render_markdown(report_with_diff(DiffInfo(available=False)))
+
+    assert "Diff: not available" in markdown
+
+
+def test_the_changed_file_signal_is_in_the_group_signals() -> None:
+    results = parse_junit(JUNIT / "mixed.xml")
+    groups = group_failures(results)
+    frame = groups[0].signature.frame
+    assert frame
+    diff = DiffInfo(changed_files=[frame.rsplit(":", 1)[0]], files_without_hunks=[])
+
+    report = build_report("0.1.0", [], results, groups, diff=diff)
+
+    names = {s.name for s in report.groups[0].signals}
+    assert SignalName.TOUCHES_CHANGED_FILE in names
