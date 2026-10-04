@@ -85,7 +85,8 @@ class Classification(BaseModel):
     next_step: str
     classified_by: ClassifiedBy
     heuristic_verdict: Category | None
-    # None when the heuristics classified the group, there is nothing to compare with.
+    # None when there is nothing to compare with: the heuristics classified the group itself,
+    # or they had no verdict.
     agrees_with_heuristics: bool | None
     disagreement_reason: str | None = None
 
@@ -97,4 +98,17 @@ class Classification(BaseModel):
             raise ValueError(
                 "a classification without evidence must be unknown with low confidence"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _disagreement_needs_a_reason(self) -> "Classification":
+        disagrees = (
+            self.heuristic_verdict is not None and self.category is not self.heuristic_verdict
+        )
+        if (
+            self.classified_by is ClassifiedBy.LLM
+            and disagrees
+            and not (self.disagreement_reason or "").strip()
+        ):
+            raise ValueError("disagreement_reason is required when the llm disagrees")
         return self
