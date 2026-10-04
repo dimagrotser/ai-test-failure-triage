@@ -216,6 +216,18 @@ def test_fixture_leak_case_fails_tests_that_run_after_the_leaking_one(tmp_path: 
     )
 
 
+def test_deposit_case_fails_every_cent_deposit_the_same_way(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "product-bug-deposit-float", tmp_path)
+
+    failed = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert len(failed) == 41
+    assert {r.test_id for r in failed} == {
+        "tests.test_balance::test_deposit_increases_the_balance",
+        "tests.test_balance::test_deposit_keeps_every_cent",
+    }
+    assert all("unsupported operand" in (r.attempts[0].message or "") for r in failed)
+
+
 def test_junit_with_object_reprs_is_still_byte_identical_across_builds(tmp_path: Path) -> None:
     scenario = SCENARIOS / "test-bug-expected-value"
 

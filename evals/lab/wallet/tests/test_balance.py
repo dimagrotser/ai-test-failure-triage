@@ -25,3 +25,12 @@ def test_deposit_rejects_non_positive_amounts(amount: Decimal) -> None:
         account.deposit(amount)
 
     assert account.balance == Decimal("50.00")
+
+
+@pytest.mark.parametrize("cents", range(1, 41))
+def test_deposit_keeps_every_cent(cents: int) -> None:
+    account = Account("alice")
+
+    account.deposit(Decimal(cents) / 100)
+
+    assert account.balance == Decimal(cents) / 100

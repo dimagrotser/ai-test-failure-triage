@@ -1,0 +1,7 @@
+category: product_bug
+source: injected
+scenario: deposit converts the amount to float
+notes: >-
+  The patch turns the amount into a float before adding it to the balance, so every
+  deposit raises a TypeError (Decimal plus float). Forty-one tests fail at the same line
+  of wallet/accounts.py. The tests are untouched and pass again once the patch is reverted.
