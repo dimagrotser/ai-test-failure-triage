@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.100">
+    <testcase classname="tests.test_page" name="test_button" time="0.010">
+      <failure message="KeyError: 'button'">tests/test_page.py:9: KeyError</failure>
+    </testcase>
+    <testcase classname="tests.test_page" name="test_total" time="0.010">
+      <failure message="AssertionError: assert 3 == 4">AssertionError: assert 3 == 4</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

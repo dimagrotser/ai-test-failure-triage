@@ -233,3 +233,23 @@ def test_analyze_rejects_json_and_markdown_together() -> None:
     assert result.exit_code == 2
     assert "either --json or --markdown" in result.output
     assert result.stdout == ""
+
+
+EVALS = Path(__file__).parent / "fixtures" / "evals"
+
+
+def test_eval_prints_the_baseline_without_an_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    result = runner.invoke(app, ["eval", str(EVALS)])
+
+    assert result.exit_code == 0
+    assert "Accuracy: 3/5 (60%)" in result.output
+    assert "Confusion matrix" in result.output
+
+
+def test_eval_reports_a_dataset_that_cannot_be_scored(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["eval", str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert "no cases" in result.output

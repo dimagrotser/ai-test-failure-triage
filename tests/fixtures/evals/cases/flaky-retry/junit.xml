@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="0" failures="1" skipped="0" tests="3" time="0.100">
+    <testcase classname="tests.test_ids" name="test_ids_differ" time="0.010">
+      <failure message="AssertionError: assert 2 == 3">tests/test_ids.py:7: AssertionError</failure>
+    </testcase>
+    <testcase classname="tests.test_ids" name="test_ids_differ" time="0.010"/>
+    <testcase classname="tests.test_ids" name="test_other" time="0.010"/>
+  </testsuite>
+</testsuites>
