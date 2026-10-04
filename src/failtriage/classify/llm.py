@@ -24,12 +24,17 @@ def classify_with_llm(payload: GroupPayload, provider: Provider, prompt: Prompt)
     raw = provider.complete(prompt, payload.model_dump_json(indent=2))
     try:
         answer = LlmAnswer.model_validate_json(raw)
+        evidence = _verified(answer.evidence, payload)
+        if not evidence and answer.category is not Category.UNKNOWN:
+            answer = _without_proof(answer)
+        elif not evidence:
+            answer = answer.model_copy(update={"confidence": Confidence.LOW})
         verdict = payload.heuristic_verdict
         return Classification(
             category=answer.category,
             confidence=answer.confidence,
             summary=answer.summary,
-            evidence=answer.evidence,
+            evidence=evidence,
             next_step=answer.next_step,
             classified_by=ClassifiedBy.LLM,
             heuristic_verdict=verdict,
@@ -40,3 +45,38 @@ def classify_with_llm(payload: GroupPayload, provider: Provider, prompt: Prompt)
         # Only the error locations: the messages quote the model's output.
         where = ", ".join(sorted({".".join(map(str, e["loc"])) or "answer" for e in exc.errors()}))
         raise InvalidAnswerError(f"the answer does not fit the schema: {where}") from None
+
+
+def _verified(quotes: list[str], payload: GroupPayload) -> list[str]:
+    """Keep the quotes that appear verbatim in the text the model was given."""
+    texts = _texts(payload)
+    return [q for q in quotes if q and any(q in text for text in texts)]
+
+
+def _texts(payload: GroupPayload) -> list[str]:
+    signature = payload.signature
+    fields = [
+        signature.exception_type,
+        signature.message,
+        signature.frame,
+        payload.message,
+        payload.stack_trace,
+        payload.stdout,
+        payload.stderr,
+        payload.diff,
+        *payload.tests,
+        *(s.quote for s in payload.signals),
+    ]
+    return [f for f in fields if f]
+
+
+def _without_proof(answer: LlmAnswer) -> LlmAnswer:
+    return answer.model_copy(
+        update={
+            "category": Category.UNKNOWN,
+            "confidence": Confidence.LOW,
+            "summary": "The evidence the model quoted was not found in the failure output",
+            "next_step": "Read the failure output, the quoted evidence could not be verified",
+            "disagreement_reason": "None of the quotes the model gave appear in the failure output",
+        }
+    )
