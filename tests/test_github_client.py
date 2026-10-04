@@ -160,3 +160,27 @@ def test_does_not_follow_a_next_link_to_another_host() -> None:
 
     with pytest.raises(GitHubError, match="another host"):
         _client(transport).get_pages("/x")
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "https://api.github.com.evil.example/steal?page=2",
+        "https://api.github.com@evil.example/steal?page=2",
+        "http://api.github.com/steal?page=2",
+    ],
+)
+def test_a_next_link_that_only_looks_like_the_api_is_refused(target: str) -> None:
+    link = f'<{target}>; rel="next"'
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, json=[], headers={"Link": link}))
+
+    with pytest.raises(GitHubError, match="another host"):
+        _client(transport).get_pages("/x")
+
+
+def test_a_retry_after_date_is_not_a_crash() -> None:
+    date = "Wed, 21 Oct 2026 07:28:00 GMT"
+    transport = httpx.MockTransport(lambda r: httpx.Response(429, headers={"Retry-After": date}))
+
+    with pytest.raises(GitHubError, match="GitHub answered 429"):
+        _client(transport).get_pages("/x")

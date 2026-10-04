@@ -51,10 +51,15 @@ class GitHubClient:
             items.extend(body)
             url = response.links.get("next", {}).get("url")
             params = None
-            if url and not url.startswith(self._base_url):
+            if url and not self._is_api_url(url):
                 # The token rides on every request, so it must not follow a link off the API.
                 raise GitHubError("GitHub pagination points to another host")
         return items
+
+    def _is_api_url(self, url: str) -> bool:
+        # A prefix check would accept `api.github.com.evil.example` and `api.github.com@evil`.
+        target, api = httpx.URL(url), httpx.URL(self._base_url)
+        return (target.scheme, target.host, target.port) == (api.scheme, api.host, api.port)
 
     def _get(self, url: str, params: dict[str, int] | None) -> httpx.Response:
         for attempt in range(self._max_retries + 1):
@@ -78,7 +83,9 @@ def _rate_limit_wait(response: httpx.Response) -> float | None:
     """Seconds to wait when the answer is a rate limit, None for any other failure."""
     if response.status_code not in (403, 429):
         return None
-    if (retry_after := response.headers.get("Retry-After")) is not None:
+    retry_after = response.headers.get("Retry-After", "")
+    # Retry-After may also be an HTTP date, which is not worth parsing: treat it as a plain error.
+    if retry_after.isdigit():
         return float(retry_after)
     if response.headers.get("X-RateLimit-Remaining") == "0":
         reset = float(response.headers.get("X-RateLimit-Reset", "0"))
