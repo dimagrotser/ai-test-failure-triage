@@ -1,4 +1,6 @@
+import io
 import json
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -480,13 +482,28 @@ def fake_github(
     requests: list[httpx.Request],
     status: int = 200,
     files: list[dict[str, Any]] = PR_FILES,
+    artifacts: dict[int, bytes | int] | None = None,
 ) -> None:
+    """Fake GitHub. `artifacts` maps an artifact id to its zip, or to an error status; the
+    listing shows them newest first (highest id) as runs on main."""
     monkeypatch.setenv("GITHUB_TOKEN", GITHUB_TOKEN)
+    served = artifacts or {}
 
     def handle(request: httpx.Request) -> httpx.Response:
         requests.append(request)
         if status != 200:
             return httpx.Response(status, json={"message": f"bad {GITHUB_TOKEN}"})
+        if request.url.path.endswith("/actions/artifacts"):
+            listing = [
+                {"id": i, "expired": False, "workflow_run": {"head_branch": "main"}}
+                for i in sorted(served, reverse=True)
+            ]
+            return httpx.Response(200, json={"total_count": len(listing), "artifacts": listing})
+        if "/actions/artifacts/" in request.url.path:
+            answer = served[int(request.url.path.split("/")[-2])]
+            if isinstance(answer, int):
+                return httpx.Response(answer, json={"message": "gone"})
+            return httpx.Response(200, content=answer)
         return httpx.Response(200, json=files)
 
     monkeypatch.setattr(
@@ -508,8 +525,8 @@ def test_the_pr_files_are_read_from_github_with_the_token(monkeypatch: pytest.Mo
     result = analyze_pr()
 
     assert result.exit_code == 0
-    assert [r.url.path for r in github] == ["/repos/acme/wallet/pulls/7/files"]
-    assert github[0].headers["Authorization"] == f"Bearer {GITHUB_TOKEN}"
+    assert "/repos/acme/wallet/pulls/7/files" in [r.url.path for r in github]
+    assert all(r.headers["Authorization"] == f"Bearer {GITHUB_TOKEN}" for r in github)
 
 
 def test_the_report_lists_changed_files_and_those_without_hunks(
@@ -699,3 +716,126 @@ def test_history_with_text_output_is_a_usage_error() -> None:
 
     assert result.exit_code == 2
     assert "--json or --markdown" in result.stderr
+
+
+def history_zip(run_id: int) -> bytes:
+    entries = [
+        e for e in json.loads((FLAKY_CASE / "history.json").read_text()) if e["run_id"] == run_id
+    ]
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("history.json", json.dumps(entries))
+    return buffer.getvalue()
+
+
+def analyze_flaky_pr(*extra: str) -> Any:
+    args = [
+        "analyze",
+        "--junit",
+        str(FLAKY_CASE / "junit.xml"),
+        "--repo",
+        "acme/wallet",
+        "--pr",
+        "7",
+    ]
+    return runner.invoke(app, [*args, *(extra or ["--json"])])
+
+
+def downloaded(github: list[httpx.Request]) -> list[int]:
+    return [int(r.url.path.split("/")[-2]) for r in github if r.url.path.endswith("/zip")]
+
+
+def test_a_pr_run_reads_history_from_the_artifacts_on_main(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_github(monkeypatch, [], artifacts={2: history_zip(2), 1: history_zip(1)})
+
+    result = analyze_flaky_pr()
+
+    assert result.exit_code == 0
+    report = AnalysisReport.model_validate_json(result.stdout)
+    assert report.history is not None
+    assert report.history.runs == 2
+    names = {s.name for g in report.groups for s in g.signals}
+    assert SignalName.FLAKY_IN_HISTORY in names
+
+
+def test_history_runs_limits_how_many_artifacts_are_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    github: list[httpx.Request] = []
+    fake_github(monkeypatch, github, artifacts={2: history_zip(2), 1: history_zip(1)})
+
+    result = analyze_flaky_pr("--json", "--history-runs", "1")
+
+    assert result.exit_code == 0
+    assert downloaded(github) == [2]
+
+
+def test_ten_runs_are_read_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    github: list[httpx.Request] = []
+    fake_github(monkeypatch, github, artifacts={i: history_zip(1) for i in range(1, 13)})
+
+    analyze_flaky_pr()
+
+    assert downloaded(github) == list(range(12, 2, -1))
+
+
+def test_a_cold_start_says_history_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_github(monkeypatch, [], artifacts={})
+
+    markdown = analyze_flaky_pr("--markdown")
+    as_json = analyze_flaky_pr()
+
+    assert markdown.exit_code == 0
+    assert "History: none." in markdown.stdout
+    assert AnalysisReport.model_validate_json(as_json.stdout).history is None
+
+
+def test_an_expired_or_missing_artifact_is_skipped_without_failing_the_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_github(monkeypatch, [], artifacts={3: 410, 2: history_zip(2), 1: 404})
+
+    result = analyze_flaky_pr()
+
+    assert result.exit_code == 0
+    report = AnalysisReport.model_validate_json(result.stdout)
+    assert report.history is not None
+    assert report.history.runs == 1
+    assert "history artifact 3 skipped" in result.stderr
+    assert "history artifact 1 skipped" in result.stderr
+
+
+def test_a_failing_artifact_listing_is_a_warning_and_the_run_goes_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_github(monkeypatch, [], status=403)
+
+    result = analyze_flaky_pr()
+
+    assert result.exit_code == 0
+    assert AnalysisReport.model_validate_json(result.stdout).history is None
+    assert "continuing without history" in result.stderr
+    assert GITHUB_TOKEN not in result.stderr + result.stdout
+
+
+def test_a_history_file_wins_over_the_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:
+    github: list[httpx.Request] = []
+    fake_github(monkeypatch, github, artifacts={2: history_zip(2)})
+
+    result = analyze_flaky_pr("--json", "--history", str(FLAKY_CASE / "history.json"))
+
+    assert result.exit_code == 0
+    assert not [r for r in github if "/actions/" in r.url.path]
+
+
+def test_a_run_without_a_pr_never_reads_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:
+    github: list[httpx.Request] = []
+    fake_github(monkeypatch, github, artifacts={2: history_zip(2)})
+
+    runner.invoke(app, ["analyze", "--junit", str(FLAKY_CASE / "junit.xml"), "--json"])
+
+    assert github == []
+
+
+def test_history_runs_must_be_positive() -> None:
+    result = analyze_flaky_pr("--json", "--history-runs", "0")
+
+    assert result.exit_code == 2
