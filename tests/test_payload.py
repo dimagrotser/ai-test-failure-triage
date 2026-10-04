@@ -1,4 +1,4 @@
-from failtriage.classify.payload import truncate_lines, truncate_message
+from failtriage.classify.payload import select_hunks, truncate_lines, truncate_message
 
 
 def numbered(count: int) -> str:
@@ -44,3 +44,46 @@ def test_message_exactly_at_the_limit_is_unchanged() -> None:
 
 def test_empty_message_is_unchanged() -> None:
     assert truncate_message("", limit=1000) == ""
+
+
+DIFF = """\
+diff --git a/src/wallet/ledger.py b/src/wallet/ledger.py
+index 111..222 100644
+--- a/src/wallet/ledger.py
++++ b/src/wallet/ledger.py
+@@ -1,2 +1,2 @@
+-balance = 0
++balance = 0.0
+diff --git a/README.md b/README.md
+index 333..444 100644
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-old
++new
+"""
+TRACE = '  File "/work/src/wallet/ledger.py", line 9, in deposit'
+
+
+def test_diff_keeps_only_files_named_in_the_trace() -> None:
+    result = select_hunks(DIFF, TRACE, limit=150)
+
+    assert "src/wallet/ledger.py" in result
+    assert "+balance = 0.0" in result
+    assert "README.md" not in result
+
+
+def test_diff_without_a_relevant_file_is_empty() -> None:
+    assert select_hunks(DIFF, "nothing here", limit=150) == ""
+
+
+def test_empty_diff_is_empty() -> None:
+    assert select_hunks("", TRACE, limit=150) == ""
+
+
+def test_relevant_diff_over_the_line_limit_is_cut_with_a_marker() -> None:
+    result = select_hunks(DIFF, TRACE, limit=3).splitlines()
+
+    assert result[:3] == DIFF.splitlines()[:3]
+    assert result[3] == "... 4 lines omitted ..."
+    assert len(result) == 4
