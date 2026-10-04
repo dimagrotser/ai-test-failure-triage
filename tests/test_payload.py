@@ -1,4 +1,4 @@
-from failtriage.classify.payload import truncate_lines
+from failtriage.classify.payload import truncate_lines, truncate_message
 
 
 def numbered(count: int) -> str:
@@ -30,3 +30,17 @@ def test_one_line_over_the_limits_omits_exactly_one_line() -> None:
 
 def test_empty_text_is_unchanged() -> None:
     assert truncate_lines("", head=15, tail=25) == ""
+
+
+def test_message_over_the_limit_is_cut_and_counts_the_omitted_characters() -> None:
+    result = truncate_message("a" * 1005, limit=1000)
+
+    assert result == "a" * 1000 + "... 5 characters omitted"
+
+
+def test_message_exactly_at_the_limit_is_unchanged() -> None:
+    assert truncate_message("a" * 1000, limit=1000) == "a" * 1000
+
+
+def test_empty_message_is_unchanged() -> None:
+    assert truncate_message("", limit=1000) == ""
