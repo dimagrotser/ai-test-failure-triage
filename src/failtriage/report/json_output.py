@@ -35,10 +35,13 @@ class GroupReport(BaseModel):
 
 
 class Cost(BaseModel):
+    # None when no LLM was used.
+    model: str | None = None
     llm_calls: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
-    usd: float = 0.0
+    # None when the model is not in the price table, which is not the same as free.
+    usd: float | None = 0.0
 
 
 class AnalysisReport(BaseModel):
@@ -52,8 +55,14 @@ class AnalysisReport(BaseModel):
 
 
 def build_report(
-    tool_version: str, inputs: list[str], results: list[TestResult], groups: list[FailureGroup]
+    tool_version: str,
+    inputs: list[str],
+    results: list[TestResult],
+    groups: list[FailureGroup],
+    classifications: list[Classification] | None = None,
+    cost: Cost | None = None,
 ) -> AnalysisReport:
+    """`classifications` line up with `groups`; without them the heuristics classify."""
     return AnalysisReport(
         run=RunInfo(
             tool_version=tool_version,
@@ -62,12 +71,15 @@ def build_report(
             failed=sum(r.status in (Status.FAILED, Status.ERROR) for r in results),
             passed_on_retry=sum(r.status is Status.PASSED_ON_RETRY for r in results),
         ),
-        groups=[_group_report(g) for g in groups],
-        cost=Cost(),
+        groups=[
+            _group_report(g, classifications[i] if classifications else None)
+            for i, g in enumerate(groups)
+        ],
+        cost=cost or Cost(),
     )
 
 
-def _group_report(group: FailureGroup) -> GroupReport:
+def _group_report(group: FailureGroup, classification: Classification | None) -> GroupReport:
     return GroupReport(
         signature=group.signature,
         tests=[
@@ -75,5 +87,5 @@ def _group_report(group: FailureGroup) -> GroupReport:
             for r in group.results
         ],
         signals=signals(group),
-        classification=classify_with_heuristics(group),
+        classification=classification or classify_with_heuristics(group),
     )

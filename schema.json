@@ -103,6 +103,18 @@
     },
     "Cost": {
       "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
         "llm_calls": {
           "default": 0,
           "title": "Llm Calls",
@@ -119,9 +131,16 @@
           "type": "integer"
         },
         "usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": 0.0,
-          "title": "Usd",
-          "type": "number"
+          "title": "Usd"
         }
       },
       "title": "Cost",

@@ -1,10 +1,12 @@
 import json
+from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from failtriage.classify.payload import GroupPayload
-from failtriage.classify.provider import Provider
-from failtriage.models import Category, Classification, ClassifiedBy, Confidence
+from failtriage.classify.heuristics import classify_with_heuristics
+from failtriage.classify.payload import GroupPayload, Limits, build_payloads
+from failtriage.classify.provider import Provider, ProviderError
+from failtriage.models import Category, Classification, ClassifiedBy, Confidence, FailureGroup
 from failtriage.prompts import Prompt
 from failtriage.redaction import redact
 
@@ -27,6 +29,42 @@ class LlmAnswer(BaseModel):
     evidence: list[str]
     next_step: str
     disagreement_reason: str | None = None
+
+
+def answer_schema() -> dict[str, Any]:
+    """JSON schema the provider asks the model to follow."""
+    schema = LlmAnswer.model_json_schema()
+    schema["additionalProperties"] = False
+    return schema
+
+
+class GroupClassifications(BaseModel):
+    # In the order of the groups that were passed in.
+    classifications: list[Classification]
+    # Group index to the type of the error that sent the group to heuristics.
+    failed: dict[int, str]
+
+
+def classify_groups(
+    groups: list[FailureGroup], provider: Provider, prompt: Prompt, limits: Limits
+) -> GroupClassifications:
+    """Classify with the LLM what the group cap allows. The rest, and any group whose call or
+    answer fails, gets the heuristics classification, so a run never ends without a result."""
+    plan = build_payloads(groups, limits)
+    payloads = {p.signature: p for p in plan.sent}
+    classifications: list[Classification] = []
+    failed: dict[int, str] = {}
+    for index, group in enumerate(groups):
+        payload = payloads.get(group.signature)
+        if payload is None:
+            classifications.append(classify_with_heuristics(group))
+            continue
+        try:
+            classifications.append(classify_with_llm(payload, provider, prompt))
+        except (ProviderError, InvalidAnswerError, UnredactedPayloadError) as exc:
+            classifications.append(classify_with_heuristics(group))
+            failed[index] = type(exc).__name__
+    return GroupClassifications(classifications=classifications, failed=failed)
 
 
 def classify_with_llm(payload: GroupPayload, provider: Provider, prompt: Prompt) -> Classification:
