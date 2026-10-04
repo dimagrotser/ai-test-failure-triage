@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class Status(StrEnum):
@@ -64,3 +64,37 @@ class Signal(BaseModel):
 
     name: SignalName
     quote: str
+
+
+class Confidence(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class ClassifiedBy(StrEnum):
+    HEURISTICS = "heuristics"
+    LLM = "llm"
+
+
+class Classification(BaseModel):
+    category: Category
+    confidence: Confidence
+    summary: str
+    evidence: list[str]
+    next_step: str
+    classified_by: ClassifiedBy
+    heuristic_verdict: Category | None
+    # None when the heuristics classified the group, there is nothing to compare with.
+    agrees_with_heuristics: bool | None
+    disagreement_reason: str | None = None
+
+    @model_validator(mode="after")
+    def _no_evidence_means_unknown(self) -> "Classification":
+        if not self.evidence and (
+            self.category is not Category.UNKNOWN or self.confidence is not Confidence.LOW
+        ):
+            raise ValueError(
+                "a classification without evidence must be unknown with low confidence"
+            )
+        return self
