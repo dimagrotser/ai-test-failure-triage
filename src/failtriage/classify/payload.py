@@ -1,3 +1,85 @@
+from pydantic import BaseModel, ConfigDict
+
+from failtriage.classify.heuristics import heuristic_verdict, signals
+from failtriage.models import Category, FailureGroup, Signal, Signature, Status
+from failtriage.redaction import redact, redact_result
+
+GROUP_CAP_NOTE = "not sent to LLM: group cap"
+
+
+class Limits(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    stack_head: int = 15
+    stack_tail: int = 25
+    message_chars: int = 1000
+    output_tail: int = 30
+    diff_lines: int = 150
+    max_groups: int = 10
+
+
+class GroupPayload(BaseModel):
+    signature: Signature
+    tests: list[str]
+    message: str | None
+    stack_trace: str | None
+    stdout: str | None
+    stderr: str | None
+    signals: list[Signal]
+    heuristic_verdict: Category | None
+    diff: str | None
+
+
+class SkippedGroup(BaseModel):
+    group: FailureGroup
+    note: str
+
+
+class PayloadPlan(BaseModel):
+    sent: list[GroupPayload]
+    skipped: list[SkippedGroup]
+
+
+def build_payloads(
+    groups: list[FailureGroup], limits: Limits, diff: str | None = None
+) -> PayloadPlan:
+    """Shape what the LLM gets: redact first, then truncate, largest groups first up to the cap."""
+    ranked = sorted(groups, key=lambda g: -len(g.results))
+    redacted_diff = redact(diff) if diff else None
+    return PayloadPlan(
+        sent=[_payload(g, limits, redacted_diff) for g in ranked[: limits.max_groups]],
+        skipped=[SkippedGroup(group=g, note=GROUP_CAP_NOTE) for g in ranked[limits.max_groups :]],
+    )
+
+
+def _payload(group: FailureGroup, limits: Limits, diff: str | None) -> GroupPayload:
+    redacted = redact_result(group.results[0])
+    attempt = next(
+        a for a in reversed(redacted.attempts) if a.status in (Status.FAILED, Status.ERROR)
+    )
+    found = signals(group)
+
+    def tail(text: str | None) -> str | None:
+        return None if text is None else truncate_lines(text, head=0, tail=limits.output_tail)
+
+    stack_trace = attempt.stack_trace
+    return GroupPayload(
+        signature=group.signature,
+        tests=[r.test_id for r in group.results],
+        message=None
+        if attempt.message is None
+        else truncate_message(attempt.message, limits.message_chars),
+        stack_trace=None
+        if stack_trace is None
+        else truncate_lines(stack_trace, limits.stack_head, limits.stack_tail),
+        stdout=tail(attempt.stdout),
+        stderr=tail(attempt.stderr),
+        signals=found,
+        heuristic_verdict=heuristic_verdict(found),
+        diff=(select_hunks(diff, stack_trace or "", limits.diff_lines) or None) if diff else None,
+    )
+
+
 def truncate_lines(text: str, head: int, tail: int) -> str:
     """Keep the first `head` and last `tail` lines, marking how many were cut."""
     lines = text.splitlines()
