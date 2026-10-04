@@ -180,3 +180,20 @@ def test_analyze_json_prints_nothing_for_unreadable_input() -> None:
 
     assert result.exit_code == 2
     assert result.stdout == ""
+
+
+@pytest.mark.parametrize("flags", [[], ["--json"]])
+def test_analyze_internal_error_exits_one_without_printing_details(
+    monkeypatch: pytest.MonkeyPatch, flags: list[str]
+) -> None:
+    def explode(results: object) -> None:
+        raise RuntimeError("token ghp_unredactedsecret leaked")
+
+    monkeypatch.setattr("failtriage.cli.group_failures", explode)
+
+    result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "mixed.xml"), *flags])
+
+    assert result.exit_code == 1
+    assert "internal error: RuntimeError" in result.output
+    assert "ghp_" not in result.output
+    assert result.stdout == ""

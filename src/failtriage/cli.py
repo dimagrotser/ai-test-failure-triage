@@ -42,11 +42,18 @@ def analyze(
 ) -> None:
     """Group the failed tests of a report by cause and print the groups."""
     try:
-        results = [redact_result(r) for r in parse_junit(junit)]
+        _analyze(junit, json_output)
     except ReportParseError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
+    except Exception as exc:
+        # Only the type: a message or traceback may quote text that is not redacted.
+        typer.echo(f"internal error: {type(exc).__name__}", err=True)
+        raise typer.Exit(code=1) from None
 
+
+def _analyze(junit: Path, json_output: bool) -> None:
+    results = [redact_result(r) for r in parse_junit(junit)]
     if not results:
         typer.echo(f"warning: no tests found in {junit}", err=True)
         if not json_output:
