@@ -1,3 +1,7 @@
+import re
+from collections.abc import Callable
+from functools import partial
+
 from pydantic import BaseModel, ConfigDict
 
 from failtriage.classify.heuristics import heuristic_verdict, signals
@@ -58,26 +62,25 @@ def _payload(group: FailureGroup, limits: Limits, diff: str | None) -> GroupPayl
         a for a in reversed(redacted.attempts) if a.status in (Status.FAILED, Status.ERROR)
     )
     found = signals(group)
-
-    def tail(text: str | None) -> str | None:
-        return None if text is None else truncate_lines(text, head=0, tail=limits.output_tail)
-
-    stack_trace = attempt.stack_trace
+    relevant_diff = select_hunks(diff, attempt.stack_trace or "", limits.diff_lines) if diff else ""
     return GroupPayload(
         signature=group.signature,
-        tests=[r.test_id for r in group.results],
-        message=None
-        if attempt.message is None
-        else truncate_message(attempt.message, limits.message_chars),
-        stack_trace=None
-        if stack_trace is None
-        else truncate_lines(stack_trace, limits.stack_head, limits.stack_tail),
-        stdout=tail(attempt.stdout),
-        stderr=tail(attempt.stderr),
+        tests=[redact(r.test_id) for r in group.results],
+        message=_cut(attempt.message, partial(truncate_message, limit=limits.message_chars)),
+        stack_trace=_cut(
+            attempt.stack_trace,
+            partial(truncate_lines, head=limits.stack_head, tail=limits.stack_tail),
+        ),
+        stdout=_cut(attempt.stdout, partial(truncate_lines, head=0, tail=limits.output_tail)),
+        stderr=_cut(attempt.stderr, partial(truncate_lines, head=0, tail=limits.output_tail)),
         signals=found,
         heuristic_verdict=heuristic_verdict(found),
-        diff=(select_hunks(diff, stack_trace or "", limits.diff_lines) or None) if diff else None,
+        diff=relevant_diff or None,
     )
+
+
+def _cut(text: str | None, cut: Callable[[str], str]) -> str | None:
+    return None if text is None else cut(text)
 
 
 def truncate_lines(text: str, head: int, tail: int) -> str:
@@ -98,7 +101,7 @@ def truncate_message(text: str, limit: int) -> str:
 
 def select_hunks(diff: str, trace: str, limit: int) -> str:
     """Keep the diff of files whose path appears in the trace, at most `limit` lines."""
-    relevant = [f for f in _split_files(diff) if _path(f) in trace]
+    relevant = [f for f in _split_files(diff) if _mentions(trace, _path(f))]
     kept = [line for file_diff in relevant for line in file_diff]
     return truncate_lines("\n".join(kept), head=limit, tail=0)
 
@@ -116,3 +119,8 @@ def _split_files(diff: str) -> list[list[str]]:
 def _path(file_diff: list[str]) -> str:
     # `diff --git a/<path> b/<path>`: the b side is the file as it is after the change.
     return file_diff[0].rsplit(" b/", 1)[-1]
+
+
+def _mentions(trace: str, path: str) -> bool:
+    # `a.py` must not match `data.py`, so the path has to start at a path boundary.
+    return re.search(rf"(?<![\w.-]){re.escape(path)}(?!\w)", trace) is not None

@@ -219,6 +219,7 @@ def test_a_secret_on_the_cut_is_redacted_before_truncation() -> None:
     assert payload.message is not None
     assert "user" not in payload.message
     assert "example" not in payload.message
+    assert "<EMAIL>" in payload.message
 
 
 def test_the_diff_is_redacted_and_limited_to_files_in_the_trace() -> None:
@@ -249,3 +250,30 @@ def test_a_diff_without_relevant_files_is_left_out() -> None:
     [payload] = build_payloads([group], Limits(), diff=DIFF).sent
 
     assert payload.diff is None
+
+
+def test_test_ids_in_the_payload_are_redacted() -> None:
+    group = failed_group("ids")
+    group.results[0].test_id = "tests/test_ids.py::test_mail[user@example.com]"
+
+    [payload] = build_payloads([group], Limits()).sent
+
+    assert payload.tests == ["tests/test_ids.py::test_mail[<EMAIL>]"]
+
+
+def test_a_path_only_matches_whole_path_components() -> None:
+    diff = DIFF.replace("ledger.py", "ger.py")
+    trace = 'File "/work/src/wallet/ledger.py", line 9'
+
+    assert select_hunks(diff, trace, limit=150) == ""
+
+
+def test_trace_stdout_and_stderr_are_redacted() -> None:
+    secret = "token=hunter2hunter2"
+    group = failed_group("out", stack_trace=secret, stdout=secret, stderr=secret)
+
+    [payload] = build_payloads([group], Limits()).sent
+
+    for text in (payload.stack_trace, payload.stdout, payload.stderr):
+        assert text is not None
+        assert "hunter2" not in text
