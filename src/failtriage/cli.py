@@ -18,6 +18,7 @@ from failtriage.evaluate import EvalError, evaluate, render_eval
 from failtriage.github.client import GitHubClient, GitHubError
 from failtriage.github.pr_files import list_pr_files, to_unified_diff
 from failtriage.grouping import group_failures
+from failtriage.history import history_schema
 from failtriage.models import FailureGroup, Status
 from failtriage.parsers.junit import ReportParseError, parse_junit
 from failtriage.prompts import load_prompt
@@ -43,9 +44,15 @@ def version() -> None:
 
 
 @app.command()
-def schema() -> None:
+def schema(
+    history: Annotated[
+        bool, typer.Option("--history", help="Print the schema of the history file instead.")
+    ] = False,
+) -> None:
     """Print the JSON schema of `analyze --json` output."""
-    typer.echo(json.dumps(AnalysisReport.model_json_schema(), indent=2))
+    typer.echo(
+        json.dumps(history_schema() if history else AnalysisReport.model_json_schema(), indent=2)
+    )
 
 
 @app.command()
