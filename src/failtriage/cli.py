@@ -1,3 +1,4 @@
+import json
 import textwrap
 from importlib.metadata import version as package_version
 from pathlib import Path
@@ -9,7 +10,7 @@ from failtriage.grouping import group_failures
 from failtriage.models import FailureGroup, Status
 from failtriage.parsers.junit import ReportParseError, parse_junit
 from failtriage.redaction import redact_result
-from failtriage.report.json_output import build_report
+from failtriage.report.json_output import AnalysisReport, build_report
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -24,6 +25,12 @@ def main() -> None:
 def version() -> None:
     """Print the installed failtriage version."""
     typer.echo(package_version("failtriage"))
+
+
+@app.command()
+def schema() -> None:
+    """Print the JSON schema of `analyze --json` output."""
+    typer.echo(json.dumps(AnalysisReport.model_json_schema(), indent=2))
 
 
 @app.command()

@@ -1,0 +1,325 @@
+{
+  "$defs": {
+    "Category": {
+      "enum": [
+        "product_bug",
+        "test_bug",
+        "flaky",
+        "environment",
+        "unknown"
+      ],
+      "title": "Category",
+      "type": "string"
+    },
+    "Classification": {
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/Category"
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "next_step": {
+          "title": "Next Step",
+          "type": "string"
+        },
+        "classified_by": {
+          "$ref": "#/$defs/ClassifiedBy"
+        },
+        "heuristic_verdict": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Category"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "agrees_with_heuristics": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Agrees With Heuristics"
+        },
+        "disagreement_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Disagreement Reason"
+        }
+      },
+      "required": [
+        "category",
+        "confidence",
+        "summary",
+        "evidence",
+        "next_step",
+        "classified_by",
+        "heuristic_verdict",
+        "agrees_with_heuristics"
+      ],
+      "title": "Classification",
+      "type": "object"
+    },
+    "ClassifiedBy": {
+      "enum": [
+        "heuristics",
+        "llm"
+      ],
+      "title": "ClassifiedBy",
+      "type": "string"
+    },
+    "Confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "Cost": {
+      "properties": {
+        "llm_calls": {
+          "default": 0,
+          "title": "Llm Calls",
+          "type": "integer"
+        },
+        "input_tokens": {
+          "default": 0,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "output_tokens": {
+          "default": 0,
+          "title": "Output Tokens",
+          "type": "integer"
+        },
+        "usd": {
+          "default": 0.0,
+          "title": "Usd",
+          "type": "number"
+        }
+      },
+      "title": "Cost",
+      "type": "object"
+    },
+    "GroupReport": {
+      "properties": {
+        "signature": {
+          "$ref": "#/$defs/Signature"
+        },
+        "tests": {
+          "items": {
+            "$ref": "#/$defs/GroupTest"
+          },
+          "title": "Tests",
+          "type": "array"
+        },
+        "signals": {
+          "items": {
+            "$ref": "#/$defs/Signal"
+          },
+          "title": "Signals",
+          "type": "array"
+        },
+        "classification": {
+          "$ref": "#/$defs/Classification"
+        }
+      },
+      "required": [
+        "signature",
+        "tests",
+        "signals",
+        "classification"
+      ],
+      "title": "GroupReport",
+      "type": "object"
+    },
+    "GroupTest": {
+      "properties": {
+        "test_id": {
+          "title": "Test Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "attempts": {
+          "title": "Attempts",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "test_id",
+        "status",
+        "attempts"
+      ],
+      "title": "GroupTest",
+      "type": "object"
+    },
+    "RunInfo": {
+      "properties": {
+        "tool_version": {
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Inputs",
+          "type": "array"
+        },
+        "tests": {
+          "title": "Tests",
+          "type": "integer"
+        },
+        "failed": {
+          "title": "Failed",
+          "type": "integer"
+        },
+        "passed_on_retry": {
+          "title": "Passed On Retry",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tool_version",
+        "inputs",
+        "tests",
+        "failed",
+        "passed_on_retry"
+      ],
+      "title": "RunInfo",
+      "type": "object"
+    },
+    "Signal": {
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/SignalName"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "quote"
+      ],
+      "title": "Signal",
+      "type": "object"
+    },
+    "SignalName": {
+      "enum": [
+        "passed_on_retry",
+        "network_error",
+        "timeout",
+        "missing_env_or_permission",
+        "frame_in_test_code",
+        "frame_in_source_code",
+        "assertion_mismatch"
+      ],
+      "title": "SignalName",
+      "type": "string"
+    },
+    "Signature": {
+      "properties": {
+        "exception_type": {
+          "title": "Exception Type",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Frame"
+        }
+      },
+      "required": [
+        "exception_type",
+        "message",
+        "frame"
+      ],
+      "title": "Signature",
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "passed",
+        "failed",
+        "error",
+        "skipped",
+        "passed_on_retry"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "run": {
+      "$ref": "#/$defs/RunInfo"
+    },
+    "groups": {
+      "items": {
+        "$ref": "#/$defs/GroupReport"
+      },
+      "title": "Groups",
+      "type": "array"
+    },
+    "cost": {
+      "$ref": "#/$defs/Cost"
+    },
+    "history": {
+      "default": null,
+      "title": "History",
+      "type": "null"
+    }
+  },
+  "required": [
+    "run",
+    "groups",
+    "cost"
+  ],
+  "title": "AnalysisReport",
+  "type": "object"
+}
