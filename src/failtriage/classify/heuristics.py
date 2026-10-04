@@ -4,6 +4,9 @@ from collections.abc import Iterator
 from failtriage.models import (
     Attempt,
     Category,
+    Classification,
+    ClassifiedBy,
+    Confidence,
     FailureGroup,
     Signal,
     SignalName,
@@ -52,6 +55,58 @@ _RULES: list[tuple[SignalName, SignalName | None, Category]] = [
     (SignalName.FRAME_IN_TEST_CODE, SignalName.ASSERTION_MISMATCH, Category.TEST_BUG),
     (SignalName.FRAME_IN_SOURCE_CODE, SignalName.ASSERTION_MISMATCH, Category.PRODUCT_BUG),
 ]
+
+
+# Passed on retry is direct evidence of nondeterminism (ADR 0001). The other rules only read
+# where or how a test failed, so they stay below high.
+_CONFIDENCE: dict[Category, Confidence] = {
+    Category.FLAKY: Confidence.HIGH,
+    Category.ENVIRONMENT: Confidence.MEDIUM,
+    Category.TEST_BUG: Confidence.LOW,
+    Category.PRODUCT_BUG: Confidence.LOW,
+}
+
+_TEXT: dict[Category, tuple[str, str]] = {
+    Category.FLAKY: (
+        "Failed, then passed on retry",
+        "Find the source of nondeterminism in the test or the code it calls",
+    ),
+    Category.ENVIRONMENT: (
+        "The failure points at the CI environment",
+        "Check the service or setting in the quote, then rerun",
+    ),
+    Category.TEST_BUG: (
+        "The failing frame is in test code",
+        "Check the test setup and expected values",
+    ),
+    Category.PRODUCT_BUG: (
+        "The failing frame is in source code",
+        "Check the source code at the failing frame",
+    ),
+    Category.UNKNOWN: (
+        "No clear cause in the failure output",
+        "Read the failure output, there is not enough evidence to classify it",
+    ),
+}
+
+
+def classify_with_heuristics(group: FailureGroup) -> Classification:
+    """Classify a group from its signals alone, unknown when they say nothing."""
+    found = signals(group)
+    verdict = heuristic_verdict(found)
+    evidence = [s.quote for s in found]
+    category = verdict if verdict and evidence else Category.UNKNOWN
+    summary, next_step = _TEXT[category]
+    return Classification(
+        category=category,
+        confidence=_CONFIDENCE.get(category, Confidence.LOW),
+        summary=summary,
+        evidence=evidence,
+        next_step=next_step,
+        classified_by=ClassifiedBy.HEURISTICS,
+        heuristic_verdict=verdict,
+        agrees_with_heuristics=None,
+    )
 
 
 def heuristic_verdict(found: list[Signal]) -> Category | None:
