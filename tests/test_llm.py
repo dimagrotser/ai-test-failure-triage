@@ -5,7 +5,7 @@ import pytest
 
 from failtriage.classify.llm import InvalidAnswerError, UnredactedPayloadError, classify_with_llm
 from failtriage.classify.payload import GroupPayload, Limits, build_payloads
-from failtriage.classify.provider import MissingRecordingError, RecordedProvider
+from failtriage.classify.provider import MissingRecordingError, RecordedProvider, Usage
 from failtriage.grouping import group_failures
 from failtriage.models import Category, ClassifiedBy, Confidence
 from failtriage.parsers.junit import parse_junit
@@ -20,6 +20,7 @@ class StubProvider:
 
     def __init__(self, answer: str) -> None:
         self.answer = answer
+        self.usage = Usage()
         self.payloads: list[str] = []
 
     def complete(self, prompt: Prompt, payload: str) -> str:
