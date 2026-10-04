@@ -495,7 +495,15 @@ def fake_github(
             return httpx.Response(status, json={"message": f"bad {GITHUB_TOKEN}"})
         if request.url.path.endswith("/actions/artifacts"):
             listing = [
-                {"id": i, "expired": False, "workflow_run": {"head_branch": "main"}}
+                {
+                    "id": i,
+                    "expired": False,
+                    "workflow_run": {
+                        "head_branch": "main",
+                        "repository_id": 1,
+                        "head_repository_id": 1,
+                    },
+                }
                 for i in sorted(served, reverse=True)
             ]
             return httpx.Response(200, json={"total_count": len(listing), "artifacts": listing})

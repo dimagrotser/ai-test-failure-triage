@@ -16,6 +16,8 @@ MAX_FILE_BYTES = 10 * 1024 * 1024
 
 class _WorkflowRun(BaseModel):
     head_branch: str | None = None
+    repository_id: int | None = None
+    head_repository_id: int | None = None
 
 
 class _Artifact(BaseModel):
@@ -50,12 +52,19 @@ def fetch_history(client: GitHubClient, repo: str, runs: int) -> FetchedHistory:
 
 
 def _on_main(artifact: _Artifact) -> bool:
-    return artifact.workflow_run is not None and artifact.workflow_run.head_branch == MAIN_BRANCH
+    run = artifact.workflow_run
+    if run is None or run.head_branch != MAIN_BRANCH:
+        return False
+    # A fork can have a `main` branch too, and its runs must not feed our history.
+    return run.head_repository_id is not None and run.head_repository_id == run.repository_id
 
 
 def _read_artifact(client: GitHubClient, repo: str, artifact_id: int) -> list[HistoryEntry]:
     data = client.get_bytes(f"/repos/{repo}/actions/artifacts/{artifact_id}/zip")
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
-        if archive.getinfo(ARTIFACT_FILE).file_size > MAX_FILE_BYTES:
-            raise ValueError("history file too large")
-        return parse_history(archive.read(ARTIFACT_FILE))
+        with archive.open(ARTIFACT_FILE) as file:
+            # The size in the zip header is declared by whoever made the zip, so cap the read.
+            data = file.read(MAX_FILE_BYTES + 1)
+    if len(data) > MAX_FILE_BYTES:
+        raise ValueError("history file too large")
+    return parse_history(data)
