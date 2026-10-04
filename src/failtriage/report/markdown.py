@@ -26,7 +26,7 @@ def render_markdown(report: AnalysisReport) -> str:
         )
     else:
         parts.append(
-            "History: none. No earlier runs on main were read, "
+            "History: none. No earlier runs on main were available, "
             "so nothing here says a test was stable before."
         )
     if note := _diff_note(report.diff):
