@@ -31,12 +31,12 @@ class Label(BaseModel):
 class ScoredGroup(BaseModel):
     case_id: str
     source: Source
-    label: Category
+    expected: Category
     predicted: Category
 
     @property
     def correct(self) -> bool:
-        return self.label is self.predicted
+        return self.expected is self.predicted
 
 
 class EvalResult(BaseModel):
@@ -66,7 +66,7 @@ def _score_case(case_dir: Path) -> list[ScoredGroup]:
         ScoredGroup(
             case_id=case_dir.name,
             source=label.source,
-            label=label.category,
+            expected=label.category,
             predicted=classify_with_heuristics(group).category,
         )
         for group in groups
@@ -83,7 +83,7 @@ def _read_label(case_dir: Path) -> Label:
 def render_eval(result: EvalResult) -> str:
     groups = result.groups
     correct = sum(g.correct for g in groups)
-    by_category = {c.value: [g for g in groups if g.label is c] for c in Category}
+    by_category = {c.value: [g for g in groups if g.expected is c] for c in Category}
     by_source = {s.value: [g for g in groups if g.source is s] for s in Source}
     lines = [
         f"Heuristics-only baseline: {result.cases} cases, {len(groups)} failure groups",
@@ -113,7 +113,7 @@ def _accuracy_table(title: str, rows: Mapping[str, list[ScoredGroup]]) -> list[s
 
 
 def _confusion_matrix(groups: list[ScoredGroup]) -> list[str]:
-    counts = Counter((g.label, g.predicted) for g in groups)
+    counts = Counter((g.expected, g.predicted) for g in groups)
     lines = [
         "Confusion matrix (rows: label, columns: predicted)",
         f"{'':<13}" + "".join(f"{c:>13}" for c in Category),
@@ -125,11 +125,11 @@ def _confusion_matrix(groups: list[ScoredGroup]) -> list[str]:
 
 
 def _misses(groups: list[ScoredGroup]) -> list[str]:
-    misses = Counter((g.case_id, g.label, g.predicted) for g in groups if not g.correct)
+    misses = Counter((g.case_id, g.expected, g.predicted) for g in groups if not g.correct)
     if not misses:
         return ["Misses: none"]
     lines = ["Misses"]
-    for (case_id, label, predicted), count in misses.items():
+    for (case_id, expected, predicted), count in misses.items():
         suffix = f" ({count} groups)" if count > 1 else ""
-        lines.append(f"{case_id}: {label} -> {predicted}{suffix}")
+        lines.append(f"{case_id}: {expected} -> {predicted}{suffix}")
     return lines
