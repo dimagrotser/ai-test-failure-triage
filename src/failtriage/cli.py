@@ -158,14 +158,18 @@ def _github_client(token: str) -> GitHubClient:
     return GitHubClient(token)
 
 
+def _github_reason(exc: GitHubError | ValidationError) -> str:
+    # Only the type or our own message: GitHub's answer may echo what we sent.
+    return str(exc) if isinstance(exc, GitHubError) else type(exc).__name__
+
+
 def _fetch_history(repo: str, runs: int) -> list[HistoryEntry] | None:
     """History from the artifacts of recent runs on main. Without it the run goes on."""
     client = _github_client(os.environ["GITHUB_TOKEN"])
     try:
         fetched = fetch_history(client, repo, runs)
     except (GitHubError, ValidationError) as exc:
-        reason = str(exc) if isinstance(exc, GitHubError) else type(exc).__name__
-        typer.echo(f"github: {reason}, continuing without history", err=True)
+        typer.echo(f"github: {_github_reason(exc)}, continuing without history", err=True)
         return None
     for artifact_id in fetched.skipped:
         typer.echo(f"github: history artifact {artifact_id} skipped", err=True)
@@ -178,9 +182,7 @@ def _read_diff(repo: str, pr: int) -> tuple[DiffInfo, str | None]:
     try:
         files = list_pr_files(client, repo, pr)
     except (GitHubError, ValidationError) as exc:
-        # Only the type or our own message: GitHub's answer may echo what we sent.
-        reason = str(exc) if isinstance(exc, GitHubError) else type(exc).__name__
-        typer.echo(f"github: {reason}, continuing without the diff", err=True)
+        typer.echo(f"github: {_github_reason(exc)}, continuing without the diff", err=True)
         return DiffInfo(available=False), None
     info = DiffInfo(
         changed_files=[f.filename for f in files],
