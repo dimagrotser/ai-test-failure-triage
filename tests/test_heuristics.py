@@ -341,3 +341,49 @@ def test_an_absolute_path_inside_a_tests_directory_is_still_test_code() -> None:
     group = group_with_frame("/home/runner/work/app/tests/unit/helpers.py:build")
 
     assert quote_of(group, SignalName.FRAME_IN_TEST_CODE) is not None
+
+
+def changed_quote(frame: str, changed: list[str]) -> str | None:
+    found = signals(group_with_frame(frame), changed_files=changed)
+    return next((s.quote for s in found if s.name is SignalName.TOUCHES_CHANGED_FILE), None)
+
+
+def test_a_frame_in_a_changed_file_has_the_touches_changed_file_signal() -> None:
+    quote = changed_quote("src/wallet/fees.py:fee", ["README.md", "src/wallet/fees.py"])
+
+    assert quote == "src/wallet/fees.py is changed in this pull request"
+
+
+def test_a_frame_with_an_absolute_checkout_path_matches_the_repo_relative_file() -> None:
+    frame = "/home/runner/work/wallet/wallet/src/wallet/fees.py:fee"
+
+    assert changed_quote(frame, ["src/wallet/fees.py"]) is not None
+
+
+@pytest.mark.parametrize(
+    ("frame", "changed"),
+    [
+        ("src/wallet/data.py:load", ["a.py"]),
+        ("src/wallet/a.py:load", ["wallet/b.py"]),
+        ("src/wallet/fees.py:fee", ["fees.py.orig"]),
+        ("src/wallet/fees.py:fee", []),
+        ("com.acme.Cart.total", ["Cart.java"]),
+    ],
+)
+def test_other_frames_do_not_touch_a_changed_file(frame: str, changed: list[str]) -> None:
+    assert changed_quote(frame, changed) is None
+
+
+def test_without_a_changed_file_list_there_is_no_such_signal() -> None:
+    found = signals(group_with_frame("src/wallet/fees.py:fee"))
+
+    assert SignalName.TOUCHES_CHANGED_FILE not in {s.name for s in found}
+
+
+def test_touching_a_changed_file_does_not_change_the_verdict() -> None:
+    group = group_with_frame("src/wallet/fees.py:fee")
+
+    plain = heuristic_verdict(signals(group))
+    enriched = heuristic_verdict(signals(group, changed_files=["src/wallet/fees.py"]))
+
+    assert plain == enriched

@@ -261,7 +261,8 @@
         "missing_env_or_permission",
         "frame_in_test_code",
         "frame_in_source_code",
-        "assertion_mismatch"
+        "assertion_mismatch",
+        "touches_changed_file"
       ],
       "title": "SignalName",
       "type": "string"
