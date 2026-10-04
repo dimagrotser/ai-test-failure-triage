@@ -6,6 +6,7 @@ from typing import Annotated
 
 import typer
 
+from failtriage.evaluate import EvalError, evaluate, render_eval
 from failtriage.grouping import group_failures
 from failtriage.models import FailureGroup, Status
 from failtriage.parsers.junit import ReportParseError, parse_junit
@@ -55,6 +56,21 @@ def analyze(
         raise typer.Exit(code=2) from exc
     except Exception as exc:
         # Only the type: a message or traceback may quote text that is not redacted.
+        typer.echo(f"internal error: {type(exc).__name__}", err=True)
+        raise typer.Exit(code=1) from None
+
+
+@app.command(name="eval")
+def eval_(
+    evals_dir: Annotated[Path, typer.Argument(help="Directory with a cases/ folder of Lab cases.")],
+) -> None:
+    """Score the heuristics-only classifier against the labeled Lab cases."""
+    try:
+        typer.echo(render_eval(evaluate(evals_dir)), nl=False)
+    except EvalError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=2) from exc
+    except Exception as exc:
         typer.echo(f"internal error: {type(exc).__name__}", err=True)
         raise typer.Exit(code=1) from None
 
