@@ -5,6 +5,7 @@ from functools import partial
 from pydantic import BaseModel, ConfigDict
 
 from failtriage.classify.heuristics import heuristic_verdict, signals
+from failtriage.history import HistoryEntry
 from failtriage.models import Category, FailureGroup, Signal, Signature, Status
 from failtriage.redaction import redact, redact_result
 
@@ -49,26 +50,32 @@ def build_payloads(
     limits: Limits,
     diff: str | None = None,
     changed_files: Collection[str] = (),
+    history: Collection[HistoryEntry] = (),
 ) -> PayloadPlan:
     """Shape what the LLM gets: redact first, then truncate, largest groups first up to the cap."""
     ranked = sorted(groups, key=lambda g: -len(g.results))
     redacted_diff = redact(diff) if diff else None
     return PayloadPlan(
         sent=[
-            _payload(g, limits, redacted_diff, changed_files) for g in ranked[: limits.max_groups]
+            _payload(g, limits, redacted_diff, changed_files, history)
+            for g in ranked[: limits.max_groups]
         ],
         skipped=[SkippedGroup(group=g, note=GROUP_CAP_NOTE) for g in ranked[limits.max_groups :]],
     )
 
 
 def _payload(
-    group: FailureGroup, limits: Limits, diff: str | None, changed_files: Collection[str]
+    group: FailureGroup,
+    limits: Limits,
+    diff: str | None,
+    changed_files: Collection[str],
+    history: Collection[HistoryEntry],
 ) -> GroupPayload:
     redacted = redact_result(group.results[0])
     attempt = next(
         a for a in reversed(redacted.attempts) if a.status in (Status.FAILED, Status.ERROR)
     )
-    found = signals(group, changed_files)
+    found = signals(group, changed_files, history)
     relevant_diff = select_hunks(diff, attempt.stack_trace or "", limits.diff_lines) if diff else ""
     return GroupPayload(
         signature=group.signature,

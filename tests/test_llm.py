@@ -19,6 +19,7 @@ from failtriage.classify.provider import (
 )
 from failtriage.github.pr_files import ChangedFile, to_unified_diff
 from failtriage.grouping import group_failures
+from failtriage.history import HistoryEntry
 from failtriage.models import (
     Attempt,
     Category,
@@ -485,3 +486,51 @@ def test_a_file_name_with_an_email_aborts_the_call_instead_of_leaking() -> None:
 
     assert provider.payloads == []
     assert result.failed == {0: "UnredactedPayloadError"}
+
+
+def fee_history(test_id: str = "tests/test_fees.py::test_fee") -> list[HistoryEntry]:
+    return [
+        HistoryEntry(test_id=test_id, status=status, attempts=1, sha="d" * 40, run_id=run)
+        for run, status in enumerate([Status.FAILED, Status.PASSED], start=1)
+    ]
+
+
+def test_history_signals_reach_the_provider() -> None:
+    provider = StubProvider(NO_PROOF)
+
+    classify_groups([fee_group()], provider, load_prompt(), Limits(), history=fee_history())
+
+    sent = json.loads(provider.payloads[0])
+    names = {s["name"] for s in sent["signals"]}
+    assert {SignalName.FAILED_ON_MAIN, SignalName.FLAKY_IN_HISTORY} <= names
+    assert sent["heuristic_verdict"] == Category.FLAKY
+
+
+def test_a_secret_in_a_history_test_id_never_reaches_the_provider() -> None:
+    secret = "ghp_" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8"
+    test_id = f"tests/test_fees.py::test_fee[{secret}]"
+    group = fee_group()
+    group.results[0].test_id = test_id
+    provider = StubProvider(NO_PROOF)
+
+    classify_groups([group], provider, load_prompt(), Limits(), history=fee_history(test_id))
+
+    assert provider.payloads
+    assert secret not in provider.payloads[0]
+
+
+def test_a_group_over_the_cap_is_classified_with_the_history_too() -> None:
+    small = fee_group()
+    big = fee_group()
+    big.results.append(big.results[0])
+    big.signature = big.signature.model_copy(update={"message": "other"})
+
+    result = classify_groups(
+        [small, big],
+        StubProvider(NO_PROOF),
+        load_prompt(),
+        Limits(max_groups=1),
+        history=fee_history(),
+    )
+
+    assert result.classifications[0].category is Category.FLAKY

@@ -227,6 +227,24 @@
       "title": "GroupTest",
       "type": "object"
     },
+    "HistoryInfo": {
+      "properties": {
+        "runs": {
+          "title": "Runs",
+          "type": "integer"
+        },
+        "tests": {
+          "title": "Tests",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "runs",
+        "tests"
+      ],
+      "title": "HistoryInfo",
+      "type": "object"
+    },
     "RunInfo": {
       "properties": {
         "tool_version": {
@@ -370,9 +388,15 @@
       "default": null
     },
     "history": {
-      "default": null,
-      "title": "History",
-      "type": "null"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HistoryInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

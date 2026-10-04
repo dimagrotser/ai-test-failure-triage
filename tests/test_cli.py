@@ -636,3 +636,66 @@ def test_a_pr_with_text_output_is_a_usage_error(monkeypatch: pytest.MonkeyPatch)
 
     assert result.exit_code == 2
     assert "--json or --markdown" in result.stderr
+
+
+FLAKY_CASE = Path(__file__).parent.parent / "evals" / "cases" / "flaky-random-transfer-id"
+
+
+def analyze_with_history(history: Path, *extra: str) -> Any:
+    args = ["analyze", "--junit", str(FLAKY_CASE / "junit.xml"), "--history", str(history)]
+    return runner.invoke(app, [*args, *(extra or ["--json"])])
+
+
+def test_history_adds_signals_and_a_summary_to_the_json() -> None:
+    result = analyze_with_history(FLAKY_CASE / "history.json")
+
+    assert result.exit_code == 0
+    report = AnalysisReport.model_validate_json(result.stdout)
+    assert report.history is not None
+    assert report.history.runs == 2
+    names = {s.name for g in report.groups for s in g.signals}
+    assert {SignalName.FAILED_ON_MAIN, SignalName.FLAKY_IN_HISTORY} <= names
+
+
+def test_history_shows_in_the_markdown() -> None:
+    result = analyze_with_history(FLAKY_CASE / "history.json", "--markdown")
+
+    assert result.exit_code == 0
+    assert "History: 2 runs on main" in result.stdout
+
+
+def test_without_history_the_report_says_none() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(FLAKY_CASE / "junit.xml"), "--markdown"])
+
+    assert "History: none." in result.stdout
+    assert analyze_json(FLAKY_CASE / "junit.xml").history is None
+
+
+def test_an_empty_history_file_is_reported_as_none(tmp_path: Path) -> None:
+    empty = tmp_path / "history.json"
+    empty.write_text("[]")
+
+    result = analyze_with_history(empty)
+
+    assert result.exit_code == 0
+    assert AnalysisReport.model_validate_json(result.stdout).history is None
+
+
+def test_an_invalid_history_file_is_a_usage_error_that_quotes_nothing(tmp_path: Path) -> None:
+    bad = tmp_path / "history.json"
+    bad.write_text('[{"test_id": "secret-test", "status": "melted"}]')
+
+    result = analyze_with_history(bad)
+
+    assert result.exit_code == 2
+    assert f"{bad} is not a valid history file" in result.stderr
+    assert "secret-test" not in result.stderr + result.stdout
+
+
+def test_history_with_text_output_is_a_usage_error() -> None:
+    args = ["analyze", "--junit", str(FLAKY_CASE / "junit.xml"), "--history"]
+
+    result = runner.invoke(app, [*args, str(FLAKY_CASE / "history.json")])
+
+    assert result.exit_code == 2
+    assert "--json or --markdown" in result.stderr

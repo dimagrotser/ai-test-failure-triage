@@ -18,7 +18,13 @@ def render_markdown(report: AnalysisReport) -> str:
         f"**{groups}**: {run.failed} failed {_plural(run.failed, 'test')}, "
         f"{run.passed_on_retry} passed on retry, {run.tests} {_plural(run.tests, 'test')} total."
     ]
-    if report.history is None:
+    if report.history:
+        history = report.history
+        parts.append(
+            f"History: {history.runs} {_plural(history.runs, 'run')} on main, "
+            f"{history.tests} {_plural(history.tests, 'test')}."
+        )
+    else:
         parts.append(
             "History: none. No earlier runs on main were read, "
             "so nothing here says a test was stable before."

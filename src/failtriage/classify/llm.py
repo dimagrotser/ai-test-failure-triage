@@ -7,6 +7,7 @@ from pydantic import BaseModel, ValidationError
 from failtriage.classify.heuristics import classify_with_heuristics
 from failtriage.classify.payload import GroupPayload, Limits, build_payloads
 from failtriage.classify.provider import Provider, ProviderError
+from failtriage.history import HistoryEntry
 from failtriage.models import Category, Classification, ClassifiedBy, Confidence, FailureGroup
 from failtriage.prompts import Prompt
 from failtriage.redaction import redact
@@ -53,22 +54,23 @@ def classify_groups(
     limits: Limits,
     diff: str | None = None,
     changed_files: Collection[str] = (),
+    history: Collection[HistoryEntry] = (),
 ) -> GroupClassifications:
     """Classify with the LLM what the group cap allows. The rest, and any group whose call or
     answer fails, gets the heuristics classification, so a run never ends without a result."""
-    plan = build_payloads(groups, limits, diff, changed_files)
+    plan = build_payloads(groups, limits, diff, changed_files, history)
     payloads = {p.signature: p for p in plan.sent}
     classifications: list[Classification] = []
     failed: dict[int, str] = {}
     for index, group in enumerate(groups):
         payload = payloads.get(group.signature)
         if payload is None:
-            classifications.append(classify_with_heuristics(group))
+            classifications.append(classify_with_heuristics(group, history))
             continue
         try:
             classifications.append(classify_with_llm(payload, provider, prompt))
         except (ProviderError, InvalidAnswerError, UnredactedPayloadError) as exc:
-            classifications.append(classify_with_heuristics(group))
+            classifications.append(classify_with_heuristics(group, history))
             failed[index] = type(exc).__name__
     return GroupClassifications(classifications=classifications, failed=failed)
 
