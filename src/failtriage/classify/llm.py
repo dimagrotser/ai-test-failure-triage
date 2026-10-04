@@ -1,3 +1,5 @@
+import json
+
 from pydantic import BaseModel, ValidationError
 
 from failtriage.classify.payload import GroupPayload
@@ -9,6 +11,9 @@ from failtriage.redaction import redact
 
 class InvalidAnswerError(Exception):
     pass
+
+
+NO_PROOF_REASON = "No quote from the failure output supports a more specific category"
 
 
 class UnredactedPayloadError(Exception):
@@ -38,7 +43,9 @@ def classify_with_llm(payload: GroupPayload, provider: Provider, prompt: Prompt)
         if not evidence and answer.category is not Category.UNKNOWN:
             answer = _without_proof(answer)
         elif not evidence:
-            answer = answer.model_copy(update={"confidence": Confidence.LOW})
+            answer = answer.model_copy(
+                update={"confidence": Confidence.LOW, "disagreement_reason": NO_PROOF_REASON}
+            )
         verdict = payload.heuristic_verdict
         return Classification(
             category=answer.category,
@@ -60,7 +67,22 @@ def classify_with_llm(payload: GroupPayload, provider: Provider, prompt: Prompt)
 def _verified(quotes: list[str], payload: GroupPayload) -> list[str]:
     """Keep the quotes that appear verbatim in the text the model was given."""
     texts = _texts(payload)
-    return [q for q in quotes if q and any(q in text for text in texts)]
+    kept = []
+    for quote in quotes:
+        # The model reads JSON, so it may copy a quote with the escapes that JSON adds.
+        for candidate in (quote, _unescape(quote)):
+            if candidate and any(candidate in text for text in texts):
+                kept.append(candidate)
+                break
+    return kept
+
+
+def _unescape(quote: str) -> str:
+    try:
+        text = json.loads(f'"{quote}"')
+    except ValueError:
+        return ""
+    return text if isinstance(text, str) else ""
 
 
 def _texts(payload: GroupPayload) -> list[str]:
@@ -87,6 +109,6 @@ def _without_proof(answer: LlmAnswer) -> LlmAnswer:
             "confidence": Confidence.LOW,
             "summary": "The evidence the model quoted was not found in the failure output",
             "next_step": "Read the failure output, the quoted evidence could not be verified",
-            "disagreement_reason": "None of the quotes the model gave appear in the failure output",
+            "disagreement_reason": NO_PROOF_REASON,
         }
     )

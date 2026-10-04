@@ -266,3 +266,37 @@ def test_a_payload_without_a_recording_fails_instead_of_calling_out() -> None:
 
     with pytest.raises(MissingRecordingError):
         classify_with_llm(payload, provider, load_prompt())
+
+
+def test_an_unknown_answer_without_a_reason_is_kept_when_there_is_nothing_to_quote() -> None:
+    reply = answer(category="unknown", confidence="low", evidence=[])
+
+    result = classify_with_llm(
+        payload_for("environment-refused"), StubProvider(reply), load_prompt()
+    )
+
+    assert result.category is Category.UNKNOWN
+    assert result.agrees_with_heuristics is False
+    assert result.disagreement_reason
+
+
+def test_a_quote_copied_from_the_json_text_is_matched_and_stored_unescaped() -> None:
+    payload = payload_for("environment-refused").model_copy(
+        update={"message": 'assert x == {"a": 1}\\n'}
+    )
+    quote = 'assert x == {\\"a\\": 1}\\\\n'
+
+    result = classify_with_llm(payload, StubProvider(answer(evidence=[quote])), load_prompt())
+
+    assert result.evidence == ['assert x == {"a": 1}\\n']
+
+
+def test_a_private_key_in_the_payload_aborts_the_call() -> None:
+    key = "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkq\n-----END PRIVATE KEY-----"
+    payload = payload_for("environment-refused").model_copy(update={"stderr": key})
+    provider = StubProvider(answer())
+
+    with pytest.raises(UnredactedPayloadError):
+        classify_with_llm(payload, provider, load_prompt())
+
+    assert provider.payloads == []
