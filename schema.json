@@ -289,7 +289,9 @@
         "frame_in_test_code",
         "frame_in_source_code",
         "assertion_mismatch",
-        "touches_changed_file"
+        "touches_changed_file",
+        "failed_on_main",
+        "flaky_in_history"
       ],
       "title": "SignalName",
       "type": "string"

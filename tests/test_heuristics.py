@@ -4,6 +4,7 @@ import pytest
 
 from failtriage.classify.heuristics import heuristic_verdict, signals
 from failtriage.grouping import group_failures
+from failtriage.history import HistoryEntry, load_history
 from failtriage.models import (
     Attempt,
     Category,
@@ -387,3 +388,114 @@ def test_touching_a_changed_file_does_not_change_the_verdict() -> None:
     enriched = heuristic_verdict(signals(group, changed_files=["src/wallet/fees.py"]))
 
     assert plain == enriched
+
+
+def lab_history(case: str) -> list[HistoryEntry]:
+    return load_history(CASES / case / "history.json")
+
+
+def history_names(case: str) -> set[SignalName]:
+    group = lab_group(case)
+    return {s.name for s in signals(group, history=lab_history(case))} & {
+        SignalName.FAILED_ON_MAIN,
+        SignalName.FLAKY_IN_HISTORY,
+    }
+
+
+@pytest.mark.parametrize(
+    "case", ["flaky-cold-settlement-clock", "flaky-random-transfer-id", "flaky-rates-cache-order"]
+)
+def test_a_lab_flaky_case_failed_and_passed_on_one_sha_in_history(case: str) -> None:
+    assert history_names(case) == {SignalName.FAILED_ON_MAIN, SignalName.FLAKY_IN_HISTORY}
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["product-bug-fee-rounding", "environment-ledger-dns", "unknown-dormant-new-account"],
+)
+def test_a_lab_case_that_only_passed_in_history_has_no_history_signal(case: str) -> None:
+    assert history_names(case) == set()
+
+
+def test_an_empty_history_gives_no_history_signal() -> None:
+    assert history_names("unknown-interest-rate-mismatch") == set()
+
+
+def test_without_history_there_is_no_history_signal() -> None:
+    group = lab_group("flaky-random-transfer-id")
+
+    assert {s.name for s in signals(group)}.isdisjoint(
+        {SignalName.FAILED_ON_MAIN, SignalName.FLAKY_IN_HISTORY}
+    )
+
+
+def entry(
+    status: Status, sha: str = "a" * 40, run_id: int = 1, test_id: str = "t::a"
+) -> HistoryEntry:
+    return HistoryEntry(test_id=test_id, status=status, attempts=1, sha=sha, run_id=run_id)
+
+
+def failed_group(test_id: str = "t::a") -> FailureGroup:
+    attempt = Attempt(status=Status.FAILED, message="boom")
+    result = TestResult(test_id=test_id, status=Status.FAILED, attempts=[attempt])
+    return group_failures([result])[0]
+
+
+def history_signal(name: SignalName, history: list[HistoryEntry]) -> Signal | None:
+    return next((s for s in signals(failed_group(), history=history) if s.name is name), None)
+
+
+def test_failed_on_main_quotes_the_run_and_the_short_sha() -> None:
+    found = history_signal(
+        SignalName.FAILED_ON_MAIN, [entry(Status.FAILED, sha="abcdef1234567890", run_id=7)]
+    )
+
+    assert found is not None
+    assert found.quote == "t::a failed on main in run 7 at abcdef123456"
+
+
+def test_an_error_on_main_counts_as_failed_on_main() -> None:
+    assert history_signal(SignalName.FAILED_ON_MAIN, [entry(Status.ERROR)]) is not None
+
+
+def test_another_test_failing_on_main_is_not_failed_on_main() -> None:
+    history = [entry(Status.FAILED, test_id="t::other")]
+
+    assert history_signal(SignalName.FAILED_ON_MAIN, history) is None
+
+
+def test_a_pass_and_a_failure_on_the_same_sha_is_flaky_in_history() -> None:
+    history = [entry(Status.FAILED, run_id=1), entry(Status.PASSED, run_id=2)]
+    found = history_signal(SignalName.FLAKY_IN_HISTORY, history)
+
+    assert found is not None
+    assert found.quote == f"t::a passed and failed on {'a' * 12} in runs 1, 2"
+
+
+def test_a_pass_on_retry_in_history_is_flaky_in_history() -> None:
+    assert history_signal(SignalName.FLAKY_IN_HISTORY, [entry(Status.PASSED_ON_RETRY)])
+
+
+def test_a_pass_and_a_failure_on_different_shas_is_not_flaky_in_history() -> None:
+    history = [entry(Status.PASSED, sha="a" * 40), entry(Status.FAILED, sha="b" * 40, run_id=2)]
+
+    assert history_signal(SignalName.FLAKY_IN_HISTORY, history) is None
+    assert history_signal(SignalName.FAILED_ON_MAIN, history) is not None
+
+
+def test_a_failure_that_never_passed_is_failed_on_main_but_not_flaky_in_history() -> None:
+    history = [entry(Status.FAILED, run_id=1), entry(Status.FAILED, run_id=2)]
+
+    assert history_signal(SignalName.FLAKY_IN_HISTORY, history) is None
+
+
+def test_a_secret_in_a_history_test_id_never_reaches_a_quote() -> None:
+    secret = "ghp_" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8"
+    test_id = f"t::token={secret}"
+    group = failed_group(test_id)
+    history = [entry(Status.FAILED, test_id=test_id)]
+
+    quotes = [s.quote for s in signals(group, history=history)]
+
+    assert any("failed on main" in q for q in quotes)
+    assert not any(secret in q for q in quotes)

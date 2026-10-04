@@ -58,6 +58,8 @@ class SignalName(StrEnum):
     FRAME_IN_SOURCE_CODE = "frame_in_source_code"
     ASSERTION_MISMATCH = "assertion_mismatch"
     TOUCHES_CHANGED_FILE = "touches_changed_file"
+    FAILED_ON_MAIN = "failed_on_main"
+    FLAKY_IN_HISTORY = "flaky_in_history"
 
 
 class Signal(BaseModel):
