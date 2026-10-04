@@ -107,3 +107,43 @@ def test_a_group_where_only_some_tests_passed_on_retry_is_flaky_with_medium_conf
 
     assert result.category is Category.FLAKY
     assert result.confidence is Confidence.MEDIUM
+
+
+def llm_classification(
+    category: Category, verdict: Category | None, reason: str | None
+) -> Classification:
+    return Classification(
+        category=category,
+        confidence=Confidence.MEDIUM,
+        summary="s",
+        evidence=["quote"],
+        next_step="n",
+        classified_by=ClassifiedBy.LLM,
+        heuristic_verdict=verdict,
+        agrees_with_heuristics=None if verdict is None else category is verdict,
+        disagreement_reason=reason,
+    )
+
+
+def test_an_llm_classification_that_disagrees_with_the_verdict_needs_a_reason() -> None:
+    with pytest.raises(ValidationError, match="disagreement_reason"):
+        llm_classification(Category.TEST_BUG, Category.PRODUCT_BUG, reason=None)
+
+
+def test_a_blank_reason_does_not_count() -> None:
+    with pytest.raises(ValidationError, match="disagreement_reason"):
+        llm_classification(Category.TEST_BUG, Category.PRODUCT_BUG, reason="  ")
+
+
+def test_an_llm_classification_that_disagrees_keeps_its_reason() -> None:
+    result = llm_classification(Category.TEST_BUG, Category.PRODUCT_BUG, reason="stale value")
+
+    assert result.disagreement_reason == "stale value"
+
+
+def test_an_llm_classification_that_agrees_needs_no_reason() -> None:
+    llm_classification(Category.PRODUCT_BUG, Category.PRODUCT_BUG, reason=None)
+
+
+def test_an_llm_classification_without_a_verdict_needs_no_reason() -> None:
+    llm_classification(Category.PRODUCT_BUG, None, reason=None)
