@@ -197,3 +197,39 @@ def test_analyze_internal_error_exits_one_without_printing_details(
     assert "internal error: RuntimeError" in result.output
     assert "ghp_" not in result.output
     assert result.stdout == ""
+
+
+def test_analyze_markdown_prints_the_report() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "mixed.xml"), "--markdown"])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("**3 failed tests in 3 groups**")
+    assert "History: none." in result.stdout
+
+
+def test_analyze_markdown_of_a_green_run_is_one_line() -> None:
+    result = runner.invoke(
+        app, ["analyze", "--junit", str(FIXTURES / "all_green.xml"), "--markdown"]
+    )
+
+    assert result.exit_code == 0
+    assert result.stdout == "All 4 tests passed or were skipped.\n"
+
+
+def test_analyze_markdown_contains_redacted_text_only() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "secrets.xml"), "--markdown"])
+
+    assert result.exit_code == 0
+    assert "test_pay_with_saved_card" in result.stdout
+    for secret in ["4111", "jane.doe", "hunter2", "abc.def.ghi", "ghp_"]:
+        assert secret not in result.stdout
+
+
+def test_analyze_rejects_json_and_markdown_together() -> None:
+    result = runner.invoke(
+        app, ["analyze", "--junit", str(FIXTURES / "mixed.xml"), "--json", "--markdown"]
+    )
+
+    assert result.exit_code == 2
+    assert "either --json or --markdown" in result.output
+    assert result.stdout == ""

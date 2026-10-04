@@ -11,6 +11,7 @@ from failtriage.models import FailureGroup, Status
 from failtriage.parsers.junit import ReportParseError, parse_junit
 from failtriage.redaction import redact_result
 from failtriage.report.json_output import AnalysisReport, build_report
+from failtriage.report.markdown import render_markdown
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -39,10 +40,16 @@ def analyze(
     json_output: Annotated[
         bool, typer.Option("--json", help="Print the analysis as JSON instead of text.")
     ] = False,
+    markdown: Annotated[
+        bool, typer.Option("--markdown", help="Print the analysis as a Markdown report.")
+    ] = False,
 ) -> None:
     """Group the failed tests of a report by cause and print the groups."""
+    if json_output and markdown:
+        typer.echo("use either --json or --markdown, not both", err=True)
+        raise typer.Exit(code=2)
     try:
-        _analyze(junit, json_output)
+        _analyze(junit, json_output, markdown)
     except ReportParseError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
@@ -52,17 +59,20 @@ def analyze(
         raise typer.Exit(code=1) from None
 
 
-def _analyze(junit: Path, json_output: bool) -> None:
+def _analyze(junit: Path, json_output: bool, markdown: bool) -> None:
     results = [redact_result(r) for r in parse_junit(junit)]
     if not results:
         typer.echo(f"warning: no tests found in {junit}", err=True)
-        if not json_output:
+        if not (json_output or markdown):
             return
 
     groups = group_failures(results)
-    if json_output:
+    if json_output or markdown:
         report = build_report(package_version("failtriage"), [str(junit)], results, groups)
-        typer.echo(report.model_dump_json(indent=2))
+        if json_output:
+            typer.echo(report.model_dump_json(indent=2))
+        else:
+            typer.echo(render_markdown(report), nl=False)
         return
     for number, group in enumerate(groups, start=1):
         _print_group(number, group)
