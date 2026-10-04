@@ -310,3 +310,34 @@ def test_signals_and_verdict_are_the_same_on_every_call() -> None:
     group = lab_group("environment-ledger-dns")
 
     assert signals(group) == signals(group)
+
+
+def test_a_key_error_on_a_lowercase_key_is_not_a_missing_variable() -> None:
+    group = failure("KeyError: 'user_id'")
+
+    assert quote_of(group, SignalName.MISSING_ENV_OR_PERMISSION) is None
+
+
+def test_a_passed_on_retry_result_without_a_passed_attempt_does_not_crash() -> None:
+    result = TestResult(
+        test_id="a::one",
+        status=Status.PASSED_ON_RETRY,
+        attempts=[Attempt(status=Status.FAILED, message="ValueError: bad")],
+    )
+
+    [group] = group_failures([result])
+
+    assert quote_of(group, SignalName.PASSED_ON_RETRY) == "a::one: failed, then passed on retry"
+
+
+def test_a_checkout_directory_called_test_does_not_make_source_code_test_code() -> None:
+    group = group_with_frame("/home/runner/work/test/app/wallet/accounts.py:deposit")
+
+    assert quote_of(group, SignalName.FRAME_IN_SOURCE_CODE) is not None
+    assert quote_of(group, SignalName.FRAME_IN_TEST_CODE) is None
+
+
+def test_an_absolute_path_inside_a_tests_directory_is_still_test_code() -> None:
+    group = group_with_frame("/home/runner/work/app/tests/unit/helpers.py:build")
+
+    assert quote_of(group, SignalName.FRAME_IN_TEST_CODE) is not None

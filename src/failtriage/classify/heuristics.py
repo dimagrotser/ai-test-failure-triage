@@ -35,7 +35,7 @@ _TEXT_PATTERNS: dict[SignalName, re.Pattern[str]] = {
     SignalName.MISSING_ENV_OR_PERMISSION: re.compile(
         r"PermissionError|permission denied|EACCES|read-only file system"
         # An upper snake case key is an environment variable, `KeyError: 'EUR'` is data.
-        r"|KeyError: '[A-Z][A-Z0-9]*_[A-Z0-9_]+'"
+        r"|(?-i:KeyError: '[A-Z][A-Z0-9]*_[A-Z0-9_]+')"
         r"|environment variable \S+ (?:is )?(?:not set|missing)",
         re.IGNORECASE,
     ),
@@ -78,8 +78,11 @@ def signals(group: FailureGroup) -> list[Signal]:
 def _passed_on_retry(results: list[TestResult]) -> Signal | None:
     for result in results:
         if result.status is Status.PASSED_ON_RETRY:
-            attempt = next(n for n, a in enumerate(result.attempts, 1) if a.status is Status.PASSED)
-            quote = f"{result.test_id}: failed, then passed on attempt {attempt}"
+            passed = next(
+                (n for n, a in enumerate(result.attempts, 1) if a.status is Status.PASSED), 0
+            )
+            when = f"attempt {passed}" if passed else "retry"
+            quote = f"{result.test_id}: failed, then passed on {when}"
             return Signal(name=SignalName.PASSED_ON_RETRY, quote=quote)
     return None
 
@@ -107,6 +110,9 @@ def _assertion_mismatch(exception_type: str, lines: list[str]) -> Signal | None:
 
 def _is_test_path(path: str) -> bool:
     *directories, filename = path.split("/")
+    if path.startswith("/"):
+        # Only the end of an absolute path belongs to the project, a checkout may sit in `test/`.
+        directories = directories[-2:]
     return not _TEST_DIRS.isdisjoint(directories) or bool(_TEST_FILE.match(filename))
 
 
