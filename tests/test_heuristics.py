@@ -2,9 +2,17 @@ from pathlib import Path
 
 import pytest
 
-from failtriage.classify.heuristics import signals
+from failtriage.classify.heuristics import heuristic_verdict, signals
 from failtriage.grouping import group_failures
-from failtriage.models import Attempt, FailureGroup, SignalName, Status, TestResult
+from failtriage.models import (
+    Attempt,
+    Category,
+    FailureGroup,
+    Signal,
+    SignalName,
+    Status,
+    TestResult,
+)
 from failtriage.parsers.junit import parse_junit
 
 CASES = Path(__file__).parent.parent / "evals" / "cases"
@@ -187,3 +195,118 @@ def test_other_exceptions_are_not_an_assertion_mismatch() -> None:
     group = lab_group("product-bug-deposit-float")
 
     assert quote_of(group, SignalName.ASSERTION_MISMATCH) is None
+
+
+def verdict_of(*names: SignalName) -> Category | None:
+    return heuristic_verdict([Signal(name=n, quote="q") for n in names])
+
+
+@pytest.mark.parametrize(
+    ("names", "expected"),
+    [
+        ([SignalName.PASSED_ON_RETRY], Category.FLAKY),
+        ([SignalName.NETWORK_ERROR], Category.ENVIRONMENT),
+        ([SignalName.TIMEOUT], Category.ENVIRONMENT),
+        ([SignalName.MISSING_ENV_OR_PERMISSION], Category.ENVIRONMENT),
+        ([SignalName.FRAME_IN_TEST_CODE], Category.TEST_BUG),
+        ([SignalName.FRAME_IN_SOURCE_CODE], Category.PRODUCT_BUG),
+    ],
+)
+def test_each_rule_gives_its_category(names: list[SignalName], expected: Category) -> None:
+    assert verdict_of(*names) is expected
+
+
+@pytest.mark.parametrize(
+    "names",
+    [
+        [],
+        [SignalName.ASSERTION_MISMATCH],
+        [SignalName.FRAME_IN_TEST_CODE, SignalName.ASSERTION_MISMATCH],
+        [SignalName.FRAME_IN_SOURCE_CODE, SignalName.ASSERTION_MISMATCH],
+    ],
+)
+def test_no_clear_signal_means_no_verdict(names: list[SignalName]) -> None:
+    assert verdict_of(*names) is None
+
+
+def test_passed_on_retry_wins_over_every_other_signal() -> None:
+    names = [SignalName.NETWORK_ERROR, SignalName.FRAME_IN_SOURCE_CODE, SignalName.PASSED_ON_RETRY]
+
+    assert verdict_of(*names) is Category.FLAKY
+
+
+def test_an_environment_signal_wins_over_a_frame_signal() -> None:
+    assert verdict_of(SignalName.FRAME_IN_TEST_CODE, SignalName.TIMEOUT) is Category.ENVIRONMENT
+
+
+def test_the_order_of_signals_does_not_change_the_verdict() -> None:
+    first = verdict_of(SignalName.TIMEOUT, SignalName.NETWORK_ERROR, SignalName.FRAME_IN_TEST_CODE)
+    second = verdict_of(SignalName.FRAME_IN_TEST_CODE, SignalName.NETWORK_ERROR, SignalName.TIMEOUT)
+
+    assert first is second is Category.ENVIRONMENT
+
+
+def test_a_failure_that_never_passed_is_not_flaky_even_if_it_times_out() -> None:
+    group = failure("TimeoutError: timed out")
+
+    assert heuristic_verdict(signals(group)) is Category.ENVIRONMENT
+
+
+def test_the_same_failure_that_passed_on_retry_is_flaky() -> None:
+    result = TestResult(
+        test_id="a::one",
+        status=Status.PASSED_ON_RETRY,
+        attempts=[
+            Attempt(status=Status.FAILED, message="TimeoutError: timed out"),
+            Attempt(status=Status.PASSED),
+        ],
+    )
+
+    [group] = group_failures([result])
+
+    assert heuristic_verdict(signals(group)) is Category.FLAKY
+
+
+def test_a_group_without_text_has_no_signal_and_no_verdict() -> None:
+    group = failure("")
+
+    assert signals(group) == []
+    assert heuristic_verdict(signals(group)) is None
+
+
+LAB_VERDICTS = {
+    "environment-ledger-dns": Category.ENVIRONMENT,
+    "environment-ledger-down": Category.ENVIRONMENT,
+    "environment-ledger-timeout": Category.ENVIRONMENT,
+    "environment-missing-ledger-url": Category.ENVIRONMENT,
+    "environment-read-only-statements": Category.ENVIRONMENT,
+    "flaky-cold-settlement-clock": Category.FLAKY,
+    "flaky-random-transfer-id": Category.FLAKY,
+    "flaky-rates-cache-order": Category.FLAKY,
+    "product-bug-deposit-float": Category.PRODUCT_BUG,
+    "product-bug-fee-rounding": None,
+    "test-bug-expected-value": None,
+    "test-bug-fixture-leak": None,
+    "test-bug-stale-selector": Category.TEST_BUG,
+    "unknown-dormant-new-account": None,
+    "unknown-interest-rate-mismatch": None,
+    # Known miss: a source-code exception that is really a missing feature, not a bug.
+    "unknown-amount-with-comma": Category.PRODUCT_BUG,
+}
+
+
+@pytest.mark.parametrize("case", sorted(LAB_VERDICTS))
+def test_verdict_of_the_main_group_of_a_lab_case(case: str) -> None:
+    assert heuristic_verdict(signals(lab_group(case))) is LAB_VERDICTS[case]
+
+
+def test_every_lab_case_is_in_the_verdict_table() -> None:
+    cases = {p.parent.name for p in CASES.glob("*/junit.xml")}
+
+    assert cases == set(LAB_VERDICTS)
+
+
+def test_signals_and_verdict_are_the_same_on_every_call() -> None:
+    group = lab_group("environment-ledger-dns")
+
+    assert signals(group) == signals(group)

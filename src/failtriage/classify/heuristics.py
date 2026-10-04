@@ -1,7 +1,15 @@
 import re
 from collections.abc import Iterator
 
-from failtriage.models import Attempt, FailureGroup, Signal, SignalName, Status, TestResult
+from failtriage.models import (
+    Attempt,
+    Category,
+    FailureGroup,
+    Signal,
+    SignalName,
+    Status,
+    TestResult,
+)
 from failtriage.redaction import redact_result
 
 _QUOTE_LIMIT = 200
@@ -32,6 +40,27 @@ _TEXT_PATTERNS: dict[SignalName, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
 }
+
+# Every verdict rule lives here. The first rule whose signal is present, and whose excluded signal
+# is absent, decides. A frame in code only says where it failed, so an assertion mismatch there
+# stays undecided: the test or the product could be wrong.
+_RULES: list[tuple[SignalName, SignalName | None, Category]] = [
+    (SignalName.PASSED_ON_RETRY, None, Category.FLAKY),
+    (SignalName.NETWORK_ERROR, None, Category.ENVIRONMENT),
+    (SignalName.TIMEOUT, None, Category.ENVIRONMENT),
+    (SignalName.MISSING_ENV_OR_PERMISSION, None, Category.ENVIRONMENT),
+    (SignalName.FRAME_IN_TEST_CODE, SignalName.ASSERTION_MISMATCH, Category.TEST_BUG),
+    (SignalName.FRAME_IN_SOURCE_CODE, SignalName.ASSERTION_MISMATCH, Category.PRODUCT_BUG),
+]
+
+
+def heuristic_verdict(found: list[Signal]) -> Category | None:
+    """The Category the rules derive from the signals, or None when nothing is clear."""
+    names = {s.name for s in found}
+    for required, excluded, category in _RULES:
+        if required in names and excluded not in names:
+            return category
+    return None
 
 
 def signals(group: FailureGroup) -> list[Signal]:
