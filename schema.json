@@ -227,6 +227,24 @@
       "title": "GroupTest",
       "type": "object"
     },
+    "HistoryInfo": {
+      "properties": {
+        "runs": {
+          "title": "Runs",
+          "type": "integer"
+        },
+        "tests": {
+          "title": "Tests",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "runs",
+        "tests"
+      ],
+      "title": "HistoryInfo",
+      "type": "object"
+    },
     "RunInfo": {
       "properties": {
         "tool_version": {
@@ -289,7 +307,9 @@
         "frame_in_test_code",
         "frame_in_source_code",
         "assertion_mismatch",
-        "touches_changed_file"
+        "touches_changed_file",
+        "failed_on_main",
+        "flaky_in_history"
       ],
       "title": "SignalName",
       "type": "string"
@@ -368,9 +388,15 @@
       "default": null
     },
     "history": {
-      "default": null,
-      "title": "History",
-      "type": "null"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HistoryInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

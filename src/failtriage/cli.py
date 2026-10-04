@@ -18,6 +18,7 @@ from failtriage.evaluate import EvalError, evaluate, render_eval
 from failtriage.github.client import GitHubClient, GitHubError
 from failtriage.github.pr_files import list_pr_files, to_unified_diff
 from failtriage.grouping import group_failures
+from failtriage.history import HistoryEntry, HistoryError, history_schema, load_history
 from failtriage.models import FailureGroup, Status
 from failtriage.parsers.junit import ReportParseError, parse_junit
 from failtriage.prompts import load_prompt
@@ -43,9 +44,15 @@ def version() -> None:
 
 
 @app.command()
-def schema() -> None:
+def schema(
+    history: Annotated[
+        bool, typer.Option("--history", help="Print the schema of the history file instead.")
+    ] = False,
+) -> None:
     """Print the JSON schema of `analyze --json` output."""
-    typer.echo(json.dumps(AnalysisReport.model_json_schema(), indent=2))
+    typer.echo(
+        json.dumps(history_schema() if history else AnalysisReport.model_json_schema(), indent=2)
+    )
 
 
 @app.command()
@@ -71,6 +78,10 @@ def analyze(
     pr: Annotated[
         int | None, typer.Option(help="Pull request number. Needs --repo and GITHUB_TOKEN.")
     ] = None,
+    history: Annotated[
+        Path | None,
+        typer.Option(help="JSON file with test statuses from earlier runs on main."),
+    ] = None,
 ) -> None:
     """Group the failed tests of a report by cause and print the groups."""
     if json_output and markdown:
@@ -94,10 +105,14 @@ def analyze(
     if repo is not None and not os.environ.get("GITHUB_TOKEN"):
         typer.echo("--repo and --pr read from GitHub and need GITHUB_TOKEN", err=True)
         raise typer.Exit(code=2)
+    if history is not None and not (json_output or markdown):
+        typer.echo("--history needs --json or --markdown, text output has no signals", err=True)
+        raise typer.Exit(code=2)
     pull_request = (repo, pr) if repo is not None and pr is not None else None
     try:
-        _analyze(junit, json_output, markdown, model, record, pull_request)
-    except ReportParseError as exc:
+        entries = load_history(history) if history is not None else None
+        _analyze(junit, json_output, markdown, model, record, pull_request, entries)
+    except (ReportParseError, HistoryError) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
     except Exception as exc:
@@ -154,6 +169,7 @@ def _analyze(
     model: str,
     record: Path | None,
     pull_request: tuple[str, int] | None,
+    history: list[HistoryEntry] | None = None,
 ) -> None:
     results = [redact_result(r) for r in parse_junit(junit)]
     if not results:
@@ -165,7 +181,7 @@ def _analyze(
     if json_output or markdown:
         diff_info, diff = _read_diff(*pull_request) if pull_request else (None, None)
         changed = diff_info.changed_files if diff_info else []
-        classified, cost = _classify(groups, model, record, diff, changed)
+        classified, cost = _classify(groups, model, record, diff, changed, history or [])
         report = build_report(
             package_version("failtriage"),
             [str(junit)],
@@ -174,6 +190,7 @@ def _analyze(
             classified.classifications if classified else None,
             cost,
             diff_info,
+            history,
         )
         if json_output:
             typer.echo(report.model_dump_json(indent=2))
@@ -197,13 +214,16 @@ def _classify(
     record: Path | None,
     diff: str | None,
     changed_files: list[str],
+    history: list[HistoryEntry],
 ) -> tuple[GroupClassifications | None, Cost]:
     """Classify with the LLM when there is a key, else leave it to the heuristics."""
     if not os.environ.get("ANTHROPIC_API_KEY"):
         typer.echo("ANTHROPIC_API_KEY not set, classifying with heuristics only", err=True)
         return None, Cost()
     provider = AnthropicProvider(_client(), model, answer_schema(), record)
-    classified = classify_groups(groups, provider, load_prompt(), Limits(), diff, changed_files)
+    classified = classify_groups(
+        groups, provider, load_prompt(), Limits(), diff, changed_files, history
+    )
     usage = provider.usage
     usd = cost_usd(model, usage)
     calls = f"{usage.calls} {'call' if usage.calls == 1 else 'calls'}"

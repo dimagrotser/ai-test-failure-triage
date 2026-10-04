@@ -1,0 +1,53 @@
+{
+  "$defs": {
+    "HistoryEntry": {
+      "description": "One test in one run on main, as the action uploads it (ADR 0002).",
+      "properties": {
+        "test_id": {
+          "title": "Test Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "attempts": {
+          "minimum": 1,
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "sha": {
+          "title": "Sha",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "test_id",
+        "status",
+        "attempts",
+        "sha",
+        "run_id"
+      ],
+      "title": "HistoryEntry",
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "passed",
+        "failed",
+        "error",
+        "skipped",
+        "passed_on_retry"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "items": {
+    "$ref": "#/$defs/HistoryEntry"
+  },
+  "type": "array"
+}

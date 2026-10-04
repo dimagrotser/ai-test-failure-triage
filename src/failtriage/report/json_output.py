@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from failtriage.classify.heuristics import classify_with_heuristics, signals
+from failtriage.history import HistoryEntry
 from failtriage.models import (
     Classification,
     FailureGroup,
@@ -52,6 +53,11 @@ class DiffInfo(BaseModel):
     files_without_hunks: list[str] = []
 
 
+class HistoryInfo(BaseModel):
+    runs: int
+    tests: int
+
+
 class AnalysisReport(BaseModel):
     schema_version: Literal[1] = 1
     run: RunInfo
@@ -59,9 +65,9 @@ class AnalysisReport(BaseModel):
     cost: Cost
     # None when the run was not tied to a pull request.
     diff: DiffInfo | None = None
-    # Always null until history is read from artifacts, which a report must say instead of
-    # implying a clean record (ADR 0002).
-    history: None = None
+    # None when there is no history, which a report must say instead of implying a clean
+    # record (ADR 0002).
+    history: HistoryInfo | None = None
 
 
 def build_report(
@@ -72,6 +78,7 @@ def build_report(
     classifications: list[Classification] | None = None,
     cost: Cost | None = None,
     diff: DiffInfo | None = None,
+    history: list[HistoryEntry] | None = None,
 ) -> AnalysisReport:
     """`classifications` line up with `groups`; without them the heuristics classify."""
     changed = diff.changed_files if diff else []
@@ -84,16 +91,30 @@ def build_report(
             passed_on_retry=sum(r.status is Status.PASSED_ON_RETRY for r in results),
         ),
         groups=[
-            _group_report(g, classifications[i] if classifications else None, changed)
+            _group_report(
+                g, classifications[i] if classifications else None, changed, history or []
+            )
             for i, g in enumerate(groups)
         ],
         cost=cost or Cost(),
         diff=diff,
+        history=_history_info(history),
+    )
+
+
+def _history_info(history: list[HistoryEntry] | None) -> HistoryInfo | None:
+    if not history:
+        return None
+    return HistoryInfo(
+        runs=len({e.run_id for e in history}), tests=len({e.test_id for e in history})
     )
 
 
 def _group_report(
-    group: FailureGroup, classification: Classification | None, changed_files: list[str]
+    group: FailureGroup,
+    classification: Classification | None,
+    changed_files: list[str],
+    history: list[HistoryEntry],
 ) -> GroupReport:
     return GroupReport(
         signature=group.signature,
@@ -101,6 +122,6 @@ def _group_report(
             GroupTest(test_id=r.test_id, status=r.status, attempts=len(r.attempts))
             for r in group.results
         ],
-        signals=signals(group, changed_files),
-        classification=classification or classify_with_heuristics(group),
+        signals=signals(group, changed_files, history),
+        classification=classification or classify_with_heuristics(group, history),
     )

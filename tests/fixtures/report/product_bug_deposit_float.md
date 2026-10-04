@@ -1,6 +1,6 @@
 **1 failure group**: 41 failed tests, 0 passed on retry, 59 tests total.
 
-History: none. No earlier runs on main were read, so nothing here says a test was stable before.
+History: none. No earlier runs on main were available, so nothing here says a test was stable before.
 
 ### 1. product_bug, low confidence
 

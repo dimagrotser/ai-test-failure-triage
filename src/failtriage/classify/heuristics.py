@@ -1,6 +1,7 @@
 import re
 from collections.abc import Collection, Iterator
 
+from failtriage.history import HistoryEntry
 from failtriage.models import (
     Attempt,
     Category,
@@ -13,7 +14,7 @@ from failtriage.models import (
     Status,
     TestResult,
 )
-from failtriage.redaction import redact_result
+from failtriage.redaction import redact, redact_result
 
 _QUOTE_LIMIT = 200
 _PYTEST_EXCEPTION_LINE = re.compile(r"^E\s+(?P<text>\S.*)$")
@@ -49,6 +50,7 @@ _TEXT_PATTERNS: dict[SignalName, re.Pattern[str]] = {
 # stays undecided: the test or the product could be wrong.
 _RULES: list[tuple[SignalName, SignalName | None, Category]] = [
     (SignalName.PASSED_ON_RETRY, None, Category.FLAKY),
+    (SignalName.FLAKY_IN_HISTORY, None, Category.FLAKY),
     (SignalName.NETWORK_ERROR, None, Category.ENVIRONMENT),
     (SignalName.TIMEOUT, None, Category.ENVIRONMENT),
     (SignalName.MISSING_ENV_OR_PERMISSION, None, Category.ENVIRONMENT),
@@ -58,8 +60,9 @@ _RULES: list[tuple[SignalName, SignalName | None, Category]] = [
 
 
 # Passed on retry is direct evidence of nondeterminism (ADR 0001), but only for the tests that
-# did it, see classify_with_heuristics. The other rules only read where or how a test failed,
-# so they stay below high.
+# did it, see classify_with_heuristics. History shows a test is unstable, not that this failure
+# was random, so flaky from history alone is medium. The other rules only read where or how a
+# test failed, so they stay below high.
 _CONFIDENCE: dict[Category, Confidence] = {
     Category.FLAKY: Confidence.HIGH,
     Category.ENVIRONMENT: Confidence.MEDIUM,
@@ -91,15 +94,20 @@ _TEXT: dict[Category, tuple[str, str]] = {
 }
 
 
-def classify_with_heuristics(group: FailureGroup) -> Classification:
+def classify_with_heuristics(
+    group: FailureGroup, history: Collection[HistoryEntry] = ()
+) -> Classification:
     """Classify a group from its signals alone, unknown when they say nothing."""
-    found = signals(group)
+    found = signals(group, history=history)
     verdict = heuristic_verdict(found)
     evidence = [s.quote for s in found]
     category = verdict if verdict and evidence else Category.UNKNOWN
     summary, next_step = _TEXT[category]
     confidence = _CONFIDENCE.get(category, Confidence.LOW)
-    if category is Category.FLAKY and any(
+    if category is Category.FLAKY and SignalName.PASSED_ON_RETRY not in {s.name for s in found}:
+        summary = "Passed and failed on the same commit in history"
+        confidence = Confidence.MEDIUM
+    elif category is Category.FLAKY and any(
         r.status is not Status.PASSED_ON_RETRY for r in group.results
     ):
         # Other tests with this signature failed every attempt, so only part of the group is proven.
@@ -125,9 +133,14 @@ def heuristic_verdict(found: list[Signal]) -> Category | None:
     return None
 
 
-def signals(group: FailureGroup, changed_files: Collection[str] = ()) -> list[Signal]:
+def signals(
+    group: FailureGroup,
+    changed_files: Collection[str] = (),
+    history: Collection[HistoryEntry] = (),
+) -> list[Signal]:
     """Signals of a group, each with the first quote that proves it. `changed_files` are the
-    repo-relative paths a pull request changed, without them there is no diff signal."""
+    repo-relative paths a pull request changed, without them there is no diff signal. Without
+    `history` there are no history signals."""
     results = [redact_result(r) for r in group.results]
     found = [_passed_on_retry(results)]
     lines = [line for r in results for line in _failure_lines(r)]
@@ -136,6 +149,7 @@ def signals(group: FailureGroup, changed_files: Collection[str] = ()) -> list[Si
     found.append(_frame_signal(group.signature.frame, results))
     found.append(_assertion_mismatch(group.signature.exception_type, lines))
     found.append(_touches_changed_file(group.signature.frame, changed_files))
+    found.extend(_history_signals(results, history))
     return [s for s in found if s]
 
 
@@ -183,6 +197,44 @@ def _touches_changed_file(frame: str | None, changed_files: Collection[str]) -> 
     return Signal(
         name=SignalName.TOUCHES_CHANGED_FILE, quote=f"{changed} is changed in this pull request"
     )
+
+
+_FAILURES = (Status.FAILED, Status.ERROR)
+
+
+def _history_signals(results: list[TestResult], history: Collection[HistoryEntry]) -> list[Signal]:
+    """Signals from earlier runs on main for the first test of the group that has them."""
+    failed = flaky = None
+    for result in results:
+        own = [e for e in history if e.test_id == result.test_id]
+        # A test id is not redacted with the attempts, and a quote must never carry a secret.
+        test_id = redact(result.test_id)
+        failed = failed or _failed_on_main(test_id, own)
+        flaky = flaky or _flaky_in_history(test_id, own)
+    return [s for s in (failed, flaky) if s]
+
+
+def _failed_on_main(test_id: str, entries: list[HistoryEntry]) -> Signal | None:
+    failure = next((e for e in entries if e.status in _FAILURES), None)
+    if failure is None:
+        return None
+    quote = f"{test_id} failed on main in run {failure.run_id} at {failure.sha[:12]}"
+    return Signal(name=SignalName.FAILED_ON_MAIN, quote=quote)
+
+
+def _flaky_in_history(test_id: str, entries: list[HistoryEntry]) -> Signal | None:
+    """A pass and a failure on one commit. An entry that passed on retry is both by itself."""
+    for sha in dict.fromkeys(e.sha for e in entries):
+        same = [e for e in entries if e.sha == sha]
+        passed = any(e.status in (Status.PASSED, Status.PASSED_ON_RETRY) for e in same)
+        failed = any(e.status in (*_FAILURES, Status.PASSED_ON_RETRY) for e in same)
+        if passed and failed:
+            run_ids = sorted({e.run_id for e in same})
+            noun = "run" if len(run_ids) == 1 else "runs"
+            runs = ", ".join(map(str, run_ids))
+            quote = f"{test_id} passed and failed on {sha[:12]} in {noun} {runs}"
+            return Signal(name=SignalName.FLAKY_IN_HISTORY, quote=quote)
+    return None
 
 
 def _is_test_path(path: str) -> bool:

@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from failtriage.grouping import group_failures
+from failtriage.history import load_history
 from failtriage.models import ClassifiedBy, SignalName
 from failtriage.parsers.junit import parse_junit
 from failtriage.report.json_output import AnalysisReport, DiffInfo, build_report
@@ -206,3 +207,22 @@ def test_the_changed_file_signal_is_in_the_group_signals() -> None:
 
     names = {s.name for s in report.groups[0].signals}
     assert SignalName.TOUCHES_CHANGED_FILE in names
+
+
+def test_a_report_with_history_says_how_much_was_read() -> None:
+    results = parse_junit(CASES / "flaky-random-transfer-id" / "junit.xml")
+    history = load_history(CASES / "flaky-random-transfer-id" / "history.json")
+    report = build_report("0.1.0", ["j"], results, group_failures(results), history=history)
+
+    markdown = render_markdown(report)
+
+    assert "History: 2 runs on main, 17 tests." in markdown
+    assert "History: none" not in markdown
+
+
+def test_an_empty_history_is_reported_as_none() -> None:
+    results = parse_junit(JUNIT / "mixed.xml")
+    report = build_report("0.1.0", ["j"], results, group_failures(results), history=[])
+
+    assert report.history is None
+    assert "History: none." in render_markdown(report)
