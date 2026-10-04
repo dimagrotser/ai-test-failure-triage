@@ -206,6 +206,7 @@ def verdict_of(*names: SignalName) -> Category | None:
     ("names", "expected"),
     [
         ([SignalName.PASSED_ON_RETRY], Category.FLAKY),
+        ([SignalName.FLAKY_IN_HISTORY], Category.FLAKY),
         ([SignalName.NETWORK_ERROR], Category.ENVIRONMENT),
         ([SignalName.TIMEOUT], Category.ENVIRONMENT),
         ([SignalName.MISSING_ENV_OR_PERMISSION], Category.ENVIRONMENT),
@@ -222,6 +223,8 @@ def test_each_rule_gives_its_category(names: list[SignalName], expected: Categor
     [
         [],
         [SignalName.ASSERTION_MISMATCH],
+        [SignalName.FAILED_ON_MAIN],
+        [SignalName.TOUCHES_CHANGED_FILE],
         [SignalName.FRAME_IN_TEST_CODE, SignalName.ASSERTION_MISMATCH],
         [SignalName.FRAME_IN_SOURCE_CODE, SignalName.ASSERTION_MISMATCH],
     ],
@@ -499,3 +502,11 @@ def test_a_secret_in_a_history_test_id_never_reaches_a_quote() -> None:
 
     assert any("failed on main" in q for q in quotes)
     assert not any(secret in q for q in quotes)
+
+
+def test_flaky_in_history_wins_over_an_environment_signal() -> None:
+    assert verdict_of(SignalName.TIMEOUT, SignalName.FLAKY_IN_HISTORY) is Category.FLAKY
+
+
+def test_failed_on_main_does_not_change_the_verdict() -> None:
+    assert verdict_of(SignalName.TIMEOUT, SignalName.FAILED_ON_MAIN) is Category.ENVIRONMENT

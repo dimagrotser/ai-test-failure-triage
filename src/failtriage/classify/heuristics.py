@@ -50,6 +50,7 @@ _TEXT_PATTERNS: dict[SignalName, re.Pattern[str]] = {
 # stays undecided: the test or the product could be wrong.
 _RULES: list[tuple[SignalName, SignalName | None, Category]] = [
     (SignalName.PASSED_ON_RETRY, None, Category.FLAKY),
+    (SignalName.FLAKY_IN_HISTORY, None, Category.FLAKY),
     (SignalName.NETWORK_ERROR, None, Category.ENVIRONMENT),
     (SignalName.TIMEOUT, None, Category.ENVIRONMENT),
     (SignalName.MISSING_ENV_OR_PERMISSION, None, Category.ENVIRONMENT),
@@ -59,8 +60,9 @@ _RULES: list[tuple[SignalName, SignalName | None, Category]] = [
 
 
 # Passed on retry is direct evidence of nondeterminism (ADR 0001), but only for the tests that
-# did it, see classify_with_heuristics. The other rules only read where or how a test failed,
-# so they stay below high.
+# did it, see classify_with_heuristics. History shows a test is unstable, not that this failure
+# was random, so flaky from history alone is medium. The other rules only read where or how a
+# test failed, so they stay below high.
 _CONFIDENCE: dict[Category, Confidence] = {
     Category.FLAKY: Confidence.HIGH,
     Category.ENVIRONMENT: Confidence.MEDIUM,
@@ -92,15 +94,20 @@ _TEXT: dict[Category, tuple[str, str]] = {
 }
 
 
-def classify_with_heuristics(group: FailureGroup) -> Classification:
+def classify_with_heuristics(
+    group: FailureGroup, history: Collection[HistoryEntry] = ()
+) -> Classification:
     """Classify a group from its signals alone, unknown when they say nothing."""
-    found = signals(group)
+    found = signals(group, history=history)
     verdict = heuristic_verdict(found)
     evidence = [s.quote for s in found]
     category = verdict if verdict and evidence else Category.UNKNOWN
     summary, next_step = _TEXT[category]
     confidence = _CONFIDENCE.get(category, Confidence.LOW)
-    if category is Category.FLAKY and any(
+    if category is Category.FLAKY and SignalName.PASSED_ON_RETRY not in {s.name for s in found}:
+        summary = "Passed and failed on the same commit in history"
+        confidence = Confidence.MEDIUM
+    elif category is Category.FLAKY and any(
         r.status is not Status.PASSED_ON_RETRY for r in group.results
     ):
         # Other tests with this signature failed every attempt, so only part of the group is proven.

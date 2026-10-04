@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from failtriage.classify.heuristics import classify_with_heuristics
 from failtriage.grouping import group_failures
+from failtriage.history import HistoryEntry, load_history
 from failtriage.models import (
     Attempt,
     Category,
@@ -22,6 +23,10 @@ CASES = Path(__file__).parent.parent / "evals" / "cases"
 
 def lab_group(case: str) -> FailureGroup:
     return group_failures(parse_junit(CASES / case / "junit.xml"))[0]
+
+
+def lab_history_of(case: str) -> list[HistoryEntry]:
+    return load_history(CASES / case / "history.json")
 
 
 def test_a_test_that_passed_on_retry_is_flaky_with_high_confidence() -> None:
@@ -147,3 +152,56 @@ def test_an_llm_classification_that_agrees_needs_no_reason() -> None:
 
 def test_an_llm_classification_without_a_verdict_needs_no_reason() -> None:
     llm_classification(Category.PRODUCT_BUG, None, reason=None)
+
+
+def history_of(*statuses: Status, sha: str = "c" * 40) -> list[HistoryEntry]:
+    return [
+        HistoryEntry(
+            test_id="tests.test_balance::test_deposit_increases_the_balance",
+            status=status,
+            attempts=1,
+            sha=sha,
+            run_id=n,
+        )
+        for n, status in enumerate(statuses, start=1)
+    ]
+
+
+def test_a_test_that_passed_and_failed_on_one_sha_in_history_is_flaky_with_medium_confidence() -> (
+    None
+):
+    group = lab_group("product-bug-deposit-float")
+    history = history_of(Status.FAILED, Status.PASSED)
+    history = [e.model_copy(update={"test_id": group.results[0].test_id}) for e in history]
+
+    result = classify_with_heuristics(group, history=history)
+
+    assert result.category is Category.FLAKY
+    assert result.confidence is Confidence.MEDIUM
+    assert result.heuristic_verdict is Category.FLAKY
+    assert result.summary == "Passed and failed on the same commit in history"
+    assert any("passed and failed on" in quote for quote in result.evidence)
+
+
+def test_a_failure_on_main_alone_does_not_make_a_group_flaky() -> None:
+    group = lab_group("product-bug-deposit-float")
+    history = [
+        e.model_copy(update={"test_id": group.results[0].test_id})
+        for e in history_of(Status.FAILED)
+    ]
+
+    result = classify_with_heuristics(group, history=history)
+
+    assert result.category is Category.PRODUCT_BUG
+    assert any("failed on main" in quote for quote in result.evidence)
+
+
+def test_passed_on_retry_keeps_high_confidence_when_history_agrees() -> None:
+    group = lab_group("flaky-random-transfer-id")
+    history = lab_history_of("flaky-random-transfer-id")
+
+    result = classify_with_heuristics(group, history=history)
+
+    assert result.category is Category.FLAKY
+    assert result.confidence is Confidence.HIGH
+    assert result.summary == "Failed, then passed on retry"
