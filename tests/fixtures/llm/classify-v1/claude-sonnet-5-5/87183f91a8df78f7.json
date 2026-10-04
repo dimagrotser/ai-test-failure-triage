@@ -1,0 +1,6 @@
+{
+  "prompt_version": "classify-v1",
+  "model": "claude-sonnet-5-5",
+  "payload": "{\n  \"signature\": {\n    \"exception_type\": \"ConnectionRefusedError\",\n    \"message\": \"[Errno <NUM>] Connection refused\",\n    \"frame\": \"wallet/ledger.py:\"\n  },\n  \"tests\": [\n    \"tests.test_ledger::test_records_transfer\"\n  ],\n  \"message\": \"ConnectionRefusedError: [Errno 111] Connection refused\",\n  \"stack_trace\": \"wallet/ledger.py:12: ConnectionRefusedError\",\n  \"stdout\": null,\n  \"stderr\": null,\n  \"signals\": [\n    {\n      \"name\": \"network_error\",\n      \"quote\": \"ConnectionRefusedError: [Errno 111] Connection refused\"\n    },\n    {\n      \"name\": \"frame_in_source_code\",\n      \"quote\": \"wallet/ledger.py:12: ConnectionRefusedError\"\n    }\n  ],\n  \"heuristic_verdict\": \"environment\",\n  \"diff\": null\n}",
+  "response": "{\"category\": \"environment\", \"confidence\": \"medium\", \"summary\": \"The ledger service refused the connection.\", \"evidence\": [\"ConnectionRefusedError: [Errno 111] Connection refused\"], \"next_step\": \"Check that the ledger service is up\", \"disagreement_reason\": null}"
+}

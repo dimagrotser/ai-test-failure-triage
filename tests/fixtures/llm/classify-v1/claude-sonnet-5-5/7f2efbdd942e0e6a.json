@@ -1,0 +1,6 @@
+{
+  "prompt_version": "classify-v1",
+  "model": "claude-sonnet-5-5",
+  "payload": "{\n  \"signature\": {\n    \"exception_type\": \"AssertionError\",\n    \"message\": \"assert <NUM> == <NUM>\",\n    \"frame\": null\n  },\n  \"tests\": [\n    \"tests.test_fees::test_fee_rounds_half_up\"\n  ],\n  \"message\": \"AssertionError: assert 1.49 == 1.5\",\n  \"stack_trace\": \"AssertionError: assert 1.49 == 1.5\",\n  \"stdout\": null,\n  \"stderr\": null,\n  \"signals\": [\n    {\n      \"name\": \"assertion_mismatch\",\n      \"quote\": \"AssertionError: assert 1.49 == 1.5\"\n    }\n  ],\n  \"heuristic_verdict\": null,\n  \"diff\": null\n}",
+  "response": "{\"category\": \"product_bug\", \"confidence\": \"low\", \"summary\": \"The computed fee is 1.49 where 1.5 is expected, so the rounding looks wrong.\", \"evidence\": [\"AssertionError: assert 1.49 == 1.5\"], \"next_step\": \"Check how the fee is rounded in the code under test\", \"disagreement_reason\": null}"
+}

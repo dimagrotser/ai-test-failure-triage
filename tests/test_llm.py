@@ -5,6 +5,7 @@ import pytest
 
 from failtriage.classify.llm import InvalidAnswerError, UnredactedPayloadError, classify_with_llm
 from failtriage.classify.payload import GroupPayload, Limits, build_payloads
+from failtriage.classify.provider import MissingRecordingError, RecordedProvider
 from failtriage.grouping import group_failures
 from failtriage.models import Category, ClassifiedBy, Confidence
 from failtriage.parsers.junit import parse_junit
@@ -235,3 +236,33 @@ def test_an_already_redacted_payload_passes_the_final_check() -> None:
     classify_with_llm(payload, provider, load_prompt())
 
     assert len(provider.payloads) == 1
+
+
+RECORDINGS = Path(__file__).parent / "fixtures" / "llm"
+
+
+def test_a_recorded_answer_is_replayed_into_a_classification() -> None:
+    provider = RecordedProvider(RECORDINGS, "claude-sonnet-5-5")
+
+    result = classify_with_llm(payload_for("environment-refused"), provider, load_prompt())
+
+    assert result.category is Category.ENVIRONMENT
+    assert result.agrees_with_heuristics is True
+
+
+def test_a_recorded_answer_for_a_group_without_a_verdict() -> None:
+    provider = RecordedProvider(RECORDINGS, "claude-sonnet-5-5")
+
+    result = classify_with_llm(payload_for("product-bug-assert"), provider, load_prompt())
+
+    assert result.category is Category.PRODUCT_BUG
+    assert result.agrees_with_heuristics is None
+    assert result.evidence == ["AssertionError: assert 1.49 == 1.5"]
+
+
+def test_a_payload_without_a_recording_fails_instead_of_calling_out() -> None:
+    provider = RecordedProvider(RECORDINGS, "claude-sonnet-5-5")
+    payload = payload_for("flaky-retry")
+
+    with pytest.raises(MissingRecordingError):
+        classify_with_llm(payload, provider, load_prompt())
