@@ -27,6 +27,10 @@ class MissingRecordingError(Exception):
     pass
 
 
+class ProviderError(Exception):
+    pass
+
+
 def recording_path(directory: Path, prompt_version: str, model: str, payload: str) -> Path:
     digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
     return directory / prompt_version / model / f"{digest}.json"

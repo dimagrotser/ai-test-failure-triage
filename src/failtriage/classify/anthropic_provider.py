@@ -3,15 +3,11 @@ from typing import Any
 
 import anthropic
 
-from failtriage.classify.provider import Usage, write_recording
+from failtriage.classify.provider import ProviderError, Usage, write_recording
 from failtriage.prompts import Prompt
 
 # An answer is a few sentences and a handful of quotes, so this is far above what it needs.
 MAX_ANSWER_TOKENS = 4096
-
-
-class ProviderError(Exception):
-    pass
 
 
 class AnthropicProvider:
@@ -31,16 +27,20 @@ class AnthropicProvider:
         self.usage = Usage()
 
     def complete(self, prompt: Prompt, payload: str) -> str:
-        response = self._client.messages.create(
-            model=self.model,
-            max_tokens=MAX_ANSWER_TOKENS,
-            system=prompt.text,
-            messages=[{"role": "user", "content": payload}],
-            output_config={
-                "effort": "low",
-                "format": {"type": "json_schema", "schema": self._schema},
-            },
-        )
+        try:
+            response = self._client.messages.create(
+                model=self.model,
+                max_tokens=MAX_ANSWER_TOKENS,
+                system=prompt.text,
+                messages=[{"role": "user", "content": payload}],
+                output_config={
+                    "effort": "low",
+                    "format": {"type": "json_schema", "schema": self._schema},
+                },
+            )
+        except anthropic.APIError as exc:
+            # Only the type: the SDK message can quote the request.
+            raise ProviderError(f"the request failed: {type(exc).__name__}") from None
         call = Usage(
             calls=1,
             input_tokens=response.usage.input_tokens,

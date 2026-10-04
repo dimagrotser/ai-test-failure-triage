@@ -6,8 +6,8 @@ import anthropic
 import httpx2
 import pytest
 
-from failtriage.classify.anthropic_provider import AnthropicProvider, ProviderError
-from failtriage.classify.provider import RecordedProvider, Usage
+from failtriage.classify.anthropic_provider import AnthropicProvider
+from failtriage.classify.provider import ProviderError, RecordedProvider, Usage
 from failtriage.prompts import Prompt
 
 MODEL = "claude-sonnet-5-5"
@@ -95,17 +95,13 @@ def test_a_recording_replays_the_answer_and_its_usage(tmp_path: Path) -> None:
     assert replay.usage == Usage(calls=1, input_tokens=120, output_tokens=30)
 
 
-def test_an_api_error_does_not_quote_the_key() -> None:
-    response = httpx2.Response(
-        401,
-        json={
-            "type": "error",
-            "error": {"type": "authentication_error", "message": "invalid x-api-key"},
-        },
-    )
-    provider = AnthropicProvider(client([], response), MODEL, SCHEMA)
+def test_an_api_error_names_its_type_and_does_not_quote_the_key() -> None:
+    error_body = {"type": "error", "error": {"type": "authentication_error", "message": "bad key"}}
+    provider = AnthropicProvider(client([], httpx2.Response(401, json=error_body)), MODEL, SCHEMA)
 
-    with pytest.raises(anthropic.AuthenticationError) as error:
+    with pytest.raises(ProviderError) as error:
         provider.complete(PROMPT, "payload")
 
+    assert "AuthenticationError" in str(error.value)
     assert "test-key" not in str(error.value)
+    assert "bad key" not in str(error.value)
