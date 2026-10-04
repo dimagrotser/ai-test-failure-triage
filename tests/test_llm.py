@@ -3,9 +3,20 @@ from pathlib import Path
 
 import pytest
 
-from failtriage.classify.llm import InvalidAnswerError, UnredactedPayloadError, classify_with_llm
+from failtriage.classify.llm import (
+    InvalidAnswerError,
+    UnredactedPayloadError,
+    answer_schema,
+    classify_groups,
+    classify_with_llm,
+)
 from failtriage.classify.payload import GroupPayload, Limits, build_payloads
-from failtriage.classify.provider import MissingRecordingError, RecordedProvider, Usage
+from failtriage.classify.provider import (
+    MissingRecordingError,
+    ProviderError,
+    RecordedProvider,
+    Usage,
+)
 from failtriage.grouping import group_failures
 from failtriage.models import Category, ClassifiedBy, Confidence
 from failtriage.parsers.junit import parse_junit
@@ -301,3 +312,61 @@ def test_a_private_key_in_the_payload_aborts_the_call() -> None:
         classify_with_llm(payload, provider, load_prompt())
 
     assert provider.payloads == []
+
+
+MIXED = Path(__file__).parent / "fixtures" / "junit" / "mixed.xml"
+NO_PROOF = answer(category="unknown", confidence="low", evidence=[], disagreement_reason="no proof")
+
+
+class FailingProvider(StubProvider):
+    def complete(self, prompt: Prompt, payload: str) -> str:
+        raise ProviderError("down")
+
+
+def test_every_group_is_classified_by_the_llm_in_group_order() -> None:
+    groups = group_failures(parse_junit(MIXED))
+    provider = StubProvider(NO_PROOF)
+
+    result = classify_groups(groups, provider, load_prompt(), Limits())
+
+    assert len(provider.payloads) == 3
+    assert [c.classified_by for c in result.classifications] == [ClassifiedBy.LLM] * 3
+    assert result.failed == {}
+
+
+def test_groups_over_the_cap_are_classified_by_heuristics_and_not_sent() -> None:
+    groups = group_failures(parse_junit(MIXED))
+    provider = StubProvider(NO_PROOF)
+
+    result = classify_groups(groups, provider, load_prompt(), Limits(max_groups=1))
+
+    assert len(provider.payloads) == 1
+    by = [c.classified_by for c in result.classifications]
+    assert by.count(ClassifiedBy.LLM) == 1
+    assert by.count(ClassifiedBy.HEURISTICS) == 2
+    assert result.failed == {}
+
+
+def test_a_failing_call_falls_back_to_heuristics_and_records_only_the_error_type() -> None:
+    groups = group_failures(parse_junit(MIXED))
+
+    result = classify_groups(groups, FailingProvider(NO_PROOF), load_prompt(), Limits())
+
+    assert [c.classified_by for c in result.classifications] == [ClassifiedBy.HEURISTICS] * 3
+    assert result.failed == {0: "ProviderError", 1: "ProviderError", 2: "ProviderError"}
+
+
+def test_an_invalid_answer_falls_back_for_that_group_only() -> None:
+    groups = group_failures(parse_junit(MIXED))
+
+    result = classify_groups(groups, StubProvider("not json"), load_prompt(), Limits())
+
+    assert set(result.failed.values()) == {"InvalidAnswerError"}
+    assert [c.classified_by for c in result.classifications] == [ClassifiedBy.HEURISTICS] * 3
+
+
+def test_the_answer_schema_closes_the_object_and_requires_the_answer_fields() -> None:
+    schema = answer_schema()
+
+    assert schema["additionalProperties"] is False
+    assert {"category", "confidence", "summary", "evidence", "next_step"} <= set(schema["required"])
