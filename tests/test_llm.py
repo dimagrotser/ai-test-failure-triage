@@ -461,3 +461,27 @@ def test_a_file_without_a_patch_still_gives_the_signal_and_sends_no_diff() -> No
     sent = json.loads(provider.payloads[0])
     assert SignalName.TOUCHES_CHANGED_FILE in {s["name"] for s in sent["signals"]}
     assert "@@" not in (sent["diff"] or "")
+
+
+def test_a_file_name_with_an_email_aborts_the_call_instead_of_leaking() -> None:
+    provider = StubProvider(NO_PROOF)
+    path = "src/wallet/fees.py"
+    group = fee_group()
+
+    result = classify_groups(
+        [group], provider, load_prompt(), Limits(), changed_files=[path, "notes/jane@acme.io.md"]
+    )
+    assert provider.payloads  # a clean name is fine
+
+    provider = StubProvider(NO_PROOF)
+    leaky = group.model_copy(
+        update={
+            "signature": group.signature.model_copy(update={"frame": "notes/jane@acme.io.md:fee"})
+        }
+    )
+    result = classify_groups(
+        [leaky], provider, load_prompt(), Limits(), changed_files=["notes/jane@acme.io.md"]
+    )
+
+    assert provider.payloads == []
+    assert result.failed == {0: "UnredactedPayloadError"}

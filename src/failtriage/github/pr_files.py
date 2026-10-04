@@ -7,7 +7,7 @@ class ChangedFile(BaseModel):
     filename: str
     status: str
     previous_filename: str | None = None
-    # GitHub leaves the patch out for binary files and for diffs that are too large.
+    # GitHub leaves the patch out for binary files, pure renames and diffs that are too large.
     patch: str | None = None
 
 
