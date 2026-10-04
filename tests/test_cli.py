@@ -1,9 +1,13 @@
 import json
 from pathlib import Path
+from typing import Any
 
+import anthropic
+import httpx2
 import pytest
 from typer.testing import CliRunner
 
+from failtriage import cli
 from failtriage.cli import app
 from failtriage.models import Category, ClassifiedBy
 from failtriage.report.json_output import AnalysisReport
@@ -253,3 +257,180 @@ def test_eval_reports_a_dataset_that_cannot_be_scored(tmp_path: Path) -> None:
 
     assert result.exit_code == 2
     assert "no cases" in result.output
+
+
+KEY = "sk-ant-api03-DoNotPrintThisKey0123456789"
+LEDGER_DOWN = CASES / "environment-ledger-down" / "junit.xml"
+QUOTE = "urllib.error.URLError: <urlopen error [Errno 61] Connection refused>"
+LLM_ANSWER = {
+    "category": "environment",
+    "confidence": "high",
+    "summary": "The ledger service refused the connection.",
+    "evidence": [QUOTE],
+    "next_step": "Check that the ledger service is up",
+    "disagreement_reason": None,
+}
+
+
+def fake_anthropic(
+    monkeypatch: pytest.MonkeyPatch, requests: list[dict[str, Any]], status: int = 200
+) -> None:
+    """The key is set and the API is a local handler, so no test reaches the network."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", KEY)
+
+    def handle(request: httpx2.Request) -> httpx2.Response:
+        requests.append(json.loads(request.content))
+        if status != 200:
+            error = {"type": "authentication_error", "message": f"bad {KEY}"}
+            return httpx2.Response(status, json={"type": "error", "error": error})
+        body = {
+            "id": "msg_1",
+            "type": "message",
+            "role": "assistant",
+            "model": requests[-1]["model"],
+            "content": [{"type": "text", "text": json.dumps(LLM_ANSWER)}],
+            "stop_reason": "end_turn",
+            "stop_sequence": None,
+            "usage": {"input_tokens": 1000, "output_tokens": 200},
+        }
+        return httpx2.Response(200, json=body)
+
+    def make_client() -> anthropic.Anthropic:
+        return anthropic.Anthropic(
+            max_retries=0,
+            http_client=anthropic.DefaultHttpxClient(transport=httpx2.MockTransport(handle)),
+        )
+
+    monkeypatch.setattr(cli, "_client", make_client)
+
+
+def test_without_a_key_the_run_uses_heuristics_and_says_so() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--json"])
+
+    assert result.exit_code == 0
+    report = AnalysisReport.model_validate_json(result.stdout)
+    assert report.groups[0].classification.classified_by is ClassifiedBy.HEURISTICS
+    assert report.cost.model is None
+    assert report.cost.llm_calls == 0
+    assert "ANTHROPIC_API_KEY not set" in result.stderr
+
+
+def test_with_a_key_groups_are_classified_by_the_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_anthropic(monkeypatch, [])
+
+    report = analyze_json(LEDGER_DOWN)
+
+    classification = report.groups[0].classification
+    assert classification.classified_by is ClassifiedBy.LLM
+    assert classification.evidence == [QUOTE]
+
+
+def test_tokens_and_cost_are_in_the_json_and_logged(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_anthropic(monkeypatch, [])
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--json"])
+
+    cost = AnalysisReport.model_validate_json(result.stdout).cost
+    assert cost.model == "claude-sonnet-5-5"
+    assert (cost.llm_calls, cost.input_tokens, cost.output_tokens) == (1, 1000, 200)
+    assert cost.usd == pytest.approx(0.004)
+    assert "1 call, 1000 input tokens, 200 output tokens, $0.0040" in result.stderr
+
+
+def test_the_default_model_is_sonnet_and_it_can_be_overridden(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[dict[str, Any]] = []
+    fake_anthropic(monkeypatch, requests)
+
+    runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--json"])
+    runner.invoke(
+        app, ["analyze", "--junit", str(LEDGER_DOWN), "--json", "--model", "claude-haiku-4-5"]
+    )
+
+    assert [r["model"] for r in requests] == ["claude-sonnet-5-5", "claude-haiku-4-5"]
+
+
+def test_an_unpriced_model_is_logged_without_a_cost(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_anthropic(monkeypatch, [])
+
+    result = runner.invoke(
+        app, ["analyze", "--junit", str(LEDGER_DOWN), "--json", "--model", "claude-mystery"]
+    )
+
+    assert AnalysisReport.model_validate_json(result.stdout).cost.usd is None
+    assert "cost unknown" in result.stderr
+
+
+def test_the_markdown_report_is_classified_by_the_llm_too(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_anthropic(monkeypatch, [])
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--markdown"])
+
+    assert result.exit_code == 0
+    assert "The ledger service refused the connection." in result.stdout
+
+
+def test_record_writes_recordings_that_replay(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake_anthropic(monkeypatch, [])
+
+    result = runner.invoke(
+        app, ["analyze", "--junit", str(LEDGER_DOWN), "--json", "--record", str(tmp_path)]
+    )
+
+    assert result.exit_code == 0
+    [path] = (tmp_path / "classify-v1" / "claude-sonnet-5-5").glob("*.json")
+    saved = json.loads(path.read_text())
+    assert json.loads(saved["response"]) == LLM_ANSWER
+    assert saved["usage"] == {"input_tokens": 1000, "output_tokens": 200}
+
+
+def test_record_without_a_key_is_a_usage_error(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app, ["analyze", "--junit", str(LEDGER_DOWN), "--json", "--record", str(tmp_path)]
+    )
+
+    assert result.exit_code == 2
+    assert "ANTHROPIC_API_KEY" in result.stderr
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_a_failing_call_falls_back_to_heuristics_and_the_run_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_anthropic(monkeypatch, [], status=401)
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--json"])
+
+    assert result.exit_code == 0
+    report = AnalysisReport.model_validate_json(result.stdout)
+    assert report.groups[0].classification.classified_by is ClassifiedBy.HEURISTICS
+    assert "group 1: ProviderError" in result.stderr
+
+
+@pytest.mark.parametrize("status", [200, 401])
+def test_the_key_is_never_printed_or_recorded(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, status: int
+) -> None:
+    fake_anthropic(monkeypatch, [], status=status)
+
+    result = runner.invoke(
+        app, ["analyze", "--junit", str(LEDGER_DOWN), "--json", "--record", str(tmp_path)]
+    )
+
+    written = "".join(p.read_text() for p in tmp_path.rglob("*") if p.is_file())
+    assert KEY not in result.stdout + result.stderr + written
+
+
+def test_the_text_output_does_not_call_the_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+    requests: list[dict[str, Any]] = []
+    fake_anthropic(monkeypatch, requests)
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN)])
+
+    assert result.exit_code == 0
+    assert requests == []

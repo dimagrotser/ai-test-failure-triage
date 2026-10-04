@@ -16,3 +16,9 @@ def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(socket.socket, "connect", refuse)
     monkeypatch.setattr(socket.socket, "connect_ex", refuse_ex)
+
+
+@pytest.fixture(autouse=True)
+def no_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A key in the developer's shell must not turn a heuristics test into a live run."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
