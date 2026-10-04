@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "b1f0e2a9c3d4",
+    "filename": "src/wallet/fees.py",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 1,
+    "changes": 3,
+    "blob_url": "https://github.com/acme/wallet/blob/9c1d/src/wallet/fees.py",
+    "raw_url": "https://github.com/acme/wallet/raw/9c1d/src/wallet/fees.py",
+    "contents_url": "https://api.github.com/repos/acme/wallet/contents/src/wallet/fees.py?ref=9c1d",
+    "patch": "@@ -10,7 +10,8 @@ def fee(amount):\n     rate = Decimal(\"0.015\")\n-    return round(amount * rate, 2)\n+    fee = amount * rate\n+    return fee.quantize(Decimal(\"0.01\"))\n     \n"
+  }
+]
