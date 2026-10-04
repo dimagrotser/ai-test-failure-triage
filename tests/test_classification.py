@@ -92,3 +92,18 @@ def test_an_unknown_classification_without_evidence_needs_low_confidence() -> No
             heuristic_verdict=None,
             agrees_with_heuristics=None,
         )
+
+
+def test_a_group_where_only_some_tests_passed_on_retry_is_flaky_with_medium_confidence() -> None:
+    failed = Attempt(status=Status.FAILED, message="ValueError: bad")
+    passed = Attempt(status=Status.PASSED)
+    retried = TestResult(
+        test_id="a::retried", status=Status.PASSED_ON_RETRY, attempts=[failed, passed]
+    )
+    always = TestResult(test_id="a::always", status=Status.FAILED, attempts=[failed, failed])
+    group = group_failures([retried, always])[0]
+
+    result = classify_with_heuristics(group)
+
+    assert result.category is Category.FLAKY
+    assert result.confidence is Confidence.MEDIUM

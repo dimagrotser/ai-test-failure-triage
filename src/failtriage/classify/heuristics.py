@@ -57,8 +57,9 @@ _RULES: list[tuple[SignalName, SignalName | None, Category]] = [
 ]
 
 
-# Passed on retry is direct evidence of nondeterminism (ADR 0001). The other rules only read
-# where or how a test failed, so they stay below high.
+# Passed on retry is direct evidence of nondeterminism (ADR 0001), but only for the tests that
+# did it, see classify_with_heuristics. The other rules only read where or how a test failed,
+# so they stay below high.
 _CONFIDENCE: dict[Category, Confidence] = {
     Category.FLAKY: Confidence.HIGH,
     Category.ENVIRONMENT: Confidence.MEDIUM,
@@ -97,9 +98,15 @@ def classify_with_heuristics(group: FailureGroup) -> Classification:
     evidence = [s.quote for s in found]
     category = verdict if verdict and evidence else Category.UNKNOWN
     summary, next_step = _TEXT[category]
+    confidence = _CONFIDENCE.get(category, Confidence.LOW)
+    if category is Category.FLAKY and any(
+        r.status is not Status.PASSED_ON_RETRY for r in group.results
+    ):
+        # Other tests with this signature failed every attempt, so only part of the group is proven.
+        confidence = Confidence.MEDIUM
     return Classification(
         category=category,
-        confidence=_CONFIDENCE.get(category, Confidence.LOW),
+        confidence=confidence,
         summary=summary,
         evidence=evidence,
         next_step=next_step,
