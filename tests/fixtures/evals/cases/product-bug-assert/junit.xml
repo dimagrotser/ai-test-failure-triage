@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.100">
+    <testcase classname="tests.test_fees" name="test_fee_rounds_half_up" time="0.010">
+      <failure message="AssertionError: assert 1.49 == 1.5">AssertionError: assert 1.49 == 1.5</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

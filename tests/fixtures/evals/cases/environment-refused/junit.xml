@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.100">
+    <testcase classname="tests.test_ledger" name="test_records_transfer" time="0.010">
+      <failure message="ConnectionRefusedError: [Errno 111] Connection refused">wallet/ledger.py:12: ConnectionRefusedError</failure>
+    </testcase>
+  </testsuite>
+</testsuites>
