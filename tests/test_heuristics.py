@@ -33,6 +33,13 @@ def failure(message: str, stack_trace: str | None = None) -> FailureGroup:
     return group_failures([result])[0]
 
 
+def group_with_frame(frame: str) -> FailureGroup:
+    group = failure("ValueError: bad")
+    return group.model_copy(
+        update={"signature": group.signature.model_copy(update={"frame": frame})}
+    )
+
+
 @pytest.mark.parametrize(
     ("case", "name", "quote"),
     [
@@ -111,3 +118,72 @@ def test_a_secret_in_the_message_never_reaches_a_quote() -> None:
     quote = quote_of(group, SignalName.NETWORK_ERROR)
 
     assert quote == "ConnectionError: refused for <EMAIL> API_TOKEN=<SECRET>"
+
+
+def test_a_frame_in_a_tests_directory_is_test_code() -> None:
+    group = lab_group("test-bug-stale-selector")
+
+    assert quote_of(group, SignalName.FRAME_IN_TEST_CODE) == (
+        "tests/test_receipt.py:32: LookupError"
+    )
+    assert quote_of(group, SignalName.FRAME_IN_SOURCE_CODE) is None
+
+
+def test_a_frame_in_the_application_is_source_code() -> None:
+    group = lab_group("product-bug-deposit-float")
+
+    assert quote_of(group, SignalName.FRAME_IN_SOURCE_CODE) == "wallet/accounts.py:16: TypeError"
+    assert quote_of(group, SignalName.FRAME_IN_TEST_CODE) is None
+
+
+@pytest.mark.parametrize(
+    "frame",
+    [
+        "src/cart.spec.ts:total",
+        "src/cart.test.js:total",
+        "pkg/cart_test.py:test_total",
+        "pkg/test_cart.py:test_total",
+        "__tests__/cart.js:total",
+        "com.acme.CartTest.testTotal",
+        "com.acme.CartTests.testTotal",
+    ],
+)
+def test_conventional_test_locations_are_test_code(frame: str) -> None:
+    group = group_with_frame(frame)
+
+    assert quote_of(group, SignalName.FRAME_IN_TEST_CODE) is not None
+    assert quote_of(group, SignalName.FRAME_IN_SOURCE_CODE) is None
+
+
+@pytest.mark.parametrize("frame", ["src/cart.ts:total", "com.acme.Cart.total", "latest/cart.py:f"])
+def test_other_locations_are_source_code(frame: str) -> None:
+    group = group_with_frame(frame)
+
+    assert quote_of(group, SignalName.FRAME_IN_SOURCE_CODE) is not None
+    assert quote_of(group, SignalName.FRAME_IN_TEST_CODE) is None
+
+
+def test_a_group_without_a_frame_has_no_frame_signal() -> None:
+    names = {s.name for s in signals(failure("ValueError: bad"))}
+
+    assert names.isdisjoint({SignalName.FRAME_IN_TEST_CODE, SignalName.FRAME_IN_SOURCE_CODE})
+
+
+@pytest.mark.parametrize(
+    ("case", "quote"),
+    [
+        (
+            "product-bug-fee-rounding",
+            "AssertionError: assert Decimal('1.48') == Decimal('1.49')",
+        ),
+        ("flaky-cold-settlement-clock", "assert False"),
+    ],
+)
+def test_an_assertion_error_is_an_assertion_mismatch(case: str, quote: str) -> None:
+    assert quote_of(lab_group(case), SignalName.ASSERTION_MISMATCH) == quote
+
+
+def test_other_exceptions_are_not_an_assertion_mismatch() -> None:
+    group = lab_group("product-bug-deposit-float")
+
+    assert quote_of(group, SignalName.ASSERTION_MISMATCH) is None

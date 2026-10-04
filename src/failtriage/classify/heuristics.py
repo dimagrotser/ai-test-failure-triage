@@ -6,6 +6,10 @@ from failtriage.redaction import redact_result
 
 _QUOTE_LIMIT = 200
 _PYTEST_EXCEPTION_LINE = re.compile(r"^E\s+(?P<text>\S.*)$")
+_ASSERTION_TYPES = {"AssertionError", "AssertionFailedError", "ComparisonFailure"}
+_TEST_DIRS = {"tests", "test", "__tests__"}
+_TEST_FILE = re.compile(r"^(?:test_.*|.*_test\..*|.*\.(?:test|spec)\..*)$")
+_JAVA_TEST_CLASS = re.compile(r"(?:Test|Tests)$")
 
 # Matched only against the message, the pytest `E` lines and the first trace line. The rest of
 # a trace is library code, where a comment like `# timeout error` would give a false signal.
@@ -37,6 +41,8 @@ def signals(group: FailureGroup) -> list[Signal]:
     lines = [line for r in results for line in _failure_lines(r)]
     for name, pattern in _TEXT_PATTERNS.items():
         found.append(_from_lines(name, pattern, lines))
+    found.append(_frame_signal(group.signature.frame, results))
+    found.append(_assertion_mismatch(group.signature.exception_type, lines))
     return [s for s in found if s]
 
 
@@ -47,6 +53,42 @@ def _passed_on_retry(results: list[TestResult]) -> Signal | None:
             quote = f"{result.test_id}: failed, then passed on attempt {attempt}"
             return Signal(name=SignalName.PASSED_ON_RETRY, quote=quote)
     return None
+
+
+def _frame_signal(frame: str | None, results: list[TestResult]) -> Signal | None:
+    if not frame:
+        return None
+    path = frame.rsplit(":", 1)[0] if ":" in frame else None
+    in_tests = _is_test_path(path) if path else _is_java_test(frame)
+    name = SignalName.FRAME_IN_TEST_CODE if in_tests else SignalName.FRAME_IN_SOURCE_CODE
+    # The last trace line that names the file is the frame closest to the exception.
+    trace = [line.strip() for r in results for line in _trace_lines(r)]
+    quote = next((line for line in reversed(trace) if path and path in line), frame)
+    return Signal(name=name, quote=quote[:_QUOTE_LIMIT])
+
+
+def _assertion_mismatch(exception_type: str, lines: list[str]) -> Signal | None:
+    if exception_type.rsplit(".", 1)[-1] not in _ASSERTION_TYPES:
+        return None
+    quote = next((line for line in lines if exception_type in line), lines[0] if lines else "")
+    return Signal(
+        name=SignalName.ASSERTION_MISMATCH, quote=(quote or exception_type)[:_QUOTE_LIMIT]
+    )
+
+
+def _is_test_path(path: str) -> bool:
+    *directories, filename = path.split("/")
+    return not _TEST_DIRS.isdisjoint(directories) or bool(_TEST_FILE.match(filename))
+
+
+def _is_java_test(frame: str) -> bool:
+    return bool(_JAVA_TEST_CLASS.search(frame.rsplit(".", 1)[0]))
+
+
+def _trace_lines(result: TestResult) -> Iterator[str]:
+    for attempt in result.attempts:
+        if attempt.status in (Status.FAILED, Status.ERROR):
+            yield from (attempt.stack_trace or "").splitlines()
 
 
 def _from_lines(name: SignalName, pattern: re.Pattern[str], lines: list[str]) -> Signal | None:
