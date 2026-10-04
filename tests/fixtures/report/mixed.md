@@ -1,4 +1,4 @@
-**3 failed tests in 3 groups**, 0 passed on retry, 6 tests total.
+**3 failure groups**: 3 failed tests, 0 passed on retry, 6 tests total.
 
 History: none. No earlier runs on main were read, so nothing here says a test was stable before.
 

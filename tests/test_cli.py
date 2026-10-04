@@ -203,7 +203,7 @@ def test_analyze_markdown_prints_the_report() -> None:
     result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "mixed.xml"), "--markdown"])
 
     assert result.exit_code == 0
-    assert result.stdout.startswith("**3 failed tests in 3 groups**")
+    assert result.stdout.startswith("**3 failure groups**: 3 failed tests")
     assert "History: none." in result.stdout
 
 

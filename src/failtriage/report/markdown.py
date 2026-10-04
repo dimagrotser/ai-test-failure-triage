@@ -13,10 +13,10 @@ def render_markdown(report: AnalysisReport) -> str:
     if not report.groups:
         return f"All {report.run.tests} tests passed or were skipped.\n"
     run = report.run
-    failed = f"{run.failed} failed {_plural(run.failed, 'test')}"
-    groups = f"{len(report.groups)} {_plural(len(report.groups), 'group')}"
+    groups = f"{len(report.groups)} failure {_plural(len(report.groups), 'group')}"
     parts = [
-        f"**{failed} in {groups}**, {run.passed_on_retry} passed on retry, {run.tests} tests total."
+        f"**{groups}**: {run.failed} failed {_plural(run.failed, 'test')}, "
+        f"{run.passed_on_retry} passed on retry, {run.tests} {_plural(run.tests, 'test')} total."
     ]
     if report.history is None:
         parts.append(
@@ -29,14 +29,16 @@ def render_markdown(report: AnalysisReport) -> str:
 
 def _group_section(number: int, group: GroupReport) -> str:
     result = group.classification
-    shown = [f"`{t.test_id}`" for t in group.tests[:_TESTS_SHOWN]]
-    if len(group.tests) > _TESTS_SHOWN:
-        shown.append(f"and {len(group.tests) - _TESTS_SHOWN} more")
+    # Parametrized cases share one test id, listing it once keeps the slots for distinct tests.
+    test_ids = list(dict.fromkeys(t.test_id for t in group.tests))
+    shown = [_code(test_id) for test_id in test_ids[:_TESTS_SHOWN]]
+    if len(test_ids) > _TESTS_SHOWN:
+        shown.append(f"and {len(test_ids) - _TESTS_SHOWN} more")
     tests = ", ".join(shown)
     lines = [
         f"### {number}. {result.category.value}, {result.confidence.value} confidence",
         result.summary,
-        f"Tests ({len(group.tests)}): {tests}",
+        f"Tests ({len(test_ids)}): {tests}",
     ]
     if result.evidence:
         lines.append("Evidence:\n\n" + _fenced(result.evidence))
@@ -48,11 +50,21 @@ def _group_section(number: int, group: GroupReport) -> str:
     return "\n\n".join(lines)
 
 
-def _fenced(quotes: list[str]) -> str:
-    text = "\n".join(quotes)
+def _code(text: str) -> str:
+    fence = _backtick_fence(text, minimum=1)
+    pad = " " if text.startswith("`") or text.endswith("`") else ""
+    return f"{fence}{pad}{text}{pad}{fence}"
+
+
+def _backtick_fence(text: str, minimum: int) -> str:
     # A quote may hold backticks, a longer fence keeps it from closing the block early.
     longest = max((len(run) for run in re.findall(r"`+", text)), default=0)
-    fence = "`" * max(3, longest + 1)
+    return "`" * max(minimum, longest + 1)
+
+
+def _fenced(quotes: list[str]) -> str:
+    text = "\n".join(quotes)
+    fence = _backtick_fence(text, minimum=3)
     return f"{fence}text\n{text}\n{fence}"
 
 

@@ -33,7 +33,9 @@ def test_a_run_without_tests_is_one_line() -> None:
 def test_the_summary_line_counts_failures_retries_and_groups() -> None:
     markdown = render_markdown(report_for(JUNIT / "mixed.xml"))
 
-    assert markdown.startswith("**3 failed tests in 3 groups**, 0 passed on retry, 6 tests total.")
+    assert markdown.startswith(
+        "**3 failure groups**: 3 failed tests, 0 passed on retry, 6 tests total."
+    )
 
 
 def test_each_group_gets_a_section_with_category_confidence_and_next_step() -> None:
@@ -94,11 +96,22 @@ def test_only_groups_the_llm_did_not_classify_are_marked_as_not_sent() -> None:
 
 
 def test_a_long_test_list_is_cut_after_five_tests() -> None:
-    markdown = render_markdown(report_for(CASES / "product-bug-deposit-float" / "junit.xml"))
+    report = report_for(JUNIT / "mixed.xml")
+    group = report.groups[0]
+    group.tests = [group.tests[0].model_copy(update={"test_id": f"a::t{n}"}) for n in range(41)]
+
+    markdown = render_markdown(report)
 
     assert "Tests (41):" in markdown
-    assert markdown.count("`tests.test_balance::") == 5
+    assert markdown.count("`a::t") == 5
     assert "and 36 more" in markdown
+
+
+def test_parametrized_cases_are_listed_once() -> None:
+    markdown = render_markdown(report_for(CASES / "product-bug-deposit-float" / "junit.xml"))
+
+    assert "Tests (2):" in markdown
+    assert markdown.count("`tests.test_balance::test_deposit_keeps_every_cent`") == 1
 
 
 SNAPSHOTS = Path(__file__).parent / "fixtures" / "report"
@@ -123,3 +136,20 @@ def test_the_report_matches_its_snapshot(name: str, junit: Path) -> None:
         snapshot.write_text(markdown)
 
     assert markdown == snapshot.read_text()
+
+
+def test_a_test_id_with_backticks_cannot_close_its_code_span() -> None:
+    report = report_for(JUNIT / "mixed.xml")
+    group = report.groups[0]
+    group.tests = [group.tests[0].model_copy(update={"test_id": "a::t[`x`]"})]
+
+    assert "`` a::t[`x`] ``" not in render_markdown(report)
+    assert "``a::t[`x`]``" in render_markdown(report)
+
+
+def test_a_one_test_run_uses_singular_nouns() -> None:
+    markdown = render_markdown(report_for(JUNIT / "minimal.xml"))
+
+    assert markdown.startswith(
+        "**1 failure group**: 1 failed test, 0 passed on retry, 1 test total."
+    )

@@ -1,4 +1,4 @@
-**1 failed test in 1 group**, 0 passed on retry, 1 tests total.
+**1 failure group**: 1 failed test, 0 passed on retry, 1 test total.
 
 History: none. No earlier runs on main were read, so nothing here says a test was stable before.
 
