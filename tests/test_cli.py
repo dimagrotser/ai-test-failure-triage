@@ -1,9 +1,12 @@
+import json
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
 from failtriage.cli import app
+from failtriage.models import Category, ClassifiedBy
+from failtriage.report.json_output import AnalysisReport
 
 runner = CliRunner()
 
@@ -121,3 +124,59 @@ def test_analyze_prints_the_signature_on_redacted_text() -> None:
     [signature] = [line for line in result.output.splitlines() if "Signature:" in line]
     assert "card <CARD> declined for <EMAIL>" in signature
     assert "jane.doe" not in signature
+
+
+def analyze_json(junit: Path) -> AnalysisReport:
+    result = runner.invoke(app, ["analyze", "--junit", str(junit), "--json"])
+    assert result.exit_code == 0
+    return AnalysisReport.model_validate_json(result.stdout)
+
+
+def test_analyze_json_has_version_run_groups_cost_and_no_history() -> None:
+    report = analyze_json(FIXTURES / "mixed.xml")
+    raw = json.loads(
+        runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "mixed.xml"), "--json"]).stdout
+    )
+
+    assert report.schema_version == 1
+    assert set(raw) == {"schema_version", "run", "groups", "cost", "history"}
+    assert raw["history"] is None
+    assert report.run.tests == 6
+    assert report.run.failed == 3
+    assert len(report.groups) == 3
+    assert report.cost.usd == 0
+    first = report.groups[0]
+    assert first.tests[0].test_id == "tests.test_cart::test_total_with_discount"
+    assert first.classification.classified_by is ClassifiedBy.HEURISTICS
+
+
+def test_analyze_json_contains_redacted_text_only() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "secrets.xml"), "--json"])
+
+    assert result.exit_code == 0
+    assert "<CARD>" in result.stdout
+    for secret in ["4111", "jane.doe", "hunter2", "abc.def.ghi", "ghp_"]:
+        assert secret not in result.stdout
+
+
+def test_analyze_json_works_without_an_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    report = analyze_json(CASES / "environment-ledger-down" / "junit.xml")
+
+    assert [g.classification.category for g in report.groups] == [Category.ENVIRONMENT]
+    assert report.cost.llm_calls == 0
+
+
+def test_analyze_json_of_an_empty_report_has_no_groups() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "empty.xml"), "--json"])
+
+    assert result.exit_code == 0
+    assert AnalysisReport.model_validate_json(result.stdout).groups == []
+
+
+def test_analyze_json_prints_nothing_for_unreadable_input() -> None:
+    result = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "broken.xml"), "--json"])
+
+    assert result.exit_code == 2
+    assert result.stdout == ""

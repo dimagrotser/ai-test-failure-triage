@@ -9,6 +9,7 @@ from failtriage.grouping import group_failures
 from failtriage.models import FailureGroup, Status
 from failtriage.parsers.junit import ReportParseError, parse_junit
 from failtriage.redaction import redact_result
+from failtriage.report.json_output import build_report
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -28,6 +29,9 @@ def version() -> None:
 @app.command()
 def analyze(
     junit: Annotated[Path, typer.Option(help="JUnit XML report to analyze.")],
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Print the analysis as JSON instead of text.")
+    ] = False,
 ) -> None:
     """Group the failed tests of a report by cause and print the groups."""
     try:
@@ -38,9 +42,14 @@ def analyze(
 
     if not results:
         typer.echo(f"warning: no tests found in {junit}", err=True)
-        return
+        if not json_output:
+            return
 
     groups = group_failures(results)
+    if json_output:
+        report = build_report(package_version("failtriage"), [str(junit)], results, groups)
+        typer.echo(report.model_dump_json(indent=2))
+        return
     for number, group in enumerate(groups, start=1):
         _print_group(number, group)
     failed = sum(r.status in (Status.FAILED, Status.ERROR) for r in results)
