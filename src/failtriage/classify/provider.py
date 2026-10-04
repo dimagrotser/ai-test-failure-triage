@@ -13,6 +13,11 @@ class Usage(BaseModel):
     input_tokens: int = 0
     output_tokens: int = 0
 
+    def add(self, other: "Usage") -> None:
+        self.calls += other.calls
+        self.input_tokens += other.input_tokens
+        self.output_tokens += other.output_tokens
+
 
 class Provider(Protocol):
     model: str
@@ -64,9 +69,6 @@ class RecordedProvider:
         if not path.is_file():
             raise MissingRecordingError(f"no recording for this payload, expected {path}")
         recording = json.loads(path.read_text(encoding="utf-8"))
-        used = recording.get("usage", {})
-        self.usage.calls += 1
-        self.usage.input_tokens += used.get("input_tokens", 0)
-        self.usage.output_tokens += used.get("output_tokens", 0)
+        self.usage.add(Usage(calls=1, **recording.get("usage", {})))
         response: str = recording["response"]
         return response

@@ -47,9 +47,7 @@ class AnthropicProvider:
             output_tokens=response.usage.output_tokens,
         )
         # Billed even when the answer is unusable.
-        self.usage.calls += call.calls
-        self.usage.input_tokens += call.input_tokens
-        self.usage.output_tokens += call.output_tokens
+        self.usage.add(call)
         if response.stop_reason in ("refusal", "max_tokens"):
             raise ProviderError(f"the model stopped with {response.stop_reason}")
         text = next((b.text for b in response.content if b.type == "text"), None)

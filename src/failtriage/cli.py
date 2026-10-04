@@ -65,6 +65,9 @@ def analyze(
     if json_output and markdown:
         typer.echo("use either --json or --markdown, not both", err=True)
         raise typer.Exit(code=2)
+    if record is not None and not (json_output or markdown):
+        typer.echo("--record needs --json or --markdown, text output never calls the LLM", err=True)
+        raise typer.Exit(code=2)
     if record is not None and not os.environ.get("ANTHROPIC_API_KEY"):
         typer.echo("--record makes real LLM calls and needs ANTHROPIC_API_KEY", err=True)
         raise typer.Exit(code=2)

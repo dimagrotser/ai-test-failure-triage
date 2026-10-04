@@ -1,3 +1,5 @@
+import re
+
 from failtriage.classify.provider import Usage
 
 # USD per million tokens, (input, output). Update when Anthropic changes its prices.
@@ -10,7 +12,8 @@ PRICES: dict[str, tuple[float, float]] = {
 
 def cost_usd(model: str, usage: Usage) -> float | None:
     """Price of a run, or None when the model is not in the table."""
-    price = next((p for name, p in PRICES.items() if model.startswith(name)), None)
+    # A dated snapshot such as claude-haiku-4-5-20251001 costs what its alias costs.
+    price = PRICES.get(re.sub(r"-\d{8}$", "", model))
     if price is None:
         return None
     return (usage.input_tokens * price[0] + usage.output_tokens * price[1]) / 1_000_000

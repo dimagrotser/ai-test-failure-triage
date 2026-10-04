@@ -32,3 +32,7 @@ def test_a_dated_haiku_id_uses_the_haiku_price() -> None:
 
 def test_an_unknown_model_has_no_cost() -> None:
     assert cost_usd("claude-mystery", Usage(calls=1, input_tokens=10, output_tokens=10)) is None
+
+
+def test_a_longer_name_is_not_priced_as_its_prefix() -> None:
+    assert cost_usd("claude-sonnet-5-5-foo", Usage(calls=1, input_tokens=10)) is None

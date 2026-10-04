@@ -434,3 +434,27 @@ def test_the_text_output_does_not_call_the_llm(monkeypatch: pytest.MonkeyPatch) 
 
     assert result.exit_code == 0
     assert requests == []
+
+
+def test_what_analyze_sends_to_the_api_is_redacted(monkeypatch: pytest.MonkeyPatch) -> None:
+    requests: list[dict[str, Any]] = []
+    fake_anthropic(monkeypatch, requests)
+
+    runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "secrets.xml"), "--json"])
+
+    sent = json.dumps(requests)
+    assert requests
+    assert "<CARD>" in sent
+    for secret in ["4111", "jane.doe", "hunter2", "abc.def.ghi", "ghp_"]:
+        assert secret not in sent
+
+
+def test_record_with_text_output_is_a_usage_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake_anthropic(monkeypatch, [])
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--record", str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert "--json or --markdown" in result.stderr
