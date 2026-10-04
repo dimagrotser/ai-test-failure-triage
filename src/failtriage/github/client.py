@@ -38,11 +38,22 @@ class GitHubClient:
             },
         )
 
+    def get_json(self, path: str, params: dict[str, str | int] | None = None) -> dict[str, Any]:
+        """One JSON object from a GET endpoint."""
+        body = self._get(path, params).json()
+        if not isinstance(body, dict):
+            raise GitHubError("GitHub did not answer with an object")
+        return body
+
+    def get_bytes(self, path: str) -> bytes:
+        """A raw download such as an artifact zip. The redirect to storage drops the token."""
+        return self._get(path, None).content
+
     def get_pages(self, path: str) -> list[dict[str, Any]]:
         """Items of a list endpoint, following `Link: rel=next` to the last page."""
         items: list[dict[str, Any]] = []
         url: str | None = path
-        params: dict[str, int] | None = {"per_page": 100}
+        params: dict[str, str | int] | None = {"per_page": 100}
         while url:
             response = self._get(url, params)
             body = response.json()
@@ -61,7 +72,7 @@ class GitHubClient:
         target, api = httpx.URL(url), httpx.URL(self._base_url)
         return (target.scheme, target.host, target.port) == (api.scheme, api.host, api.port)
 
-    def _get(self, url: str, params: dict[str, int] | None) -> httpx.Response:
+    def _get(self, url: str, params: dict[str, str | int] | None) -> httpx.Response:
         for attempt in range(self._max_retries + 1):
             try:
                 response = self._http.get(url, params=params)
