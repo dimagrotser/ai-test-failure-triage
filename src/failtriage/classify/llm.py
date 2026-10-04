@@ -1,4 +1,5 @@
 import json
+from collections.abc import Collection
 from typing import Any
 
 from pydantic import BaseModel, ValidationError
@@ -46,11 +47,16 @@ class GroupClassifications(BaseModel):
 
 
 def classify_groups(
-    groups: list[FailureGroup], provider: Provider, prompt: Prompt, limits: Limits
+    groups: list[FailureGroup],
+    provider: Provider,
+    prompt: Prompt,
+    limits: Limits,
+    diff: str | None = None,
+    changed_files: Collection[str] = (),
 ) -> GroupClassifications:
     """Classify with the LLM what the group cap allows. The rest, and any group whose call or
     answer fails, gets the heuristics classification, so a run never ends without a result."""
-    plan = build_payloads(groups, limits)
+    plan = build_payloads(groups, limits, diff, changed_files)
     payloads = {p.signature: p for p in plan.sent}
     classifications: list[Classification] = []
     failed: dict[int, str] = {}

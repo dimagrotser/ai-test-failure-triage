@@ -17,8 +17,18 @@ from failtriage.classify.provider import (
     RecordedProvider,
     Usage,
 )
+from failtriage.github.pr_files import ChangedFile, to_unified_diff
 from failtriage.grouping import group_failures
-from failtriage.models import Category, ClassifiedBy, Confidence
+from failtriage.models import (
+    Attempt,
+    Category,
+    ClassifiedBy,
+    Confidence,
+    FailureGroup,
+    SignalName,
+    Status,
+    TestResult,
+)
 from failtriage.parsers.junit import parse_junit
 from failtriage.prompts import Prompt, load_prompt
 
@@ -370,3 +380,84 @@ def test_the_answer_schema_closes_the_object_and_requires_the_answer_fields() ->
 
     assert schema["additionalProperties"] is False
     assert {"category", "confidence", "summary", "evidence", "next_step"} <= set(schema["required"])
+
+
+TRACE = 'File "/work/src/wallet/fees.py", line 12, in fee\n    return round(amount * rate, 2)'
+
+
+def fee_group() -> FailureGroup:
+    attempt = Attempt(
+        status=Status.FAILED, message="AssertionError: 1.49 != 1.48", stack_trace=TRACE
+    )
+    result = TestResult(
+        test_id="tests/test_fees.py::test_fee", status=Status.FAILED, attempts=[attempt]
+    )
+    group = group_failures([result])[0]
+    signature = group.signature.model_copy(update={"frame": "src/wallet/fees.py:fee"})
+    return group.model_copy(update={"signature": signature})
+
+
+def pr_diff(patch: str | None) -> tuple[str, list[str]]:
+    files = [
+        ChangedFile(filename="src/wallet/fees.py", status="modified", patch=patch),
+        ChangedFile(filename="README.md", status="modified", patch="@@ -1 +1 @@\n-a\n+b"),
+    ]
+    return to_unified_diff(files), [f.filename for f in files]
+
+
+def test_the_hunks_of_a_changed_file_reach_the_provider_with_the_signal() -> None:
+    diff, changed = pr_diff("@@ -10,2 +10,2 @@\n-    rate = 1\n+    rate = 2")
+    provider = StubProvider(NO_PROOF)
+
+    classify_groups(
+        [fee_group()], provider, load_prompt(), Limits(), diff=diff, changed_files=changed
+    )
+
+    sent = json.loads(provider.payloads[0])
+    assert "+    rate = 2" in sent["diff"]
+    assert "README.md" not in sent["diff"]
+    assert SignalName.TOUCHES_CHANGED_FILE in {s["name"] for s in sent["signals"]}
+
+
+def test_a_secret_in_a_patch_never_reaches_the_provider() -> None:
+    diff, changed = pr_diff("@@ -1 +1 @@\n-x\n+API_KEY = 'hunter2hunter2'")
+    provider = StubProvider(NO_PROOF)
+
+    classify_groups(
+        [fee_group()], provider, load_prompt(), Limits(), diff=diff, changed_files=changed
+    )
+
+    assert "hunter2" not in provider.payloads[0]
+    assert "API_KEY" in provider.payloads[0]
+
+
+def test_a_long_patch_is_truncated_before_it_reaches_the_provider() -> None:
+    patch = "@@ -1,300 +1,300 @@\n" + "\n".join(f"+line {n}" for n in range(300))
+    diff, changed = pr_diff(patch)
+    provider = StubProvider(NO_PROOF)
+
+    classify_groups(
+        [fee_group()],
+        provider,
+        load_prompt(),
+        Limits(diff_lines=20),
+        diff=diff,
+        changed_files=changed,
+    )
+
+    sent = json.loads(provider.payloads[0])
+    assert "+line 299" not in sent["diff"]
+    assert "lines omitted" in sent["diff"]
+
+
+def test_a_file_without_a_patch_still_gives_the_signal_and_sends_no_diff() -> None:
+    diff, changed = pr_diff(None)
+    provider = StubProvider(NO_PROOF)
+
+    classify_groups(
+        [fee_group()], provider, load_prompt(), Limits(), diff=diff, changed_files=changed
+    )
+
+    sent = json.loads(provider.payloads[0])
+    assert SignalName.TOUCHES_CHANGED_FILE in {s["name"] for s in sent["signals"]}
+    assert "@@" not in (sent["diff"] or "")
