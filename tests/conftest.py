@@ -11,4 +11,8 @@ def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
     def refuse(self: socket.socket, address: Any) -> None:
         raise RuntimeError(f"network access in a test: {address}")
 
+    def refuse_ex(self: socket.socket, address: Any) -> int:
+        raise RuntimeError(f"network access in a test: {address}")
+
     monkeypatch.setattr(socket.socket, "connect", refuse)
+    monkeypatch.setattr(socket.socket, "connect_ex", refuse_ex)
