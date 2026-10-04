@@ -1,5 +1,5 @@
 import re
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 
 from failtriage.models import (
     Attempt,
@@ -125,8 +125,9 @@ def heuristic_verdict(found: list[Signal]) -> Category | None:
     return None
 
 
-def signals(group: FailureGroup) -> list[Signal]:
-    """Signals of a group, each with the first quote that proves it."""
+def signals(group: FailureGroup, changed_files: Collection[str] = ()) -> list[Signal]:
+    """Signals of a group, each with the first quote that proves it. `changed_files` are the
+    repo-relative paths a pull request changed, without them there is no diff signal."""
     results = [redact_result(r) for r in group.results]
     found = [_passed_on_retry(results)]
     lines = [line for r in results for line in _failure_lines(r)]
@@ -134,6 +135,7 @@ def signals(group: FailureGroup) -> list[Signal]:
         found.append(_from_lines(name, pattern, lines))
     found.append(_frame_signal(group.signature.frame, results))
     found.append(_assertion_mismatch(group.signature.exception_type, lines))
+    found.append(_touches_changed_file(group.signature.frame, changed_files))
     return [s for s in found if s]
 
 
@@ -167,6 +169,19 @@ def _assertion_mismatch(exception_type: str, lines: list[str]) -> Signal | None:
     quote = next((line for line in lines if exception_type in line), lines[0] if lines else "")
     return Signal(
         name=SignalName.ASSERTION_MISMATCH, quote=(quote or exception_type)[:_QUOTE_LIMIT]
+    )
+
+
+def _touches_changed_file(frame: str | None, changed_files: Collection[str]) -> Signal | None:
+    if not frame or ":" not in frame:
+        return None
+    path = frame.rsplit(":", 1)[0]
+    # A checkout path is absolute, a changed file is relative to the repo root.
+    changed = next((f for f in changed_files if path == f or path.endswith(f"/{f}")), None)
+    if changed is None:
+        return None
+    return Signal(
+        name=SignalName.TOUCHES_CHANGED_FILE, quote=f"{changed} is changed in this pull request"
     )
 
 

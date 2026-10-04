@@ -1,5 +1,5 @@
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from functools import partial
 
 from pydantic import BaseModel, ConfigDict
@@ -45,23 +45,30 @@ class PayloadPlan(BaseModel):
 
 
 def build_payloads(
-    groups: list[FailureGroup], limits: Limits, diff: str | None = None
+    groups: list[FailureGroup],
+    limits: Limits,
+    diff: str | None = None,
+    changed_files: Collection[str] = (),
 ) -> PayloadPlan:
     """Shape what the LLM gets: redact first, then truncate, largest groups first up to the cap."""
     ranked = sorted(groups, key=lambda g: -len(g.results))
     redacted_diff = redact(diff) if diff else None
     return PayloadPlan(
-        sent=[_payload(g, limits, redacted_diff) for g in ranked[: limits.max_groups]],
+        sent=[
+            _payload(g, limits, redacted_diff, changed_files) for g in ranked[: limits.max_groups]
+        ],
         skipped=[SkippedGroup(group=g, note=GROUP_CAP_NOTE) for g in ranked[limits.max_groups :]],
     )
 
 
-def _payload(group: FailureGroup, limits: Limits, diff: str | None) -> GroupPayload:
+def _payload(
+    group: FailureGroup, limits: Limits, diff: str | None, changed_files: Collection[str]
+) -> GroupPayload:
     redacted = redact_result(group.results[0])
     attempt = next(
         a for a in reversed(redacted.attempts) if a.status in (Status.FAILED, Status.ERROR)
     )
-    found = signals(group)
+    found = signals(group, changed_files)
     relevant_diff = select_hunks(diff, attempt.stack_trace or "", limits.diff_lines) if diff else ""
     return GroupPayload(
         signature=group.signature,

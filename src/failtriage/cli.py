@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import textwrap
 from importlib.metadata import version as package_version
 from pathlib import Path
@@ -7,18 +8,21 @@ from typing import Annotated
 
 import anthropic
 import typer
+from pydantic import ValidationError
 
 from failtriage.classify.anthropic_provider import AnthropicProvider
 from failtriage.classify.llm import GroupClassifications, answer_schema, classify_groups
 from failtriage.classify.payload import Limits
 from failtriage.classify.pricing import cost_usd
 from failtriage.evaluate import EvalError, evaluate, render_eval
+from failtriage.github.client import GitHubClient, GitHubError
+from failtriage.github.pr_files import list_pr_files, to_unified_diff
 from failtriage.grouping import group_failures
 from failtriage.models import FailureGroup, Status
 from failtriage.parsers.junit import ReportParseError, parse_junit
 from failtriage.prompts import load_prompt
 from failtriage.redaction import redact_result
-from failtriage.report.json_output import AnalysisReport, Cost, build_report
+from failtriage.report.json_output import AnalysisReport, Cost, DiffInfo, build_report
 from failtriage.report.markdown import render_markdown
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
@@ -60,6 +64,13 @@ def analyze(
         Path | None,
         typer.Option(help="Save every LLM answer here so tests can replay it. Needs the API key."),
     ] = None,
+    repo: Annotated[
+        str | None,
+        typer.Option(help="GitHub repository as owner/name, to read the pull request diff."),
+    ] = None,
+    pr: Annotated[
+        int | None, typer.Option(help="Pull request number. Needs --repo and GITHUB_TOKEN.")
+    ] = None,
 ) -> None:
     """Group the failed tests of a report by cause and print the groups."""
     if json_output and markdown:
@@ -71,8 +82,21 @@ def analyze(
     if record is not None and not os.environ.get("ANTHROPIC_API_KEY"):
         typer.echo("--record makes real LLM calls and needs ANTHROPIC_API_KEY", err=True)
         raise typer.Exit(code=2)
+    if (repo is None) != (pr is None):
+        typer.echo("--repo and --pr go together", err=True)
+        raise typer.Exit(code=2)
+    if repo is not None and not re.fullmatch(r"[\w.-]+/[\w.-]+", repo):
+        typer.echo("--repo must look like owner/name", err=True)
+        raise typer.Exit(code=2)
+    if repo is not None and not (json_output or markdown):
+        typer.echo("--repo needs --json or --markdown, text output has no diff", err=True)
+        raise typer.Exit(code=2)
+    if repo is not None and not os.environ.get("GITHUB_TOKEN"):
+        typer.echo("--repo and --pr read from GitHub and need GITHUB_TOKEN", err=True)
+        raise typer.Exit(code=2)
+    pull_request = (repo, pr) if repo is not None and pr is not None else None
     try:
-        _analyze(junit, json_output, markdown, model, record)
+        _analyze(junit, json_output, markdown, model, record, pull_request)
     except ReportParseError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
@@ -102,8 +126,34 @@ def _client() -> anthropic.Anthropic:
     return anthropic.Anthropic()
 
 
+def _github_client(token: str) -> GitHubClient:
+    return GitHubClient(token)
+
+
+def _read_diff(repo: str, pr: int) -> tuple[DiffInfo, str | None]:
+    """The pull request files as a report entry and one diff. Without GitHub the run goes on."""
+    client = _github_client(os.environ["GITHUB_TOKEN"])
+    try:
+        files = list_pr_files(client, repo, pr)
+    except (GitHubError, ValidationError) as exc:
+        # Only the type or our own message: GitHub's answer may echo what we sent.
+        reason = str(exc) if isinstance(exc, GitHubError) else type(exc).__name__
+        typer.echo(f"github: {reason}, continuing without the diff", err=True)
+        return DiffInfo(available=False), None
+    info = DiffInfo(
+        changed_files=[f.filename for f in files],
+        files_without_hunks=[f.filename for f in files if not f.patch],
+    )
+    return info, to_unified_diff(files)
+
+
 def _analyze(
-    junit: Path, json_output: bool, markdown: bool, model: str, record: Path | None
+    junit: Path,
+    json_output: bool,
+    markdown: bool,
+    model: str,
+    record: Path | None,
+    pull_request: tuple[str, int] | None,
 ) -> None:
     results = [redact_result(r) for r in parse_junit(junit)]
     if not results:
@@ -113,7 +163,9 @@ def _analyze(
 
     groups = group_failures(results)
     if json_output or markdown:
-        classified, cost = _classify(groups, model, record)
+        diff_info, diff = _read_diff(*pull_request) if pull_request else (None, None)
+        changed = diff_info.changed_files if diff_info else []
+        classified, cost = _classify(groups, model, record, diff, changed)
         report = build_report(
             package_version("failtriage"),
             [str(junit)],
@@ -121,6 +173,7 @@ def _analyze(
             groups,
             classified.classifications if classified else None,
             cost,
+            diff_info,
         )
         if json_output:
             typer.echo(report.model_dump_json(indent=2))
@@ -139,14 +192,18 @@ def _analyze(
 
 
 def _classify(
-    groups: list[FailureGroup], model: str, record: Path | None
+    groups: list[FailureGroup],
+    model: str,
+    record: Path | None,
+    diff: str | None,
+    changed_files: list[str],
 ) -> tuple[GroupClassifications | None, Cost]:
     """Classify with the LLM when there is a key, else leave it to the heuristics."""
     if not os.environ.get("ANTHROPIC_API_KEY"):
         typer.echo("ANTHROPIC_API_KEY not set, classifying with heuristics only", err=True)
         return None, Cost()
     provider = AnthropicProvider(_client(), model, answer_schema(), record)
-    classified = classify_groups(groups, provider, load_prompt(), Limits())
+    classified = classify_groups(groups, provider, load_prompt(), Limits(), diff, changed_files)
     usage = provider.usage
     usd = cost_usd(model, usage)
     calls = f"{usage.calls} {'call' if usage.calls == 1 else 'calls'}"

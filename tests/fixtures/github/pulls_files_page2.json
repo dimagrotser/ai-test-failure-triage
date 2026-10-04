@@ -1,0 +1,26 @@
+[
+  {
+    "sha": "0a77c1d2e3f4",
+    "filename": "assets/logo.png",
+    "status": "added",
+    "additions": 0,
+    "deletions": 0,
+    "changes": 0,
+    "blob_url": "https://github.com/acme/wallet/blob/9c1d/assets/logo.png",
+    "raw_url": "https://github.com/acme/wallet/raw/9c1d/assets/logo.png",
+    "contents_url": "https://api.github.com/repos/acme/wallet/contents/assets/logo.png?ref=9c1d"
+  },
+  {
+    "sha": "5d3e9f0a1b2c",
+    "filename": "tests/test_limits.py",
+    "status": "renamed",
+    "previous_filename": "tests/test_caps.py",
+    "additions": 1,
+    "deletions": 1,
+    "changes": 2,
+    "blob_url": "https://github.com/acme/wallet/blob/9c1d/tests/test_limits.py",
+    "raw_url": "https://github.com/acme/wallet/raw/9c1d/tests/test_limits.py",
+    "contents_url": "https://api.github.com/repos/acme/wallet/contents/tests/test_limits.py?ref=9c1d",
+    "patch": "@@ -3,4 +3,4 @@ def test_cap():\n-    assert cap(5) == 10\n+    assert cap(5) == 12\n"
+  }
+]

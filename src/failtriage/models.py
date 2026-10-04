@@ -57,6 +57,7 @@ class SignalName(StrEnum):
     FRAME_IN_TEST_CODE = "frame_in_test_code"
     FRAME_IN_SOURCE_CODE = "frame_in_source_code"
     ASSERTION_MISMATCH = "assertion_mismatch"
+    TOUCHES_CHANGED_FILE = "touches_changed_file"
 
 
 class Signal(BaseModel):

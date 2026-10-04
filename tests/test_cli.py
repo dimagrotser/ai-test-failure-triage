@@ -3,13 +3,15 @@ from pathlib import Path
 from typing import Any
 
 import anthropic
+import httpx
 import httpx2
 import pytest
 from typer.testing import CliRunner
 
 from failtriage import cli
 from failtriage.cli import app
-from failtriage.models import Category, ClassifiedBy
+from failtriage.github.client import GitHubClient
+from failtriage.models import Category, ClassifiedBy, SignalName
 from failtriage.report.json_output import AnalysisReport
 
 runner = CliRunner()
@@ -143,7 +145,8 @@ def test_analyze_json_has_version_run_groups_cost_and_no_history() -> None:
     )
 
     assert report.schema_version == 1
-    assert set(raw) == {"schema_version", "run", "groups", "cost", "history"}
+    assert set(raw) == {"schema_version", "run", "groups", "cost", "diff", "history"}
+    assert raw["diff"] is None
     assert raw["history"] is None
     assert report.run.tests == 6
     assert report.run.failed == 3
@@ -455,6 +458,181 @@ def test_record_with_text_output_is_a_usage_error(
     fake_anthropic(monkeypatch, [])
 
     result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--record", str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert "--json or --markdown" in result.stderr
+
+
+GITHUB_TOKEN = "ghs_DoNotPrintThisToken0123456789"
+PR_FILES = [
+    {
+        "filename": "wallet/ledger.py",
+        "status": "modified",
+        "patch": "@@ -1,2 +1,2 @@\n-    url = 'http://ledger'\n+    url = 'http://ledger:9000'",
+    },
+    {"filename": "assets/logo.png", "status": "added"},
+    {"filename": "README.md", "status": "modified", "patch": "@@ -1 +1 @@\n-old\n+new"},
+]
+
+
+def fake_github(
+    monkeypatch: pytest.MonkeyPatch,
+    requests: list[httpx.Request],
+    status: int = 200,
+    files: list[dict[str, Any]] = PR_FILES,
+) -> None:
+    monkeypatch.setenv("GITHUB_TOKEN", GITHUB_TOKEN)
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if status != 200:
+            return httpx.Response(status, json={"message": f"bad {GITHUB_TOKEN}"})
+        return httpx.Response(200, json=files)
+
+    monkeypatch.setattr(
+        cli,
+        "_github_client",
+        lambda token: GitHubClient(token, transport=httpx.MockTransport(handle)),
+    )
+
+
+def analyze_pr(*extra: str) -> Any:
+    args = ["analyze", "--junit", str(LEDGER_DOWN), "--json", "--repo", "acme/wallet", "--pr", "7"]
+    return runner.invoke(app, [*args, *extra])
+
+
+def test_the_pr_files_are_read_from_github_with_the_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    github: list[httpx.Request] = []
+    fake_github(monkeypatch, github)
+
+    result = analyze_pr()
+
+    assert result.exit_code == 0
+    assert [r.url.path for r in github] == ["/repos/acme/wallet/pulls/7/files"]
+    assert github[0].headers["Authorization"] == f"Bearer {GITHUB_TOKEN}"
+
+
+def test_the_report_lists_changed_files_and_those_without_hunks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_github(monkeypatch, [])
+
+    report = AnalysisReport.model_validate_json(analyze_pr().stdout)
+
+    assert report.diff is not None
+    assert report.diff.available
+    assert report.diff.changed_files == ["wallet/ledger.py", "assets/logo.png", "README.md"]
+    assert report.diff.files_without_hunks == ["assets/logo.png"]
+    assert SignalName.TOUCHES_CHANGED_FILE in {s.name for s in report.groups[0].signals}
+
+
+def test_the_matching_hunks_are_sent_to_the_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+    requests: list[dict[str, Any]] = []
+    fake_anthropic(monkeypatch, requests)
+    fake_github(monkeypatch, [])
+
+    analyze_pr()
+
+    sent = json.dumps(requests)
+    assert "ledger:9000" in sent
+    assert "README.md" not in sent
+    assert "touches_changed_file" in sent
+
+
+def test_a_secret_in_a_patch_is_not_sent_to_the_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+    requests: list[dict[str, Any]] = []
+    fake_anthropic(monkeypatch, requests)
+    leaky = [{**PR_FILES[0], "patch": "@@ -1 +1 @@\n-x\n+DB_PASSWORD = 'hunter2hunter2'"}]
+    fake_github(monkeypatch, [], files=leaky)
+
+    analyze_pr()
+
+    assert requests
+    assert "hunter2" not in json.dumps(requests)
+
+
+def test_the_markdown_report_of_a_pr_run_notes_the_missing_hunks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_github(monkeypatch, [])
+    args = [
+        "analyze",
+        "--junit",
+        str(LEDGER_DOWN),
+        "--markdown",
+        "--repo",
+        "acme/wallet",
+        "--pr",
+        "7",
+    ]
+
+    result = runner.invoke(app, args)
+
+    assert "Hunks missing for `assets/logo.png`" in result.stdout
+
+
+def test_a_github_failure_is_a_warning_and_the_run_goes_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_github(monkeypatch, [], status=403)
+
+    result = analyze_pr()
+
+    assert result.exit_code == 0
+    report = AnalysisReport.model_validate_json(result.stdout)
+    assert report.diff is not None
+    assert not report.diff.available
+    assert "continuing without the diff" in result.stderr
+    assert GITHUB_TOKEN not in result.stderr + result.stdout
+    assert "bad" not in result.stderr
+
+
+def test_a_run_without_repo_and_pr_has_no_diff_and_never_calls_github(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github: list[httpx.Request] = []
+    fake_github(monkeypatch, github)
+
+    report = analyze_json(LEDGER_DOWN)
+
+    assert report.diff is None
+    assert github == []
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--repo", "acme/wallet"],
+        ["--pr", "7"],
+        ["--repo", "wallet", "--pr", "7"],
+    ],
+)
+def test_repo_and_pr_go_together_and_repo_has_an_owner(
+    monkeypatch: pytest.MonkeyPatch, args: list[str]
+) -> None:
+    github: list[httpx.Request] = []
+    fake_github(monkeypatch, github)
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--json", *args])
+
+    assert result.exit_code == 2
+    assert github == []
+
+
+def test_a_pr_without_a_token_is_a_usage_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    result = analyze_pr()
+
+    assert result.exit_code == 2
+    assert "GITHUB_TOKEN" in result.stderr
+
+
+def test_a_pr_with_text_output_is_a_usage_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_github(monkeypatch, [])
+    args = ["analyze", "--junit", str(LEDGER_DOWN), "--repo", "acme/wallet", "--pr", "7"]
+
+    result = runner.invoke(app, args)
 
     assert result.exit_code == 2
     assert "--json or --markdown" in result.stderr

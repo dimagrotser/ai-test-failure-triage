@@ -44,11 +44,21 @@ class Cost(BaseModel):
     usd: float | None = 0.0
 
 
+class DiffInfo(BaseModel):
+    # False when the pull request files could not be read from GitHub.
+    available: bool = True
+    changed_files: list[str] = []
+    # Files GitHub returned without a patch: binary or too large. Only their names were used.
+    files_without_hunks: list[str] = []
+
+
 class AnalysisReport(BaseModel):
     schema_version: Literal[1] = 1
     run: RunInfo
     groups: list[GroupReport]
     cost: Cost
+    # None when the run was not tied to a pull request.
+    diff: DiffInfo | None = None
     # Always null until history is read from artifacts, which a report must say instead of
     # implying a clean record (ADR 0002).
     history: None = None
@@ -61,8 +71,10 @@ def build_report(
     groups: list[FailureGroup],
     classifications: list[Classification] | None = None,
     cost: Cost | None = None,
+    diff: DiffInfo | None = None,
 ) -> AnalysisReport:
     """`classifications` line up with `groups`; without them the heuristics classify."""
+    changed = diff.changed_files if diff else []
     return AnalysisReport(
         run=RunInfo(
             tool_version=tool_version,
@@ -72,20 +84,23 @@ def build_report(
             passed_on_retry=sum(r.status is Status.PASSED_ON_RETRY for r in results),
         ),
         groups=[
-            _group_report(g, classifications[i] if classifications else None)
+            _group_report(g, classifications[i] if classifications else None, changed)
             for i, g in enumerate(groups)
         ],
         cost=cost or Cost(),
+        diff=diff,
     )
 
 
-def _group_report(group: FailureGroup, classification: Classification | None) -> GroupReport:
+def _group_report(
+    group: FailureGroup, classification: Classification | None, changed_files: list[str]
+) -> GroupReport:
     return GroupReport(
         signature=group.signature,
         tests=[
             GroupTest(test_id=r.test_id, status=r.status, attempts=len(r.attempts))
             for r in group.results
         ],
-        signals=signals(group),
+        signals=signals(group, changed_files),
         classification=classification or classify_with_heuristics(group),
     )

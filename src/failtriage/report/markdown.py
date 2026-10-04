@@ -1,9 +1,9 @@
 import re
 
 from failtriage.models import ClassifiedBy
-from failtriage.report.json_output import AnalysisReport, GroupReport
+from failtriage.report.json_output import AnalysisReport, DiffInfo, GroupReport
 
-_TESTS_SHOWN = 5
+_NAMES_SHOWN = 5
 
 
 def render_markdown(report: AnalysisReport) -> str:
@@ -23,17 +23,36 @@ def render_markdown(report: AnalysisReport) -> str:
             "History: none. No earlier runs on main were read, "
             "so nothing here says a test was stable before."
         )
+    if note := _diff_note(report.diff):
+        parts.append(note)
     parts += [_group_section(n, g) for n, g in enumerate(report.groups, start=1)]
     return "\n\n".join(parts) + "\n"
+
+
+def _diff_note(diff: DiffInfo | None) -> str | None:
+    if diff is None:
+        return None
+    if not diff.available:
+        return "Diff: not available. The pull request files could not be read from GitHub."
+    if not diff.files_without_hunks:
+        return None
+    names = diff.files_without_hunks
+    shown = [_code(name) for name in names[:_NAMES_SHOWN]]
+    if len(names) > _NAMES_SHOWN:
+        shown.append(f"and {len(names) - _NAMES_SHOWN} more")
+    return (
+        f"Hunks missing for {', '.join(shown)}: GitHub returned no patch, "
+        "so only the file names were used."
+    )
 
 
 def _group_section(number: int, group: GroupReport) -> str:
     result = group.classification
     # Parametrized cases share one test id, listing it once keeps the slots for distinct tests.
     test_ids = list(dict.fromkeys(t.test_id for t in group.tests))
-    shown = [_code(test_id) for test_id in test_ids[:_TESTS_SHOWN]]
-    if len(test_ids) > _TESTS_SHOWN:
-        shown.append(f"and {len(test_ids) - _TESTS_SHOWN} more")
+    shown = [_code(test_id) for test_id in test_ids[:_NAMES_SHOWN]]
+    if len(test_ids) > _NAMES_SHOWN:
+        shown.append(f"and {len(test_ids) - _NAMES_SHOWN} more")
     tests = ", ".join(shown)
     lines = [
         f"### {number}. {result.category.value}, {result.confidence.value} confidence",
