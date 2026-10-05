@@ -1,0 +1,8 @@
+{
+  "uuid": "3c", "historyId": "h-fee", "name": "test_fee[10-1]",
+  "fullName": "tests.test_fees.test_fee", "status": "broken",
+  "statusDetails": {"message": "ConnectionError: db down", "trace": "ConnectionError: db down"},
+  "start": 4000, "stop": 4250,
+  "labels": [{"name": "package", "value": "tests.test_fees"}],
+  "steps": [], "attachments": []
+}
