@@ -9,6 +9,8 @@ from typing import Any
 import pytest
 import yaml
 
+from failtriage.github.history_artifacts import ARTIFACT_FILE, ARTIFACT_NAME
+
 ROOT = Path(__file__).parent.parent
 SCRIPT = ROOT / "scripts" / "analyze.sh"
 
@@ -217,6 +219,34 @@ def test_the_action_refuses_pull_request_target_before_anything_else() -> None:
 
     assert first["if"] == "github.event_name == 'pull_request_target'"
     assert "exit 1" in first["run"]
+
+
+def test_the_history_file_is_uploaded_only_when_the_script_wrote_one() -> None:
+    steps = load_action()["runs"]["steps"]
+
+    (upload,) = [s for s in steps if s.get("uses", "").startswith("actions/upload-artifact@")]
+    assert upload["if"] == "steps.analyze.outputs.history != ''"
+    assert upload["with"]["name"] == "failtriage-history"
+    assert upload["with"]["path"] == "${{ steps.analyze.outputs.history }}"
+    assert upload["with"]["if-no-files-found"] == "error"
+    assert steps.index(upload) > [s.get("id") for s in steps].index("analyze")
+
+
+def test_the_script_gets_the_ref_sha_and_run_id_from_the_workflow() -> None:
+    env = next(s for s in load_action()["runs"]["steps"] if s.get("id") == "analyze")["env"]
+
+    assert env["REF"] == "${{ github.ref }}"
+    assert env["SHA"] == "${{ github.sha }}"
+    assert env["RUN_ID"] == "${{ github.run_id }}"
+
+
+def test_the_uploaded_names_are_the_ones_the_reader_expects() -> None:
+    upload = next(
+        s for s in load_action()["runs"]["steps"] if s.get("uses", "").startswith("actions/upload")
+    )
+
+    assert upload["with"]["name"] == ARTIFACT_NAME
+    assert f"/{ARTIFACT_FILE}" in SCRIPT.read_text(encoding="utf-8")
 
 
 def test_no_step_puts_an_expression_into_a_shell_script() -> None:

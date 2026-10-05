@@ -5,7 +5,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-
 from typer.testing import CliRunner
 
 from failtriage.cli import app
