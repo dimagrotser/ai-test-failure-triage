@@ -597,3 +597,19 @@ def test_wrong_exception_case_fails_with_an_exception_raised_inside_the_wallet(
     assert "LimitExceeded" in (failed.attempts[0].message or "")
     label = yaml.safe_load((case / "label.yaml").read_text())
     assert label["category"] == "test_bug"
+
+
+def test_short_fixture_case_errors_in_setup_of_every_receipt_test(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "test-bug-receipt-fixture-short-of-funds", tmp_path)
+
+    results = parse_junit(case / "junit.xml")
+    broken = [r for r in results if r.status in (Status.FAILED, Status.ERROR)]
+    assert {r.test_id for r in broken} == {
+        "tests.test_receipt::test_receipt_shows_the_amount",
+        "tests.test_receipt::test_receipt_shows_the_fee",
+        "tests.test_receipt::test_receipt_shows_the_sender_balance_after_the_transfer",
+    }
+    assert {r.status for r in broken} == {Status.ERROR}
+    assert all("InsufficientFunds" in (r.attempts[0].message or "") for r in broken)
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "test_bug"
