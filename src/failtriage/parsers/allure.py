@@ -50,6 +50,8 @@ class _Result(BaseModel):
 
 
 def parse_allure(directory: Path) -> list[TestResult]:
+    if not directory.is_dir():
+        raise ReportParseError(f"cannot read {directory}: not a directory")
     results = [_read(path) for path in sorted(directory.glob("*-result.json"))]
     # Allure writes one file per attempt, the history id ties the attempts of a test together.
     by_test: dict[str, list[_Result]] = {}

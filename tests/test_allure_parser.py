@@ -1,6 +1,9 @@
 from pathlib import Path
 
+import pytest
+
 from failtriage.models import Status, TestResult
+from failtriage.parsers import ReportParseError
 from failtriage.parsers.allure import parse_allure
 
 FIXTURES = Path(__file__).parent / "fixtures" / "allure"
@@ -104,3 +107,13 @@ def test_a_test_without_steps_has_none() -> None:
     [attempt] = by_id("mixed")["tests.login.LoginTest::shows welcome"].attempts
 
     assert attempt.steps == []
+
+
+def test_a_directory_without_result_files_has_no_results() -> None:
+    assert parse_allure(FIXTURES / "empty") == []
+
+
+@pytest.mark.parametrize("name", ["broken", "wrong_shape", "missing", "mixed/1a-result.json"])
+def test_an_unreadable_directory_raises(name: str) -> None:
+    with pytest.raises(ReportParseError):
+        parse_allure(FIXTURES / name)
