@@ -246,3 +246,40 @@ def test_the_token_does_not_follow_a_redirect_to_another_host() -> None:
     assert data == b"PK"
     assert [r.url.host for r in seen] == ["api.github.com", "blob.example.net"]
     assert "Authorization" not in seen[1].headers
+
+
+@pytest.mark.parametrize("method", ["post_json", "patch_json"])
+def test_writes_send_the_json_body_and_the_token(method: str) -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(201, json={"id": 5})
+
+    client = _client(httpx.MockTransport(handler))
+    body = getattr(client, method)("/repos/acme/wallet/issues/7/comments", {"body": "hi"})
+
+    assert body == {"id": 5}
+    assert seen[0].method == method.removesuffix("_json").upper()
+    assert json.loads(seen[0].content) == {"body": "hi"}
+    assert seen[0].headers["Authorization"] == "Bearer ghs_exampletoken"
+
+
+def test_a_write_retries_a_rate_limit() -> None:
+    answers = [httpx.Response(429, headers={"Retry-After": "4"}), httpx.Response(201, json={})]
+    sleeps: list[float] = []
+
+    _client(httpx.MockTransport(lambda r: answers.pop(0)), sleeps).post_json("/x", {"body": "hi"})
+
+    assert sleeps == [4]
+
+
+def test_a_write_error_carries_the_status_and_nothing_else() -> None:
+    body = {"message": "Resource not accessible, token ghs_exampletoken"}
+    transport = httpx.MockTransport(lambda r: httpx.Response(403, json=body))
+
+    with pytest.raises(GitHubError) as caught:
+        _client(transport).patch_json("/x", {"body": "hi"})
+
+    assert "403" in str(caught.value)
+    assert "ghs_exampletoken" not in str(caught.value)
