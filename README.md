@@ -8,7 +8,7 @@ Run it after your tests, in a job that has the report on disk:
 
 ```yaml
 - uses: dimagrotser/ai-test-failure-triage@main
-  if: failure()
+  if: ${{ !cancelled() }}
   with:
     junit: reports/junit.xml
     anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -35,7 +35,7 @@ GitHub gives fork pull requests a read-only token and no secrets, so the action 
 
 ## Inputs and outputs
 
-| Input | Default | |
+| Input | Default | Meaning |
 |---|---|---|
 | `junit` | required | JUnit XML report |
 | `github-token` | `github.token` | token for the GitHub API |
