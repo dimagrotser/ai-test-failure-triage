@@ -1,0 +1,34 @@
+diff --git a/tests/test_tiers.py b/tests/test_tiers.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_tiers.py
+@@ -0,0 +1,12 @@
++import pytest
++
++from wallet.accounts import Account
++
++
++@pytest.fixture
++def premium() -> Account:
++    return Account("dave", tier="premium")
++
++
++def test_a_premium_account_has_the_premium_level(premium: Account) -> None:
++    assert premium.level == "premium"
+diff --git a/wallet/accounts.py b/wallet/accounts.py
+--- a/wallet/accounts.py
++++ b/wallet/accounts.py
+@@ -6,9 +6,12 @@ class InvalidAmount(ValueError):
+ 
+ 
+ class Account:
+-    def __init__(self, owner: str, balance: Decimal = Decimal("0")) -> None:
++    def __init__(
++        self, owner: str, balance: Decimal = Decimal("0"), level: str = "standard"
++    ) -> None:
+         self.owner = owner
+         self.balance = balance
++        self.level = level
+ 
+     def deposit(self, amount: Decimal) -> None:
+         if amount <= 0:

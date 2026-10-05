@@ -480,6 +480,7 @@ def test_unknown_case_fails_without_passing_on_retry(
         ("unknown-interest-rate-mismatch", False),
         ("unknown-confirmation-window-boundary", True),
         ("unknown-amount-formatting", True),
+        ("unknown-account-tier-keyword", False),
     ],
 )
 def test_history_is_empty_only_when_the_scenario_says_none(
@@ -651,3 +652,14 @@ def test_amount_formatting_case_fails_two_tests_for_two_different_conventions(
     ] is Status.PASSED
     label = yaml.safe_load((case / "label.yaml").read_text())
     assert label["category"] == "unknown"
+
+
+def test_tier_keyword_case_errors_in_the_fixture_of_a_new_test(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "unknown-account-tier-keyword", tmp_path)
+
+    [broken] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.ERROR]
+    assert broken.test_id == "tests.test_tiers::test_a_premium_account_has_the_premium_level"
+    assert "unexpected keyword argument 'tier'" in (broken.attempts[0].message or "")
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "unknown"
+    assert label["history"] == "none"
