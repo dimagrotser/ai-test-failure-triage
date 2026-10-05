@@ -1048,3 +1048,81 @@ def test_a_cut_without_a_job_summary_says_so(monkeypatch: pytest.MonkeyPatch) ->
     result = analyze_comment(LEDGER_DOWN)
 
     assert "GITHUB_STEP_SUMMARY" in result.stderr
+
+
+def test_summary_appends_the_report_to_the_job_summary(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    summary = tmp_path / "summary.md"
+    summary.write_text("earlier step\n", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--markdown", "--summary"])
+
+    assert result.exit_code == 0
+    written = summary.read_text(encoding="utf-8")
+    assert written.startswith("earlier step\n")
+    assert "failure group" in written
+    assert written.removeprefix("earlier step\n") == result.stdout
+
+
+def test_summary_alone_prints_nothing_and_does_not_need_github(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--summary"])
+
+    assert result.exit_code == 0
+    assert result.stdout == ""
+    assert "failure group" in summary.read_text(encoding="utf-8")
+
+
+def test_summary_needs_the_job_summary_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--summary"])
+
+    assert result.exit_code == 2
+    assert "GITHUB_STEP_SUMMARY" in result.stderr
+
+
+def test_summary_with_a_cut_comment_writes_the_report_once(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    FakeComments().install(monkeypatch)
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setattr(cli, "render_markdown", lambda report: "line\n" * 30000)
+
+    result = analyze_comment(LEDGER_DOWN, "--summary")
+
+    assert result.exit_code == 0
+    assert summary.read_text(encoding="utf-8") == "line\n" * 30000
+
+
+def test_summary_with_a_short_comment_still_writes_the_report(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    FakeComments().install(monkeypatch)
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+
+    analyze_comment(LEDGER_DOWN, "--summary")
+
+    assert "failure group" in summary.read_text(encoding="utf-8")
+
+
+def test_a_secret_in_the_report_does_not_reach_the_job_summary(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+
+    runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "secrets.xml"), "--summary"])
+
+    written = summary.read_text(encoding="utf-8")
+    assert "hunter2" not in written
+    assert "ghp_a1B2c3D4" not in written
+    assert "PRIVATE KEY" not in written
