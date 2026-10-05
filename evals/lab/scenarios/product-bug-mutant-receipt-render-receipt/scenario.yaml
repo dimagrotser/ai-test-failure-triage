@@ -1,0 +1,5 @@
+category: product_bug
+source: mutation
+scenario: mutmut changes render receipt in wallet/receipt.py
+notes: mutmut mutant wallet.receipt.x_render_receipt__mutmut_1. The wallet tests kill it, so they fail
+  on the changed code and pass again once the patch is reverted.

@@ -1,0 +1,5 @@
+category: product_bug
+source: mutation
+scenario: mutmut changes account init in wallet/accounts.py
+notes: "mutmut mutant wallet.accounts.x\u01C1Account\u01C1__init____mutmut_1. The wallet tests kill it,\
+  \ so they fail on the changed code and pass again once the patch is reverted."

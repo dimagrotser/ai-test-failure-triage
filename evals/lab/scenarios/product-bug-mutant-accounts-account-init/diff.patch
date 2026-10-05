@@ -1,0 +1,11 @@
+--- a/wallet/accounts.py
++++ b/wallet/accounts.py
+@@ -7,7 +7,7 @@
+ 
+ class Account:
+     def __init__(self, owner: str, balance: Decimal = Decimal("0")) -> None:
+-        self.owner = owner
++        self.owner = None
+         self.balance = balance
+ 
+     def deposit(self, amount: Decimal) -> None:

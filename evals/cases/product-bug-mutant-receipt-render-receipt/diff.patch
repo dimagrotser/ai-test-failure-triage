@@ -1,0 +1,10 @@
+--- a/wallet/receipt.py
++++ b/wallet/receipt.py
+@@ -8,6 +8,6 @@
+     return (
+         f"<h1>Transfer to {target.owner}</h1>\n"
+         f'<p>Amount: <span data-testid="transfer-amount">{amount}</span></p>\n'
+-        f'<p>Fee: <span data-testid="transfer-fee">{transfer_fee(amount)}</span></p>\n'
++        f'<p>Fee: <span data-testid="transfer-fee">{transfer_fee(None)}</span></p>\n'
+         f'<p>Balance: <span data-testid="sender-balance">{source.balance}</span></p>\n'
+     )

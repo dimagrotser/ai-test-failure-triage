@@ -1,0 +1,10 @@
+--- a/wallet/accounts.py
++++ b/wallet/accounts.py
+@@ -11,6 +11,6 @@
+         self.balance = balance
+ 
+     def deposit(self, amount: Decimal) -> None:
+-        if amount <= 0:
++        if amount < 0:
+             raise InvalidAmount(f"amount must be positive, got {amount}")
+         self.balance += amount

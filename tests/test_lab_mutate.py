@@ -1,9 +1,11 @@
+import re
 from pathlib import Path
 
 import yaml
 
 from evals.lab.mutate import write_scenarios
 
+ROOT = Path(__file__).parent.parent
 MUTMUT = Path(__file__).parent / "fixtures" / "lab" / "mutmut"
 
 
@@ -73,3 +75,20 @@ def test_mutant_in_a_method_is_matched_although_mutmut_drops_the_class_indent(
 
     patch = (tmp_path / "product-bug-mutant-accounts-account-deposit" / "diff.patch").read_text()
     assert "-        if amount <= 0:\n+        if amount < 0:\n" in patch
+
+
+def test_committed_mutation_cases_carry_the_source_and_a_patch_of_the_mutant() -> None:
+    cases = sorted((ROOT / "evals" / "cases").glob("product-bug-mutant-*"))
+
+    assert cases
+    for case in cases:
+        label = yaml.safe_load((case / "label.yaml").read_text())
+        assert (label["category"], label["source"]) == ("product_bug", "mutation")
+        assert (case / "diff.patch").read_text().startswith("--- a/wallet/")
+
+
+def test_default_lab_build_does_not_need_mutmut() -> None:
+    assert "mutmut" not in (ROOT / "evals" / "lab" / "build.py").read_text()
+    default_target = re.search(r"^lab:\n((?:\t.*\n)+)", (ROOT / "Makefile").read_text(), re.M)
+    assert default_target
+    assert "mutate" not in default_target[1]
