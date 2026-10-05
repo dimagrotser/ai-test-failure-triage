@@ -1,0 +1,6 @@
+category: environment
+source: injected
+condition: service_down
+scenario: ledger client wraps the connection error in its own exception
+notes: >-
+  The patch makes record_transfer catch OSError and raise LedgerUnavailable("ledger is unreachable"), so the failing frame is in code the patch touched and the message names no socket error. The ledger stub is not listening, which is the real cause: the Connection refused only shows in the chained traceback. With the stub running the same tree passes.

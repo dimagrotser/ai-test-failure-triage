@@ -259,6 +259,12 @@ def test_environment_scenario_that_cannot_be_trusted_is_rejected(
     ("scenario", "condition", "failed_test", "marker"),
     [
         ("environment-ledger-down", "service_down", "test_ledger", "Connection refused"),
+        (
+            "environment-ledger-wrapped-error",
+            "service_down",
+            "test_ledger",
+            "LedgerUnavailable",
+        ),
         ("environment-ledger-dns", "dns_failure", "test_ledger", "urlopen error"),
         ("environment-ledger-timeout", "timeout", "test_ledger", "timed out"),
         ("environment-missing-ledger-url", "missing_env_var", "test_ledger", "WALLET_LEDGER_URL"),
