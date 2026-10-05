@@ -613,3 +613,15 @@ def test_short_fixture_case_errors_in_setup_of_every_receipt_test(tmp_path: Path
     assert all("InsufficientFunds" in (r.attempts[0].message or "") for r in broken)
     label = yaml.safe_load((case / "label.yaml").read_text())
     assert label["category"] == "test_bug"
+
+
+def test_relative_path_case_fails_to_find_a_file_the_wallet_wrote_elsewhere(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "test-bug-statement-relative-path", tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert failed.test_id == "tests.test_statements::test_statement_lists_the_owner_and_balance"
+    assert "No such file or directory: 'statements/alice.csv'" in (failed.attempts[0].message or "")
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "test_bug"

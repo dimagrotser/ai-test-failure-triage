@@ -1,0 +1,17 @@
+diff --git a/tests/test_statements.py b/tests/test_statements.py
+--- a/tests/test_statements.py
++++ b/tests/test_statements.py
+@@ -1,10 +1,11 @@
+ from decimal import Decimal
++from pathlib import Path
+ 
+ from wallet.accounts import Account
+ from wallet.statements import export_statement
+ 
+ 
+ def test_statement_lists_the_owner_and_balance() -> None:
+-    path = export_statement(Account("alice", Decimal("98.50")))
++    export_statement(Account("alice", Decimal("98.50")))
+ 
+-    assert path.read_text() == "owner,balance\nalice,98.50\n"
++    assert Path("statements/alice.csv").read_text() == "owner,balance\nalice,98.50\n"
