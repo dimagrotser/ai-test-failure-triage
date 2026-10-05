@@ -63,7 +63,7 @@ This is optional and `make lab` does not need `mutmut`. The command runs `mutmut
 
 Only killed mutants are used. A surviving mutant is either equivalent (it changes nothing a test could see) or a gap in the wallet tests, and neither gives a failing run to label, so those are skipped. Timeouts and suspicious results are skipped too. Each candidate also has to pass the normal check: applied as a plain patch it fails the tests, and reverting it turns them green.
 
-From each function the generator takes the killed mutant with the lowest number. The wallet has 7 mutated functions, so this gives 7 cases, not the 43 mutants `mutmut` kills. The cases are a sample, and they follow whatever mutations `mutmut` happens to try: `quantize(None)` in the fee calculation is a real crash but not a bug anyone would write.
+From each function the generator takes the killed mutant with the lowest number. The wallet has 7 mutated functions, so this gives 7 cases, far fewer than the mutants `mutmut` kills. The cases are a sample, and they follow whatever mutations `mutmut` happens to try: `quantize(None)` in the fee calculation is a real crash but not a bug anyone would write.
 
 ## Running the evals
 
