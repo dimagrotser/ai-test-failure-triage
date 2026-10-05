@@ -22,7 +22,8 @@ from failtriage.github.pr_files import list_pr_files, to_unified_diff
 from failtriage.grouping import group_failures
 from failtriage.history import HistoryEntry, HistoryError, history_schema, load_history
 from failtriage.models import FailureGroup, Status
-from failtriage.parsers.junit import ReportParseError, parse_junit
+from failtriage.parsers import ReportParseError
+from failtriage.parsers.junit import parse_junit
 from failtriage.prompts import load_prompt
 from failtriage.redaction import redact_result
 from failtriage.report.json_output import AnalysisReport, Cost, DiffInfo, build_report

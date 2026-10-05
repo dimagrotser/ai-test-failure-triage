@@ -1,0 +1,133 @@
+{
+  "config": {
+    "projects": []
+  },
+  "suites": [
+    {
+      "title": "pay.spec.ts",
+      "file": "pay.spec.ts",
+      "specs": [
+        {
+          "title": "flaky pay",
+          "file": "pay.spec.ts",
+          "line": 5,
+          "column": 3,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "expectedStatus": "passed",
+              "status": "flaky",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 1200,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "attachments": [],
+                  "error": {
+                    "message": "Timeout 5000ms exceeded.",
+                    "stack": "Error: Timeout 5000ms exceeded.\n    at /work/tests/pay.spec.ts:9:5"
+                  }
+                },
+                {
+                  "workerIndex": 0,
+                  "status": "timedOut",
+                  "duration": 1200,
+                  "retry": 1,
+                  "stdout": [],
+                  "stderr": [],
+                  "attachments": [],
+                  "error": {
+                    "message": "Test timeout of 30000ms exceeded.",
+                    "stack": "Test timeout of 30000ms exceeded."
+                  }
+                },
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 1200,
+                  "retry": 2,
+                  "stdout": [],
+                  "stderr": [],
+                  "attachments": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "always broken",
+          "file": "pay.spec.ts",
+          "line": 5,
+          "column": 3,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "expectedStatus": "passed",
+              "status": "unexpected",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 1200,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "attachments": [],
+                  "error": {
+                    "message": "boom one",
+                    "stack": "boom one"
+                  }
+                },
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 1200,
+                  "retry": 1,
+                  "stdout": [],
+                  "stderr": [],
+                  "attachments": [],
+                  "error": {
+                    "message": "boom two",
+                    "stack": "boom two"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "crashed",
+          "file": "pay.spec.ts",
+          "line": 5,
+          "column": 3,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "expectedStatus": "passed",
+              "status": "unexpected",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "interrupted",
+                  "duration": 1200,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "attachments": [],
+                  "error": {
+                    "message": "worker crashed",
+                    "stack": "worker crashed"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

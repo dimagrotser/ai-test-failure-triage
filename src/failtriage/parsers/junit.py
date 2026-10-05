@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from failtriage.models import Attempt, Status, TestResult
+from failtriage.parsers import ReportParseError, final_status
 
 OUTCOME_TAGS = {
     "failure": Status.FAILED,
@@ -17,10 +18,6 @@ FLAKY_TAGS = {"flakyFailure": Status.FAILED, "flakyError": Status.ERROR}
 RERUN_TAGS = {"rerunFailure": Status.FAILED, "rerunError": Status.ERROR}
 
 
-class ReportParseError(Exception):
-    """The report file is missing, unreadable or not valid XML."""
-
-
 def parse_junit(path: Path) -> list[TestResult]:
     try:
         root = ET.parse(path).getroot()
@@ -31,17 +28,9 @@ def parse_junit(path: Path) -> list[TestResult]:
         key = (case.get("file") or "", case.get("classname") or "", case.get("name") or "")
         attempts_by_case.setdefault(key, []).extend(_parse_attempts(case))
     return [
-        TestResult(test_id=_test_id(*key), status=_final_status(attempts), attempts=attempts)
+        TestResult(test_id=_test_id(*key), status=final_status(attempts), attempts=attempts)
         for key, attempts in attempts_by_case.items()
     ]
-
-
-def _final_status(attempts: list[Attempt]) -> Status:
-    final = attempts[-1].status
-    earlier_failed = any(a.status in (Status.FAILED, Status.ERROR) for a in attempts[:-1])
-    if final is Status.PASSED and earlier_failed:
-        return Status.PASSED_ON_RETRY
-    return final
 
 
 def _parse_attempts(case: ET.Element) -> list[Attempt]:

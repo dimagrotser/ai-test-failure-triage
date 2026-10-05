@@ -3,7 +3,8 @@ from pathlib import Path
 import pytest
 
 from failtriage.models import Status
-from failtriage.parsers.junit import ReportParseError, parse_junit
+from failtriage.parsers import ReportParseError
+from failtriage.parsers.junit import parse_junit
 
 FIXTURES = Path(__file__).parent / "fixtures" / "junit"
 

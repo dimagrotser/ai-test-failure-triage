@@ -18,6 +18,7 @@ class Attempt(BaseModel):
     stdout: str | None = None
     stderr: str | None = None
     duration: float | None = None
+    attachments: list[str] = []
 
 
 class TestResult(BaseModel):

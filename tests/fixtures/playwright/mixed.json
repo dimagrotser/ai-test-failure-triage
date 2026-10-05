@@ -1,0 +1,198 @@
+{
+  "config": {
+    "projects": []
+  },
+  "suites": [
+    {
+      "title": "login.spec.ts",
+      "file": "login.spec.ts",
+      "specs": [
+        {
+          "title": "shows welcome",
+          "file": "login.spec.ts",
+          "line": 5,
+          "column": 3,
+          "tests": [
+            {
+              "projectName": "chromium",
+              "expectedStatus": "passed",
+              "status": "unexpected",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 1200,
+                  "retry": 0,
+                  "stdout": [
+                    {
+                      "text": "loading page\n"
+                    }
+                  ],
+                  "stderr": [
+                    {
+                      "text": "warn: slow\n"
+                    }
+                  ],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/work/test-results/login-chromium/test-failed-1.png"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip"
+                    }
+                  ],
+                  "error": {
+                    "message": "\u001b[31mError: expect(received).toHaveText(expected)\u001b[39m\n\nExpected: \"Welcome\"\nReceived: \"Sign in\"",
+                    "stack": "\u001b[31mError: expect(received).toHaveText(expected)\u001b[39m\n\nExpected: \"Welcome\"\nReceived: \"Sign in\"\n    at /work/tests/login.spec.ts:14:38"
+                  }
+                }
+              ]
+            },
+            {
+              "projectName": "firefox",
+              "expectedStatus": "passed",
+              "status": "expected",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 1200,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "attachments": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "suites": [
+        {
+          "title": "checkout",
+          "file": "login.spec.ts",
+          "specs": [
+            {
+              "title": "pays by card",
+              "file": "login.spec.ts",
+              "line": 5,
+              "column": 3,
+              "tests": [
+                {
+                  "projectName": "chromium",
+                  "expectedStatus": "passed",
+                  "status": "expected",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "status": "passed",
+                      "duration": 1200,
+                      "retry": 0,
+                      "stdout": [],
+                      "stderr": [],
+                      "attachments": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suites": [
+            {
+              "title": "promo",
+              "file": "login.spec.ts",
+              "specs": [
+                {
+                  "title": "skips expired code",
+                  "file": "login.spec.ts",
+                  "line": 5,
+                  "column": 3,
+                  "tests": [
+                    {
+                      "projectName": "chromium",
+                      "expectedStatus": "skipped",
+                      "status": "skipped",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "status": "skipped",
+                          "duration": 0,
+                          "retry": 0,
+                          "stdout": [],
+                          "stderr": [],
+                          "attachments": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "cart.spec.ts",
+      "file": "cart.spec.ts",
+      "specs": [
+        {
+          "title": "adds item",
+          "file": "cart.spec.ts",
+          "line": 5,
+          "column": 3,
+          "tests": [
+            {
+              "projectName": "",
+              "expectedStatus": "passed",
+              "status": "expected",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 1200,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "attachments": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "known bug",
+          "file": "cart.spec.ts",
+          "line": 5,
+          "column": 3,
+          "tests": [
+            {
+              "projectName": "",
+              "expectedStatus": "failed",
+              "status": "expected",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 1200,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "attachments": [],
+                  "error": {
+                    "message": "boom",
+                    "stack": "boom"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": []
+}
