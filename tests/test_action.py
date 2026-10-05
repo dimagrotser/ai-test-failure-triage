@@ -204,6 +204,15 @@ def load_action() -> Any:
     return yaml.safe_load((ROOT / "action.yml").read_text(encoding="utf-8"))
 
 
+def upload_step() -> Any:
+    (step,) = [
+        s
+        for s in load_action()["runs"]["steps"]
+        if s.get("uses", "").startswith("actions/upload-artifact@")
+    ]
+    return step
+
+
 def test_the_action_is_a_composite_with_the_documented_inputs_and_outputs() -> None:
     action = load_action()
 
@@ -223,8 +232,7 @@ def test_the_action_refuses_pull_request_target_before_anything_else() -> None:
 
 def test_the_history_file_is_uploaded_only_when_the_script_wrote_one() -> None:
     steps = load_action()["runs"]["steps"]
-
-    (upload,) = [s for s in steps if s.get("uses", "").startswith("actions/upload-artifact@")]
+    upload = upload_step()
     assert upload["if"] == "steps.analyze.outputs.history != ''"
     assert upload["with"]["name"] == "failtriage-history"
     assert upload["with"]["path"] == "${{ steps.analyze.outputs.history }}"
@@ -241,11 +249,7 @@ def test_the_script_gets_the_ref_sha_and_run_id_from_the_workflow() -> None:
 
 
 def test_the_uploaded_names_are_the_ones_the_reader_expects() -> None:
-    upload = next(
-        s for s in load_action()["runs"]["steps"] if s.get("uses", "").startswith("actions/upload")
-    )
-
-    assert upload["with"]["name"] == ARTIFACT_NAME
+    assert upload_step()["with"]["name"] == ARTIFACT_NAME
     assert f"/{ARTIFACT_FILE}" in SCRIPT.read_text(encoding="utf-8")
 
 
