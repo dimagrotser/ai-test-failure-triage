@@ -193,3 +193,27 @@ def test_no_workflow_runs_on_pull_request_target() -> None:
         triggers = yaml.safe_load(path.read_text(encoding="utf-8"))[True]
         names = triggers if isinstance(triggers, (list, dict)) else [triggers]
         assert "pull_request_target" not in names, path.name
+
+
+def readme_yaml_blocks() -> list[str]:
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    return [part.split("```")[0] for part in text.split("```yaml\n")[1:]]
+
+
+def test_the_readme_usage_fits_in_ten_lines_and_is_valid_yaml() -> None:
+    usage = readme_yaml_blocks()[0]
+
+    assert len(usage.strip().splitlines()) < 10
+    steps = yaml.safe_load(usage)
+    assert steps[0]["uses"].startswith("dimagrotser/ai-test-failure-triage@")
+
+
+def test_the_readme_lists_the_minimal_permissions() -> None:
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    for permission in ["pull-requests: write", "actions: read", "contents: read"]:
+        assert permission in text
+
+
+def test_the_readme_says_the_action_never_uses_pull_request_target() -> None:
+    assert "pull_request_target" in (ROOT / "README.md").read_text(encoding="utf-8")
