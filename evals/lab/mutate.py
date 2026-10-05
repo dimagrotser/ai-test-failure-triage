@@ -86,7 +86,10 @@ def _git_patch(source: Path, path: str, diff: str) -> str | None:
     # `mutmut show` numbers its hunks from the start of the function, which git apply
     # rejects. Find the function's lines in the file and diff the real thing instead.
     lines = diff.splitlines()
-    lines = lines[next(i for i, line in enumerate(lines) if line.startswith("@@")) + 1 :]
+    hunks = [i for i, line in enumerate(lines) if line.startswith("@@")]
+    if not hunks:
+        return None
+    lines = lines[hunks[0] + 1 :]
     old = [f"{line[1:]}\n" for line in lines if line.startswith((" ", "-"))]
     new = [f"{line[1:]}\n" for line in lines if line.startswith((" ", "+"))]
     original = source.read_text()

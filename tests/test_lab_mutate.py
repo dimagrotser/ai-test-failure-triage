@@ -1,4 +1,4 @@
-import re
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -87,8 +87,9 @@ def test_committed_mutation_cases_carry_the_source_and_a_patch_of_the_mutant() -
         assert (case / "diff.patch").read_text().startswith("--- a/wallet/")
 
 
-def test_default_lab_build_does_not_need_mutmut() -> None:
-    assert "mutmut" not in (ROOT / "evals" / "lab" / "build.py").read_text()
-    default_target = re.search(r"^lab:\n((?:\t.*\n)+)", (ROOT / "Makefile").read_text(), re.M)
-    assert default_target
-    assert "mutate" not in default_target[1]
+def test_default_lab_build_does_not_run_the_mutant_generator() -> None:
+    dry_run = subprocess.run(["make", "-n", "lab"], cwd=ROOT, capture_output=True, text=True)
+
+    assert dry_run.returncode == 0
+    assert "evals.lab.build" in dry_run.stdout
+    assert "mutate" not in dry_run.stdout
