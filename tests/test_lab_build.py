@@ -585,3 +585,15 @@ def test_funds_check_case_fails_where_the_test_expects_an_exception_that_never_c
     assert "DID NOT RAISE" in (failed.attempts[0].message or "")
     label = yaml.safe_load((case / "label.yaml").read_text())
     assert label["category"] == "product_bug"
+
+
+def test_wrong_exception_case_fails_with_an_exception_raised_inside_the_wallet(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "test-bug-wrong-exception-expected", tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert failed.test_id == "tests.test_limits::test_transfer_above_the_limit_is_rejected"
+    assert "LimitExceeded" in (failed.attempts[0].message or "")
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "test_bug"
