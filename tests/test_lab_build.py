@@ -555,3 +555,19 @@ def test_limit_off_by_one_case_rejects_the_transfer_that_is_exactly_at_the_limit
     assert "1000.00 is above the limit" in (failed.attempts[0].message or "")
     label = yaml.safe_load((case / "label.yaml").read_text())
     assert label["category"] == "product_bug"
+
+
+def test_fee_rate_typo_case_breaks_tests_in_three_files_with_different_messages(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "product-bug-fee-rate-typo", tmp_path)
+
+    failed = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert {r.test_id.split("::")[0] for r in failed} == {
+        "tests.test_fees",
+        "tests.test_receipt",
+        "tests.test_transfers",
+    }
+    assert len({r.attempts[0].message for r in failed}) > 3
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "product_bug"
