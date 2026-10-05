@@ -1011,3 +1011,40 @@ def test_a_comment_key_without_comment_is_a_usage_error(monkeypatch: pytest.Monk
 
     assert result.exit_code == 2
     assert "--comment-key" in result.stderr
+
+
+def test_a_green_run_updates_an_existing_comment(monkeypatch: pytest.MonkeyPatch) -> None:
+    existing = {
+        "id": 31,
+        "body": "<!-- failtriage:default -->\n1 failure group",
+        "user": {"login": "github-actions[bot]", "type": "Bot"},
+    }
+    github = FakeComments([existing])
+    github.install(monkeypatch)
+
+    analyze_comment(FIXTURES / "all_green.xml")
+
+    assert [w.method for w in github.writes] == ["PATCH"]
+    assert "tests passed" in json.loads(github.writes[0].content)["body"]
+
+
+def test_a_secret_in_the_report_does_not_reach_the_comment(monkeypatch: pytest.MonkeyPatch) -> None:
+    github = FakeComments()
+    github.install(monkeypatch)
+
+    analyze_comment(FIXTURES / "secrets.xml")
+
+    sent = github.writes[0].content.decode()
+    assert "hunter2" not in sent
+    assert "ghp_a1B2c3D4" not in sent
+    assert "PRIVATE KEY" not in sent
+
+
+def test_a_cut_without_a_job_summary_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    FakeComments().install(monkeypatch)
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    monkeypatch.setattr(cli, "render_markdown", lambda report: "line\n" * 30000)
+
+    result = analyze_comment(LEDGER_DOWN)
+
+    assert "GITHUB_STEP_SUMMARY" in result.stderr

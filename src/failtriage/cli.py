@@ -221,6 +221,10 @@ def _post_comment(repo: str, pr: int, key: str, markdown: str, has_failures: boo
     if cut and summary:
         with open(summary, "a", encoding="utf-8") as file:
             file.write(markdown)
+    elif cut:
+        typer.echo(
+            "report cut, GITHUB_STEP_SUMMARY is not set so the full report is lost", err=True
+        )
     client = _github_client(os.environ["GITHUB_TOKEN"])
     try:
         outcome = upsert_comment(client, repo, pr, key, body, has_failures=has_failures)
