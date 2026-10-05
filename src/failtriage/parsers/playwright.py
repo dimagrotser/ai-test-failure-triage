@@ -99,11 +99,14 @@ def _parse_test(spec: _Spec, test: _Test, describes: list[str]) -> TestResult:
 
 def _parse_attempt(result: _Result, expected: str) -> Attempt:
     status = ATTEMPT_STATUS.get(result.status, Status.ERROR)
+    error = result.error
+    message = _strip_ansi(error.message) if error and error.message else None
     # test.fail() marks a test that is expected to fail, so the failure is the pass.
     if expected == "failed" and status is Status.FAILED:
         status = Status.PASSED
-    error = result.error
-    message = _strip_ansi(error.message).split("\n", 1)[0] if error and error.message else None
+    elif expected == "failed" and status is Status.PASSED:
+        status = Status.FAILED
+        message = "Expected to fail, but passed."
     return Attempt(
         status=status,
         message=message,

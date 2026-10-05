@@ -190,6 +190,27 @@
               ]
             }
           ]
+        },
+        {
+          "title": "fixed but marked",
+          "file": "cart.spec.ts",
+          "tests": [
+            {
+              "projectName": "",
+              "expectedStatus": "failed",
+              "status": "unexpected",
+              "results": [
+                {
+                  "status": "passed",
+                  "duration": 10,
+                  "retry": 0,
+                  "stdout": [],
+                  "stderr": [],
+                  "attachments": []
+                }
+              ]
+            }
+          ]
         }
       ]
     }

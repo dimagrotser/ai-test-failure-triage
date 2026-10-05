@@ -38,7 +38,9 @@ def test_failed_passed_and_skipped_tests_get_their_own_status() -> None:
 def test_a_failed_attempt_has_a_message_and_stack_trace_without_color_codes() -> None:
     [attempt] = by_id("mixed.json")["login.spec.ts::chromium › shows welcome"].attempts
 
-    assert attempt.message == "Error: expect(received).toHaveText(expected)"
+    assert attempt.message == (
+        'Error: expect(received).toHaveText(expected)\n\nExpected: "Welcome"\nReceived: "Sign in"'
+    )
     assert attempt.stack_trace is not None
     assert "Expected: " in attempt.stack_trace
     assert "at /work/tests/login.spec.ts:14:38" in attempt.stack_trace
@@ -69,6 +71,13 @@ def test_a_passed_attempt_has_no_message_and_no_output() -> None:
 
 def test_a_test_that_is_expected_to_fail_and_does_fail_counts_as_passed() -> None:
     assert by_id("mixed.json")["cart.spec.ts::known bug"].status is Status.PASSED
+
+
+def test_a_test_that_is_expected_to_fail_but_passes_is_a_failure() -> None:
+    result = by_id("mixed.json")["cart.spec.ts::fixed but marked"]
+
+    assert result.status is Status.FAILED
+    assert result.attempts[0].message == "Expected to fail, but passed."
 
 
 def test_retries_become_attempts_and_the_test_passed_on_retry() -> None:
