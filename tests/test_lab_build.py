@@ -542,3 +542,16 @@ def test_rate_limit_failure_lands_on_a_test_in_another_file_than_the_one_that_us
     first_run = {e["test_id"]: e["status"] for e in history if e["run_id"] == 1}
     assert first_run["tests.test_exports::test_export_is_accepted"] == "passed"
     assert first_run["tests.test_payouts::test_payout_is_accepted"] == "failed"
+
+
+def test_limit_off_by_one_case_rejects_the_transfer_that_is_exactly_at_the_limit(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "product-bug-limit-off-by-one", tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert failed.test_id == "tests.test_limits::test_transfer_up_to_the_limit_is_allowed"
+    assert "LimitExceeded" in (failed.attempts[0].message or "")
+    assert "1000.00 is above the limit" in (failed.attempts[0].message or "")
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "product_bug"

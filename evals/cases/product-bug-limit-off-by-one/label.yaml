@@ -1,0 +1,8 @@
+category: product_bug
+source: injected
+scenario: transfer limit check rejects an amount equal to the limit
+notes: >-
+  The patch changes the limit check from > to >=, so a transfer of exactly 1000.00 is
+  rejected with LimitExceeded. The limit test says the limit itself is allowed, and the
+  neighbouring test still rejects 1000.01, so the test is right and the check is off by one.
+  The tests are untouched and pass again once the patch is reverted.
