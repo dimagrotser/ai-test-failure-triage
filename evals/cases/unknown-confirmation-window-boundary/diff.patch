@@ -1,0 +1,36 @@
+diff --git a/tests/test_confirmations.py b/tests/test_confirmations.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_confirmations.py
+@@ -0,0 +1,16 @@
++import pytest
++
++from wallet.confirmations import ConfirmationExpired, confirm
++
++
++def test_confirmation_just_inside_the_window_is_accepted() -> None:
++    confirm(899)
++
++
++def test_confirmation_after_exactly_the_window_is_accepted() -> None:
++    confirm(900)
++
++
++def test_confirmation_long_after_the_window_is_rejected() -> None:
++    with pytest.raises(ConfirmationExpired):
++        confirm(3600)
+diff --git a/wallet/confirmations.py b/wallet/confirmations.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/confirmations.py
+@@ -0,0 +1,10 @@
++CONFIRMATION_WINDOW = 900
++
++
++class ConfirmationExpired(Exception):
++    pass
++
++
++def confirm(seconds_since_request: int) -> None:
++    if seconds_since_request >= CONFIRMATION_WINDOW:
++        raise ConfirmationExpired(f"confirmation timed out after {CONFIRMATION_WINDOW} seconds")

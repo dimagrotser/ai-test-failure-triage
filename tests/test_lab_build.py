@@ -447,6 +447,11 @@ UNKNOWN_CASES = [
         "tests.test_interest::test_monthly_interest_on_a_thousand",
         "Decimal('2.50')",
     ),
+    (
+        "unknown-confirmation-window-boundary",
+        "tests.test_confirmations::test_confirmation_after_exactly_the_window_is_accepted",
+        "confirmation timed out after 900 seconds",
+    ),
 ]
 
 
@@ -473,6 +478,7 @@ def test_unknown_case_fails_without_passing_on_retry(
         ("unknown-dormant-new-account", True),
         ("unknown-amount-with-comma", True),
         ("unknown-interest-rate-mismatch", False),
+        ("unknown-confirmation-window-boundary", True),
     ],
 )
 def test_history_is_empty_only_when_the_scenario_says_none(

@@ -1,0 +1,11 @@
+category: unknown
+source: injected
+scenario: confirmation window at exactly 900 seconds
+notes: >-
+  The patch adds confirm, which rejects a confirmation once 900 seconds have passed, and
+  tests for 899, 900 and 3600 seconds. The test for exactly 900 expects it to be accepted and
+  gets ConfirmationExpired. Nothing in the repository says whether the window includes its
+  last second, so the check and the test are equally likely to be wrong. The message says
+  "timed out", but this is the product's own rule on a number and has nothing to do with a slow
+  service. The failure is deterministic, does not pass on retry, and the tests are new, so
+  there is no earlier run to compare with.
