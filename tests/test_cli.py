@@ -1126,3 +1126,12 @@ def test_a_secret_in_the_report_does_not_reach_the_job_summary(
     assert "hunter2" not in written
     assert "ghp_a1B2c3D4" not in written
     assert "PRIVATE KEY" not in written
+
+
+def test_an_empty_api_key_means_heuristics_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--json"])
+
+    assert result.exit_code == 0
+    assert "heuristics only" in result.stderr
