@@ -3,8 +3,30 @@
 # so nothing from the workflow or the pull request is ever parsed as shell.
 set -euo pipefail
 
+# One report path per line. A path stays one argument, whatever characters it has.
+source_args=()
+add_files() {
+  local flag=$1 line
+  while IFS= read -r line; do
+    if [[ -n "${line//[[:space:]]/}" ]]; then
+      source_args+=("$flag" "$line")
+    fi
+  done <<< "$2"
+}
+add_files --junit "${JUNIT:-}"
+add_files --playwright "${PLAYWRIGHT:-}"
+
+if [[ -n "${JUNIT//[[:space:]]/}" && -n "${PLAYWRIGHT//[[:space:]]/}" ]]; then
+  echo "::error::set either junit or playwright, not both"
+  exit 1
+fi
+if [ ${#source_args[@]} -eq 0 ]; then
+  echo "::error::set junit or playwright to the report to analyze"
+  exit 1
+fi
+
 report="$RUNNER_TEMP/failtriage-report.json"
-args=(analyze --junit "$JUNIT" --model "$MODEL" --json --summary)
+args=(analyze "${source_args[@]}" --model "$MODEL" --json --summary)
 
 if [ "$EVENT_NAME" = "pull_request" ]; then
   args+=(--repo "$REPO" --pr "$PR_NUMBER")
@@ -35,6 +57,6 @@ if [ "$EVENT_NAME" != "pull_request" ] && [ "$REF" = "refs/heads/main" ]; then
   history="$RUNNER_TEMP/failtriage-history/history.json"
   mkdir -p "$(dirname "$history")"
   uv run --project "$GITHUB_ACTION_PATH" --locked --no-dev failtriage history \
-    --junit "$JUNIT" --sha "$SHA" --run-id "$RUN_ID" > "$history"
+    "${source_args[@]}" --sha "$SHA" --run-id "$RUN_ID" > "$history"
   echo "history=$history" >> "$GITHUB_OUTPUT"
 fi

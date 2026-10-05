@@ -2,8 +2,11 @@ name: failtriage
 description: Group failed tests by root cause, classify each group and report on the pull request.
 inputs:
   junit:
-    description: JUnit XML report to analyze.
-    required: true
+    description: JUnit XML reports to analyze, one path per line. Use either this or playwright.
+    default: ""
+  playwright:
+    description: Playwright JSON reports to analyze, one path per line. Use either this or junit.
+    default: ""
   github-token:
     description: Token for the GitHub API. Needs pull-requests write to comment.
     default: ${{ github.token }}
@@ -43,6 +46,7 @@ runs:
       shell: bash
       env:
         JUNIT: ${{ inputs.junit }}
+        PLAYWRIGHT: ${{ inputs.playwright }}
         MODEL: ${{ inputs.model }}
         COMMENT: ${{ inputs.comment }}
         COMMENT_KEY: ${{ inputs.comment-key }}
