@@ -1,8 +1,10 @@
 import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
+from evals.lab.build import LabError
 from evals.lab.mutate import write_scenarios
 
 ROOT = Path(__file__).parent.parent
@@ -34,10 +36,12 @@ def test_killed_mutant_becomes_a_mutation_scenario_with_a_git_patch(tmp_path: Pa
 
 
 def test_only_mutants_the_tests_killed_are_used(tmp_path: Path) -> None:
-    survivors = _results("survived", "timeout", "suspicious")
+    everything = (MUTMUT / "results.txt").read_text()
 
-    assert write_scenarios(survivors, _show, tmp_path) == []
-    assert list(tmp_path.iterdir()) == []
+    written = write_scenarios(everything, _show, tmp_path)
+
+    assert {p.name for p in written} == {p.name for p in tmp_path.iterdir()}
+    assert not {p for p in tmp_path.iterdir() if "statements" in p.name or "transfers" in p.name}
 
 
 def test_one_mutant_per_function_the_lowest_numbered(tmp_path: Path) -> None:
@@ -93,3 +97,14 @@ def test_default_lab_build_does_not_run_the_mutant_generator() -> None:
     assert dry_run.returncode == 0
     assert "evals.lab.build" in dry_run.stdout
     assert "mutate" not in dry_run.stdout
+
+
+def test_results_without_a_killed_mutant_fail_and_keep_the_existing_scenarios(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "product-bug-mutant-fees-transfer-fee").mkdir()
+
+    with pytest.raises(LabError, match="no killed mutants"):
+        write_scenarios("unreadable output", _show, tmp_path)
+
+    assert (tmp_path / "product-bug-mutant-fees-transfer-fee").is_dir()

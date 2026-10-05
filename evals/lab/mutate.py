@@ -39,6 +39,9 @@ def write_scenarios(
             function = match["function"]
             killed[function] = min(int(match["number"]), killed.get(function, sys.maxsize))
 
+    if not killed:
+        raise LabError("mutmut reported no killed mutants, the existing scenarios were kept")
+
     with tempfile.TemporaryDirectory() as tmp:
         candidates: list[Path] = []
         for function, number in sorted(killed.items()):
@@ -144,4 +147,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except LabError as exc:
+        sys.exit(f"lab: {exc}")
