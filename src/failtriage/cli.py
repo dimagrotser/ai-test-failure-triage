@@ -8,7 +8,7 @@ from typing import Annotated
 
 import anthropic
 import typer
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from failtriage.classify.anthropic_provider import AnthropicProvider
 from failtriage.classify.llm import GroupClassifications, answer_schema, classify_groups
@@ -57,6 +57,27 @@ def schema(
     typer.echo(
         json.dumps(history_schema() if history else AnalysisReport.model_json_schema(), indent=2)
     )
+
+
+@app.command()
+def history(
+    junit: Annotated[Path, typer.Option(help="JUnit XML report of a run on main.")],
+    sha: Annotated[str, typer.Option(help="Commit the run tested.")],
+    run_id: Annotated[int, typer.Option(help="Id of the workflow run.")],
+) -> None:
+    """Print the history file for a run on main: one entry per test, no text from the report."""
+    try:
+        results = parse_junit(junit)
+    except ReportParseError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=2) from exc
+    entries = [
+        HistoryEntry(
+            test_id=r.test_id, status=r.status, attempts=len(r.attempts), sha=sha, run_id=run_id
+        )
+        for r in results
+    ]
+    typer.echo(TypeAdapter(list[HistoryEntry]).dump_json(entries, indent=2).decode())
 
 
 @app.command()

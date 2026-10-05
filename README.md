@@ -46,6 +46,20 @@ GitHub gives fork pull requests a read-only token and no secrets, so the action 
 
 `report` is the path of the JSON report and `groups` is the number of failure groups. The report is always written to the job summary too. A report that does not fit into a comment is cut there and the whole text stays in the summary.
 
+## History
+
+On runs of `main` the action uploads an artifact called `failtriage-history`. It holds one file, `history.json`: a JSON array with one entry per test in the report, passed tests included.
+
+```json
+[{"test_id": "tests/test_fees.py::test_fee", "status": "passed", "attempts": 1, "sha": "3f2c...", "run_id": 9003}]
+```
+
+Each entry has exactly these five fields and no text from the report, so there is nothing to redact. `status` is one of `passed`, `failed`, `error`, `skipped` or `passed_on_retry`. `failtriage schema --history` prints the schema, and `history.schema.json` is the committed copy.
+
+Pull request runs never upload it. They read the artifacts of the last 10 runs on main instead, which is why they need `actions: read`. The upload counts as a run of main when `github.ref` is `refs/heads/main` and the event is not `pull_request`, so every other event on main qualifies, a push as much as a scheduled run.
+
+Artifacts expire with your repository's retention setting (90 days by default). Until the first run on main has uploaded one, or when a fork pull request cannot read it, the report says `History: none` and nothing is called flaky from history. If a workflow runs the action in two jobs on main, the second upload fails because the artifact name is taken.
+
 ## CLI
 
 ```
@@ -55,4 +69,4 @@ uv run failtriage analyze --junit tests/fixtures/junit/mixed.xml --markdown
 
 ## Limitations
 
-Only JUnit XML is read so far. History on main is not uploaded yet, so reports say `History: none` and nothing can be called flaky from history alone, only from a pass on retry.
+Only JUnit XML is read so far. A repository needs a few runs on main before history signals appear.

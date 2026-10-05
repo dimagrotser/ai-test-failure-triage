@@ -9,6 +9,8 @@ from typing import Any
 import pytest
 import yaml
 
+from failtriage.github.history_artifacts import ARTIFACT_FILE, ARTIFACT_NAME
+
 ROOT = Path(__file__).parent.parent
 SCRIPT = ROOT / "scripts" / "analyze.sh"
 
@@ -21,7 +23,9 @@ argv = sys.argv[1:]
 with open(os.environ["UV_LOG"], "a") as log:
     log.write(json.dumps({{"argv": argv, "anthropic_key": "ANTHROPIC_API_KEY" in os.environ,
                            "github_token": os.environ.get("GITHUB_TOKEN")}}) + "\\n")
-if "failtriage" in argv:
+if "history" in argv:
+    print("[]")
+elif "failtriage" in argv:
     if os.environ.get("UV_FAIL"):
         sys.exit(int(os.environ["UV_FAIL"]))
     print(json.dumps({{"groups": [{{}}, {{}}]}}))
@@ -49,6 +53,9 @@ def run_script(tmp_path: Path, **env: str) -> tuple[subprocess.CompletedProcess[
         "COMMENT": "true",
         "COMMENT_KEY": "",
         "EVENT_NAME": "pull_request",
+        "REF": "refs/pull/7/merge",
+        "SHA": "b" * 40,
+        "RUN_ID": "9001",
         "REPO": "acme/wallet",
         "HEAD_REPO": "acme/wallet",
         "PR_NUMBER": "7",
@@ -68,7 +75,11 @@ def run_script(tmp_path: Path, **env: str) -> tuple[subprocess.CompletedProcess[
 
 
 def analyze_call(calls: list[Any]) -> Any:
-    return next(c for c in calls if "failtriage" in c["argv"])
+    return next(c for c in calls if "analyze" in c["argv"])
+
+
+def history_calls(calls: list[Any]) -> list[Any]:
+    return [c for c in calls if "history" in c["argv"]]
 
 
 def test_a_pull_request_from_the_same_repo_gets_a_comment(tmp_path: Path) -> None:
@@ -139,6 +150,39 @@ def test_the_report_and_the_group_count_become_outputs(tmp_path: Path) -> None:
     assert json.loads(report.read_text())["groups"] == [{}, {}]
 
 
+def test_a_run_on_main_writes_the_history_file(tmp_path: Path) -> None:
+    result, calls = run_script(tmp_path, EVENT_NAME="push", REF="refs/heads/main", PR_NUMBER="")
+
+    assert result.returncode == 0, result.stderr
+    (call,) = history_calls(calls)
+    argv = call["argv"]
+    assert argv[argv.index("--junit") + 1] == "reports/junit.xml"
+    assert argv[argv.index("--sha") + 1] == "b" * 40
+    assert argv[argv.index("--run-id") + 1] == "9001"
+    history = tmp_path / "failtriage-history" / "history.json"
+    assert history.read_text().strip() == "[]"
+    assert f"history={history}" in (tmp_path / "output").read_text().splitlines()
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        {},
+        {"REF": "refs/heads/main"},
+        {"EVENT_NAME": "push", "REF": "refs/heads/feature", "PR_NUMBER": ""},
+        {"EVENT_NAME": "push", "REF": "refs/tags/main", "PR_NUMBER": ""},
+    ],
+    ids=["pull-request", "pull-request-into-main", "other-branch", "tag-named-main"],
+)
+def test_only_a_run_on_main_writes_history(tmp_path: Path, env: dict[str, str]) -> None:
+    result, calls = run_script(tmp_path, **env)
+
+    assert result.returncode == 0, result.stderr
+    assert history_calls(calls) == []
+    assert not (tmp_path / "failtriage-history").exists()
+    assert "history=" not in (tmp_path / "output").read_text()
+
+
 def test_an_input_cannot_run_as_shell(tmp_path: Path) -> None:
     junit = f"a b; touch {tmp_path}/pwned #"
 
@@ -160,6 +204,15 @@ def load_action() -> Any:
     return yaml.safe_load((ROOT / "action.yml").read_text(encoding="utf-8"))
 
 
+def upload_step() -> Any:
+    (step,) = [
+        s
+        for s in load_action()["runs"]["steps"]
+        if s.get("uses", "").startswith("actions/upload-artifact@")
+    ]
+    return step
+
+
 def test_the_action_is_a_composite_with_the_documented_inputs_and_outputs() -> None:
     action = load_action()
 
@@ -175,6 +228,29 @@ def test_the_action_refuses_pull_request_target_before_anything_else() -> None:
 
     assert first["if"] == "github.event_name == 'pull_request_target'"
     assert "exit 1" in first["run"]
+
+
+def test_the_history_file_is_uploaded_only_when_the_script_wrote_one() -> None:
+    steps = load_action()["runs"]["steps"]
+    upload = upload_step()
+    assert upload["if"] == "steps.analyze.outputs.history != ''"
+    assert upload["with"]["name"] == "failtriage-history"
+    assert upload["with"]["path"] == "${{ steps.analyze.outputs.history }}"
+    assert upload["with"]["if-no-files-found"] == "error"
+    assert steps.index(upload) > [s.get("id") for s in steps].index("analyze")
+
+
+def test_the_script_gets_the_ref_sha_and_run_id_from_the_workflow() -> None:
+    env = next(s for s in load_action()["runs"]["steps"] if s.get("id") == "analyze")["env"]
+
+    assert env["REF"] == "${{ github.ref }}"
+    assert env["SHA"] == "${{ github.sha }}"
+    assert env["RUN_ID"] == "${{ github.run_id }}"
+
+
+def test_the_uploaded_names_are_the_ones_the_reader_expects() -> None:
+    assert upload_step()["with"]["name"] == ARTIFACT_NAME
+    assert f"/{ARTIFACT_FILE}" in SCRIPT.read_text(encoding="utf-8")
 
 
 def test_no_step_puts_an_expression_into_a_shell_script() -> None:
@@ -217,3 +293,17 @@ def test_the_readme_lists_the_minimal_permissions() -> None:
 
 def test_the_readme_says_the_action_never_uses_pull_request_target() -> None:
     assert "pull_request_target" in (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+def test_the_readme_documents_the_history_artifact() -> None:
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert ARTIFACT_NAME in text
+    assert ARTIFACT_FILE in text
+    assert "failtriage schema --history" in text
+
+
+def test_the_self_test_also_runs_on_main_so_it_uploads_history() -> None:
+    triggers = yaml.safe_load((ROOT / ".github/workflows/self-test.yml").read_text())[True]
+
+    assert triggers["push"]["branches"] == ["main"]
