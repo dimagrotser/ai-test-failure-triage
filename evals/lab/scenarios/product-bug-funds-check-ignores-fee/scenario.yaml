@@ -1,0 +1,10 @@
+category: product_bug
+source: injected
+scenario: funds check compares the balance with the amount and ignores the fee
+notes: >-
+  The patch compares the sender's balance with the amount instead of amount plus fee, so a
+  transfer that the sender cannot pay for goes through and the balance ends up negative.
+  The failing test says in its name and in its setup that the fee must be covered, and the
+  other transfer tests still pass. The log only says DID NOT RAISE at a line in the test
+  file, while the broken line is in wallet/transfers.py. The tests are untouched and pass
+  again once the patch is reverted.

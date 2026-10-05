@@ -571,3 +571,17 @@ def test_fee_rate_typo_case_breaks_tests_in_three_files_with_different_messages(
     assert len({r.attempts[0].message for r in failed}) > 3
     label = yaml.safe_load((case / "label.yaml").read_text())
     assert label["category"] == "product_bug"
+
+
+def test_funds_check_case_fails_where_the_test_expects_an_exception_that_never_comes(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "product-bug-funds-check-ignores-fee", tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert (
+        failed.test_id == "tests.test_transfers::test_transfer_needs_enough_money_for_the_fee_too"
+    )
+    assert "DID NOT RAISE" in (failed.attempts[0].message or "")
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "product_bug"
