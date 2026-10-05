@@ -847,3 +847,204 @@ def test_history_runs_must_be_positive() -> None:
     result = analyze_flaky_pr("--json", "--history-runs", "0")
 
     assert result.exit_code == 2
+
+
+class FakeComments:
+    """Comment API of one pull request, backed by a list the test can look at."""
+
+    def __init__(self, comments: list[dict[str, Any]] | None = None, status: int = 200) -> None:
+        self.comments = comments or []
+        self.status = status
+        self.writes: list[httpx.Request] = []
+
+    def install(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("GITHUB_TOKEN", GITHUB_TOKEN)
+        monkeypatch.setattr(
+            cli,
+            "_github_client",
+            lambda token: GitHubClient(token, transport=httpx.MockTransport(self._handle)),
+        )
+
+    def _handle(self, request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/pulls/7/files"):
+            return httpx.Response(200, json=PR_FILES)
+        if request.method != "GET":
+            self.writes.append(request)
+        if self.status != 200:
+            return httpx.Response(self.status, json={"message": f"bad {GITHUB_TOKEN}"})
+        if request.method == "GET":
+            return httpx.Response(200, json=self.comments)
+        return httpx.Response(201, json={"id": 1, "body": json.loads(request.content)["body"]})
+
+
+def analyze_comment(junit: Path, *extra: str) -> Any:
+    args = ["analyze", "--junit", str(junit), "--repo", "acme/wallet", "--pr", "7", "--comment"]
+    return runner.invoke(app, [*args, *extra])
+
+
+def test_comment_posts_the_markdown_report_with_the_default_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github = FakeComments()
+    github.install(monkeypatch)
+
+    result = analyze_comment(LEDGER_DOWN)
+
+    assert result.exit_code == 0
+    assert [w.method for w in github.writes] == ["POST"]
+    body = json.loads(github.writes[0].content)["body"]
+    assert body.startswith("<!-- failtriage:default -->\n")
+    assert "failure group" in body
+    assert "comment created" in result.stderr
+
+
+def test_comment_key_names_the_comment(monkeypatch: pytest.MonkeyPatch) -> None:
+    github = FakeComments()
+    github.install(monkeypatch)
+
+    analyze_comment(LEDGER_DOWN, "--comment-key", "e2e")
+
+    assert json.loads(github.writes[0].content)["body"].startswith("<!-- failtriage:e2e -->\n")
+
+
+def test_a_second_run_updates_the_comment(monkeypatch: pytest.MonkeyPatch) -> None:
+    existing = {
+        "id": 31,
+        "body": "<!-- failtriage:default -->\nold",
+        "user": {"login": "github-actions[bot]", "type": "Bot"},
+    }
+    github = FakeComments([existing])
+    github.install(monkeypatch)
+
+    result = analyze_comment(LEDGER_DOWN)
+
+    assert [w.method for w in github.writes] == ["PATCH"]
+    assert github.writes[0].url.path.endswith("/issues/comments/31")
+    assert "comment updated" in result.stderr
+
+
+def test_a_green_run_without_a_comment_posts_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    github = FakeComments()
+    github.install(monkeypatch)
+
+    result = analyze_comment(FIXTURES / "all_green.xml")
+
+    assert result.exit_code == 0
+    assert github.writes == []
+    assert "no failures" in result.stderr
+
+
+def test_comment_does_not_change_what_is_printed(monkeypatch: pytest.MonkeyPatch) -> None:
+    FakeComments().install(monkeypatch)
+
+    result = analyze_comment(LEDGER_DOWN, "--json")
+
+    assert AnalysisReport.model_validate_json(result.stdout).groups
+
+
+def test_a_long_report_is_cut_and_goes_whole_to_the_job_summary(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    github = FakeComments()
+    github.install(monkeypatch)
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setattr(cli, "render_markdown", lambda report: "line\n" * 30000)
+
+    result = analyze_comment(LEDGER_DOWN)
+
+    assert result.exit_code == 0
+    body = json.loads(github.writes[0].content)["body"]
+    assert len(body) <= 65536
+    assert "job summary" in body
+    assert summary.read_text(encoding="utf-8") == "line\n" * 30000
+
+
+def test_a_short_report_leaves_the_job_summary_alone(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    FakeComments().install(monkeypatch)
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+
+    analyze_comment(LEDGER_DOWN)
+
+    assert not summary.exists()
+
+
+def test_a_github_failure_while_commenting_is_a_warning(monkeypatch: pytest.MonkeyPatch) -> None:
+    FakeComments(status=403).install(monkeypatch)
+
+    result = analyze_comment(LEDGER_DOWN)
+
+    assert result.exit_code == 0
+    assert "comment not posted" in result.stderr
+    assert GITHUB_TOKEN not in result.stderr + result.stdout
+    assert "bad" not in result.stderr
+
+
+def test_comment_needs_repo_and_pr(monkeypatch: pytest.MonkeyPatch) -> None:
+    FakeComments().install(monkeypatch)
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--comment"])
+
+    assert result.exit_code == 2
+    assert "--comment" in result.stderr
+
+
+@pytest.mark.parametrize("key", ["", "a b", "x-->y", "a\nb"])
+def test_a_comment_key_cannot_break_the_marker(monkeypatch: pytest.MonkeyPatch, key: str) -> None:
+    github = FakeComments()
+    github.install(monkeypatch)
+
+    result = analyze_comment(LEDGER_DOWN, "--comment-key", key)
+
+    assert result.exit_code == 2
+    assert github.writes == []
+
+
+def test_a_comment_key_without_comment_is_a_usage_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    FakeComments().install(monkeypatch)
+
+    result = analyze_pr("--comment-key", "e2e")
+
+    assert result.exit_code == 2
+    assert "--comment-key" in result.stderr
+
+
+def test_a_green_run_updates_an_existing_comment(monkeypatch: pytest.MonkeyPatch) -> None:
+    existing = {
+        "id": 31,
+        "body": "<!-- failtriage:default -->\n1 failure group",
+        "user": {"login": "github-actions[bot]", "type": "Bot"},
+    }
+    github = FakeComments([existing])
+    github.install(monkeypatch)
+
+    analyze_comment(FIXTURES / "all_green.xml")
+
+    assert [w.method for w in github.writes] == ["PATCH"]
+    assert "tests passed" in json.loads(github.writes[0].content)["body"]
+
+
+def test_a_secret_in_the_report_does_not_reach_the_comment(monkeypatch: pytest.MonkeyPatch) -> None:
+    github = FakeComments()
+    github.install(monkeypatch)
+
+    analyze_comment(FIXTURES / "secrets.xml")
+
+    sent = github.writes[0].content.decode()
+    assert "hunter2" not in sent
+    assert "ghp_a1B2c3D4" not in sent
+    assert "PRIVATE KEY" not in sent
+
+
+def test_a_cut_without_a_job_summary_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    FakeComments().install(monkeypatch)
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    monkeypatch.setattr(cli, "render_markdown", lambda report: "line\n" * 30000)
+
+    result = analyze_comment(LEDGER_DOWN)
+
+    assert "GITHUB_STEP_SUMMARY" in result.stderr

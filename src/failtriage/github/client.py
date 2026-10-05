@@ -40,14 +40,19 @@ class GitHubClient:
 
     def get_json(self, path: str, params: dict[str, str | int] | None = None) -> dict[str, Any]:
         """One JSON object from a GET endpoint."""
-        body = self._get(path, params).json()
-        if not isinstance(body, dict):
-            raise GitHubError("GitHub did not answer with an object")
-        return body
+        return self._object(self._request("GET", path, params))
+
+    def post_json(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Create something and return the object GitHub answers with."""
+        return self._object(self._request("POST", path, json=body))
+
+    def patch_json(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Update something and return the object GitHub answers with."""
+        return self._object(self._request("PATCH", path, json=body))
 
     def get_bytes(self, path: str) -> bytes:
         """A raw download such as an artifact zip. The redirect to storage drops the token."""
-        return self._get(path, None).content
+        return self._request("GET", path).content
 
     def get_pages(self, path: str) -> list[dict[str, Any]]:
         """Items of a list endpoint, following `Link: rel=next` to the last page."""
@@ -55,7 +60,7 @@ class GitHubClient:
         url: str | None = path
         params: dict[str, str | int] | None = {"per_page": 100}
         while url:
-            response = self._get(url, params)
+            response = self._request("GET", url, params)
             body = response.json()
             if not isinstance(body, list):
                 raise GitHubError("GitHub did not answer with a list")
@@ -72,10 +77,23 @@ class GitHubClient:
         target, api = httpx.URL(url), httpx.URL(self._base_url)
         return (target.scheme, target.host, target.port) == (api.scheme, api.host, api.port)
 
-    def _get(self, url: str, params: dict[str, str | int] | None) -> httpx.Response:
+    @staticmethod
+    def _object(response: httpx.Response) -> dict[str, Any]:
+        body = response.json()
+        if not isinstance(body, dict):
+            raise GitHubError("GitHub did not answer with an object")
+        return body
+
+    def _request(
+        self,
+        method: str,
+        url: str,
+        params: dict[str, str | int] | None = None,
+        json: dict[str, Any] | None = None,
+    ) -> httpx.Response:
         for attempt in range(self._max_retries + 1):
             try:
-                response = self._http.get(url, params=params)
+                response = self._http.request(method, url, params=params, json=json)
             except httpx.HTTPError as exc:
                 # Only the type: the message can quote the URL and headers.
                 raise GitHubError(f"request to GitHub failed: {type(exc).__name__}") from None

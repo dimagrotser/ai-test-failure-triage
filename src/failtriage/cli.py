@@ -17,6 +17,7 @@ from failtriage.classify.pricing import cost_usd
 from failtriage.evaluate import EvalError, evaluate, render_eval
 from failtriage.github.client import GitHubClient, GitHubError
 from failtriage.github.history_artifacts import fetch_history
+from failtriage.github.pr_comment import comment_body, upsert_comment
 from failtriage.github.pr_files import list_pr_files, to_unified_diff
 from failtriage.grouping import group_failures
 from failtriage.history import HistoryEntry, HistoryError, history_schema, load_history
@@ -29,6 +30,7 @@ from failtriage.report.markdown import render_markdown
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
 DEFAULT_HISTORY_RUNS = 10
+DEFAULT_COMMENT_KEY = "default"
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -91,12 +93,23 @@ def analyze(
             help="Runs on main to read history from, with --repo and --pr and no --history.",
         ),
     ] = DEFAULT_HISTORY_RUNS,
+    comment: Annotated[
+        bool,
+        typer.Option(
+            "--comment", help="Post the Markdown report as a comment. Needs --repo, --pr."
+        ),
+    ] = False,
+    comment_key: Annotated[
+        str | None,
+        typer.Option(help="Name of the comment to update, so one run can keep several."),
+    ] = None,
 ) -> None:
     """Group the failed tests of a report by cause and print the groups."""
+    reports = json_output or markdown or comment
     if json_output and markdown:
         typer.echo("use either --json or --markdown, not both", err=True)
         raise typer.Exit(code=2)
-    if record is not None and not (json_output or markdown):
+    if record is not None and not reports:
         typer.echo("--record needs --json or --markdown, text output never calls the LLM", err=True)
         raise typer.Exit(code=2)
     if record is not None and not os.environ.get("ANTHROPIC_API_KEY"):
@@ -108,13 +121,22 @@ def analyze(
     if repo is not None and not re.fullmatch(r"[\w.-]+/[\w.-]+", repo):
         typer.echo("--repo must look like owner/name", err=True)
         raise typer.Exit(code=2)
-    if repo is not None and not (json_output or markdown):
+    if repo is not None and not reports:
         typer.echo("--repo needs --json or --markdown, text output has no diff", err=True)
+        raise typer.Exit(code=2)
+    if comment and repo is None:
+        typer.echo("--comment needs --repo and --pr", err=True)
+        raise typer.Exit(code=2)
+    if comment_key is not None and not comment:
+        typer.echo("--comment-key needs --comment", err=True)
+        raise typer.Exit(code=2)
+    if comment_key is not None and not re.fullmatch(r"[A-Za-z0-9_.-]+", comment_key):
+        typer.echo("--comment-key may hold letters, digits, dots, dashes and underscores", err=True)
         raise typer.Exit(code=2)
     if repo is not None and not os.environ.get("GITHUB_TOKEN"):
         typer.echo("--repo and --pr read from GitHub and need GITHUB_TOKEN", err=True)
         raise typer.Exit(code=2)
-    if history is not None and not (json_output or markdown):
+    if history is not None and not reports:
         typer.echo("--history needs --json or --markdown, text output has no signals", err=True)
         raise typer.Exit(code=2)
     pull_request = (repo, pr) if repo is not None and pr is not None else None
@@ -122,9 +144,10 @@ def analyze(
         entries: list[HistoryEntry] | None = None
         if history is not None:
             entries = load_history(history)
-        elif pull_request is not None and (json_output or markdown):
+        elif pull_request is not None:
             entries = _fetch_history(pull_request[0], history_runs)
-        _analyze(junit, json_output, markdown, model, record, pull_request, entries)
+        key = (comment_key or DEFAULT_COMMENT_KEY) if comment else None
+        _analyze(junit, json_output, markdown, model, record, pull_request, entries, key)
     except (ReportParseError, HistoryError) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
@@ -191,6 +214,27 @@ def _read_diff(repo: str, pr: int) -> tuple[DiffInfo, str | None]:
     return info, to_unified_diff(files)
 
 
+def _post_comment(repo: str, pr: int, key: str, markdown: str, has_failures: bool) -> None:
+    """Keep the report in the PR comment of `key`. Without GitHub the run goes on."""
+    body, cut = comment_body(markdown, key)
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if cut and summary:
+        with open(summary, "a", encoding="utf-8") as file:
+            file.write(markdown)
+    elif cut:
+        typer.echo(
+            "report cut, GITHUB_STEP_SUMMARY is not set so the full report is lost", err=True
+        )
+    client = _github_client(os.environ["GITHUB_TOKEN"])
+    try:
+        outcome = upsert_comment(client, repo, pr, key, body, has_failures=has_failures)
+    except (GitHubError, ValidationError) as exc:
+        typer.echo(f"github: {_github_reason(exc)}, comment not posted", err=True)
+        return
+    note = ", no failures" if outcome == "skipped" else ""
+    typer.echo(f"github: comment {outcome}{note}", err=True)
+
+
 def _analyze(
     junit: Path,
     json_output: bool,
@@ -199,15 +243,16 @@ def _analyze(
     record: Path | None,
     pull_request: tuple[str, int] | None,
     history: list[HistoryEntry] | None = None,
+    comment_key: str | None = None,
 ) -> None:
     results = [redact_result(r) for r in parse_junit(junit)]
     if not results:
         typer.echo(f"warning: no tests found in {junit}", err=True)
-        if not (json_output or markdown):
+        if not (json_output or markdown or comment_key):
             return
 
     groups = group_failures(results)
-    if json_output or markdown:
+    if json_output or markdown or comment_key:
         diff_info, diff = _read_diff(*pull_request) if pull_request else (None, None)
         changed = diff_info.changed_files if diff_info else []
         classified, cost = _classify(groups, model, record, diff, changed, history or [])
@@ -221,10 +266,13 @@ def _analyze(
             diff_info,
             history,
         )
+        rendered = render_markdown(report)
         if json_output:
             typer.echo(report.model_dump_json(indent=2))
-        else:
-            typer.echo(render_markdown(report), nl=False)
+        elif markdown:
+            typer.echo(rendered, nl=False)
+        if comment_key and pull_request:
+            _post_comment(*pull_request, comment_key, rendered, bool(report.groups))
         return
     for number, group in enumerate(groups, start=1):
         _print_group(number, group)
