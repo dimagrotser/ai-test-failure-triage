@@ -4,7 +4,7 @@ from typing import Any
 import httpx
 
 from failtriage.github.client import GitHubClient
-from failtriage.github.pr_comment import marker, upsert_comment
+from failtriage.github.pr_comment import MAX_BODY_CHARS, comment_body, marker, upsert_comment
 
 
 def tagged(text: str, key: str = "default") -> str:
@@ -153,3 +153,60 @@ def test_no_failures_with_a_comment_updates_it_to_all_green() -> None:
 
     assert outcome == "updated"
     assert "All 12 tests passed" in json.loads(github.writes[0].content)["body"]
+
+
+def test_a_short_report_gets_the_marker_and_is_kept_whole() -> None:
+    body, cut = comment_body("**1 failure group**\n", "default")
+
+    assert body == f"{marker('default')}\n**1 failure group**\n"
+    assert not cut
+
+
+def test_a_report_over_the_limit_is_cut_with_a_note() -> None:
+    lines = [f"line {n}" for n in range(20000)]
+
+    body, cut = comment_body("\n".join(lines), "default")
+
+    assert cut
+    assert len(body) <= MAX_BODY_CHARS
+    assert body.startswith(marker("default"))
+    assert "job summary" in body.splitlines()[-1]
+
+
+def test_the_cut_falls_on_a_line_boundary() -> None:
+    lines = [f"line {n}" for n in range(20000)]
+
+    body, _ = comment_body("\n".join(lines), "default")
+
+    kept = body.splitlines()[1:-2]
+    assert all(line in set(lines) for line in kept)
+
+
+def test_a_report_of_exactly_the_limit_is_not_cut() -> None:
+    head = f"{marker('default')}\n"
+    report = "x" * (MAX_BODY_CHARS - len(head))
+
+    body, cut = comment_body(report, "default")
+
+    assert len(body) == MAX_BODY_CHARS
+    assert not cut
+
+
+def test_a_long_report_without_line_breaks_is_still_cut_to_the_limit() -> None:
+    body, cut = comment_body("x" * 100_000, "default")
+
+    assert cut
+    assert len(body) <= MAX_BODY_CHARS
+
+
+def test_a_cut_inside_a_code_block_closes_it_before_the_note() -> None:
+    evidence = "\n".join(f"quote {n}" for n in range(20000))
+
+    body, cut = comment_body(f"Evidence:\n\n```text\n{evidence}\n```\n", "default")
+
+    assert cut
+    assert len(body) <= MAX_BODY_CHARS
+    lines = body.splitlines()
+    assert lines[-4].startswith("quote")
+    assert lines[-3:-1] == ["```", ""]
+    assert "job summary" in lines[-1]
