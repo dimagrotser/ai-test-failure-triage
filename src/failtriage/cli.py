@@ -24,6 +24,7 @@ from failtriage.grouping import group_failures
 from failtriage.history import HistoryEntry, HistoryError, history_schema, load_history
 from failtriage.models import FailureGroup, Status, TestResult
 from failtriage.parsers import ReportParseError
+from failtriage.parsers.allure import parse_allure
 from failtriage.parsers.junit import parse_junit
 from failtriage.parsers.playwright import parse_playwright
 from failtriage.prompts import load_prompt
@@ -72,9 +73,12 @@ def history(
     playwright: Annotated[
         list[Path] | None, typer.Option(help="Playwright JSON report of a run on main.")
     ] = None,
+    allure: Annotated[
+        list[Path] | None, typer.Option(help="Allure results directory of a run on main.")
+    ] = None,
 ) -> None:
     """Print the history file for a run on main: one entry per test, no text from the report."""
-    paths, parse = _source(junit, playwright)
+    paths, parse = _source(junit, playwright, allure)
     try:
         results = _parse_all(paths, parse)
     except ReportParseError as exc:
@@ -98,6 +102,10 @@ def analyze(
     playwright: Annotated[
         list[Path] | None,
         typer.Option(help="Playwright JSON report to analyze. Repeat it for several files."),
+    ] = None,
+    allure: Annotated[
+        list[Path] | None,
+        typer.Option(help="Allure results directory to analyze. Repeat it for several."),
     ] = None,
     json_output: Annotated[
         bool, typer.Option("--json", help="Print the analysis as JSON instead of text.")
@@ -148,7 +156,7 @@ def analyze(
     ] = False,
 ) -> None:
     """Group the failed tests of a report by cause and print the groups."""
-    paths, parse = _source(junit, playwright)
+    paths, parse = _source(junit, playwright, allure)
     reports = json_output or markdown or comment or summary
     if json_output and markdown:
         typer.echo("use either --json or --markdown, not both", err=True)
@@ -291,18 +299,25 @@ def _post_comment(
 
 
 def _source(
-    junit: list[Path] | None, playwright: list[Path] | None
+    junit: list[Path] | None, playwright: list[Path] | None, allure: list[Path] | None
 ) -> tuple[list[Path], Callable[[Path], list[TestResult]]]:
-    """The report files and the parser for their format. Exactly one format is allowed."""
-    if junit and playwright:
-        typer.echo("use only one of --junit and --playwright", err=True)
+    """The report paths and the parser for their format. Exactly one format is allowed."""
+    given = [
+        (paths, parse)
+        for paths, parse in [
+            (junit, parse_junit),
+            (playwright, parse_playwright),
+            (allure, parse_allure),
+        ]
+        if paths
+    ]
+    if len(given) > 1:
+        typer.echo("use only one of --junit, --playwright and --allure", err=True)
         raise typer.Exit(code=2)
-    if junit:
-        return junit, parse_junit
-    if playwright:
-        return playwright, parse_playwright
-    typer.echo("give a report with --junit or --playwright", err=True)
-    raise typer.Exit(code=2)
+    if not given:
+        typer.echo("give a report with --junit, --playwright or --allure", err=True)
+        raise typer.Exit(code=2)
+    return given[0]
 
 
 def _parse_all(paths: list[Path], parse: Callable[[Path], list[TestResult]]) -> list[TestResult]:

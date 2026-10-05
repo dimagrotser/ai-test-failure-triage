@@ -2,10 +2,13 @@ name: failtriage
 description: Group failed tests by root cause, classify each group and report on the pull request.
 inputs:
   junit:
-    description: JUnit XML reports to analyze, one path per line. Use either this or playwright.
+    description: JUnit XML reports to analyze, one path per line. Use only one of junit, playwright and allure.
     default: ""
   playwright:
-    description: Playwright JSON reports to analyze, one path per line. Use either this or junit.
+    description: Playwright JSON reports to analyze, one path per line. Use only one of junit, playwright and allure.
+    default: ""
+  allure:
+    description: Allure results directories to analyze, one path per line. Use only one of junit, playwright and allure.
     default: ""
   github-token:
     description: Token for the GitHub API. Needs pull-requests write to comment.
@@ -47,6 +50,7 @@ runs:
       env:
         JUNIT: ${{ inputs.junit }}
         PLAYWRIGHT: ${{ inputs.playwright }}
+        ALLURE: ${{ inputs.allure }}
         MODEL: ${{ inputs.model }}
         COMMENT: ${{ inputs.comment }}
         COMMENT_KEY: ${{ inputs.comment-key }}

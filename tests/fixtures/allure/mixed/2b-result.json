@@ -1,0 +1,18 @@
+{
+  "uuid": "2b", "historyId": "h-checkout", "name": "pays by card",
+  "fullName": "tests.checkout.CheckoutTest.pays_by_card", "status": "failed",
+  "statusDetails": {"message": "AssertionError: expected 100 but was 90", "trace": "Traceback (most recent call last):\n  File \"tests/checkout.py\", line 21, in pays_by_card\n    assert total == 100\nAssertionError: expected 100 but was 90"},
+  "start": 2000, "stop": 3500,
+  "labels": [{"name": "testClass", "value": "tests.checkout.CheckoutTest"}],
+  "steps": [
+    {"name": "open cart", "status": "passed", "start": 2000, "stop": 2100, "steps": [], "attachments": []},
+    {"name": "pay", "status": "failed", "statusDetails": {"message": "total mismatch"}, "start": 2100, "stop": 3500,
+     "steps": [{"name": "submit form", "status": "failed", "statusDetails": {"message": "422 from /pay"}, "steps": [],
+                "attachments": [{"name": "response", "source": "step-response.json", "type": "application/json"}]}],
+     "attachments": []}
+  ],
+  "attachments": [
+    {"name": "screenshot", "source": "shot-1.png", "type": "image/png"},
+    {"name": "log", "source": "missing-log.txt", "type": "text/plain"}
+  ]
+}

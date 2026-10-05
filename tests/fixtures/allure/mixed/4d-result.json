@@ -1,0 +1,5 @@
+{
+  "uuid": "4d", "historyId": "h-promo", "name": "skips expired code",
+  "fullName": "tests.promo.skips_expired_code", "status": "skipped",
+  "start": 5000, "stop": 5000, "labels": [], "steps": [], "attachments": []
+}

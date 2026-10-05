@@ -1,0 +1,3 @@
+{"uuid": "u5", "historyId": "h-broken", "name": "always_broken", "fullName": "tests.pay.PayTest.always_broken", "status": "broken",
+ "statusDetails": {"message": "boom two"}, "start": 2000, "stop": 2100,
+ "labels": [{"name": "testClass", "value": "tests.pay.PayTest"}], "steps": [], "attachments": []}

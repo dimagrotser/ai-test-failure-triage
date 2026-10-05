@@ -1196,7 +1196,7 @@ def test_analyze_needs_a_report() -> None:
     result = runner.invoke(app, ["analyze"])
 
     assert result.exit_code == 2
-    assert "--junit or --playwright" in result.output
+    assert "--junit, --playwright or --allure" in result.output
 
 
 @pytest.mark.parametrize("name", ["broken.json", "zero.json", "missing.json", "wrong_shape.json"])
@@ -1248,3 +1248,77 @@ def test_history_reads_a_playwright_report() -> None:
     entries = {e["test_id"]: e for e in json.loads(result.stdout)}
     assert entries["pay.spec.ts::chromium › flaky pay"]["status"] == "passed_on_retry"
     assert entries["pay.spec.ts::chromium › flaky pay"]["attempts"] == 3
+
+
+ALLURE = Path(__file__).parent / "fixtures" / "allure"
+
+
+def test_analyze_reads_an_allure_directory() -> None:
+    result = runner.invoke(app, ["analyze", "--allure", str(ALLURE / "retries")])
+
+    assert result.exit_code == 0
+    assert "tests.pay.PayTest::always_broken" in result.output
+    assert "1 passed on retry" in result.output
+
+
+def test_allure_cannot_be_combined_with_another_format() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--allure",
+            str(ALLURE / "mixed"),
+            "--playwright",
+            str(PLAYWRIGHT / "mixed.json"),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "only one of" in result.output
+
+
+def test_the_report_names_the_allure_directory_as_its_input() -> None:
+    result = runner.invoke(app, ["analyze", "--allure", str(ALLURE / "mixed"), "--json"])
+
+    assert json.loads(result.stdout)["run"]["inputs"] == [str(ALLURE / "mixed")]
+
+
+@pytest.mark.parametrize("name", ["broken", "wrong_shape", "missing"])
+def test_analyze_unreadable_allure_directory_exits_two(name: str) -> None:
+    result = runner.invoke(app, ["analyze", "--allure", str(ALLURE / name)])
+
+    assert result.exit_code == 2
+    assert "cannot read" in result.output
+
+
+def test_analyze_empty_allure_directory_warns_and_exits_zero() -> None:
+    result = runner.invoke(app, ["analyze", "--allure", str(ALLURE / "empty")])
+
+    assert result.exit_code == 0
+    assert "no tests found" in result.output
+
+
+def test_what_an_allure_run_sends_to_the_api_is_redacted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[dict[str, Any]] = []
+    fake_anthropic(monkeypatch, requests)
+
+    result = runner.invoke(app, ["analyze", "--allure", str(ALLURE / "secrets"), "--json"])
+
+    sent = json.dumps(requests) + result.output
+    assert requests
+    assert "<CARD>" in sent
+    for secret in ["4111", "jane.doe", "hunter2", "abc.def.ghi", "ghp_", "MIIEvQ"]:
+        assert secret not in sent
+
+
+def test_history_reads_an_allure_directory() -> None:
+    result = runner.invoke(
+        app,
+        ["history", "--allure", str(ALLURE / "retries"), "--sha", "a" * 40, "--run-id", "1"],
+    )
+
+    entries = {e["test_id"]: e for e in json.loads(result.stdout)}
+    assert entries["tests.pay.PayTest::flaky_pay"]["status"] == "passed_on_retry"
+    assert entries["tests.pay.PayTest::flaky_pay"]["attempts"] == 3

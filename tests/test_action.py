@@ -50,6 +50,7 @@ def run_script(tmp_path: Path, **env: str) -> tuple[subprocess.CompletedProcess[
         "GITHUB_ACTION_PATH": str(ROOT),
         "JUNIT": "reports/junit.xml",
         "PLAYWRIGHT": "",
+        "ALLURE": "",
         "MODEL": "claude-sonnet-5-5",
         "COMMENT": "true",
         "COMMENT_KEY": "",
@@ -203,6 +204,15 @@ def test_a_playwright_report_is_passed_as_playwright(tmp_path: Path) -> None:
     assert "--junit" not in argv
 
 
+def test_an_allure_directory_is_passed_as_allure(tmp_path: Path) -> None:
+    result, calls = run_script(tmp_path, JUNIT="", ALLURE="allure-results")
+
+    assert result.returncode == 0, result.stderr
+    argv = analyze_call(calls)["argv"]
+    assert argv[argv.index("--allure") + 1] == "allure-results"
+    assert "--junit" not in argv
+
+
 def test_one_path_per_line_becomes_one_flag_each_and_blank_lines_are_skipped(
     tmp_path: Path,
 ) -> None:
@@ -234,10 +244,31 @@ def test_the_history_of_a_run_on_main_gets_every_playwright_file(tmp_path: Path)
     assert "--junit" not in argv
 
 
+def test_the_history_of_a_run_on_main_gets_every_allure_directory(tmp_path: Path) -> None:
+    _, calls = run_script(
+        tmp_path,
+        EVENT_NAME="push",
+        REF="refs/heads/main",
+        PR_NUMBER="",
+        JUNIT="",
+        ALLURE="one\ntwo",
+    )
+
+    (call,) = history_calls(calls)
+    argv = call["argv"]
+    assert [argv[i + 1] for i, arg in enumerate(argv) if arg == "--allure"] == ["one", "two"]
+
+
 @pytest.mark.parametrize(
     "env",
-    [{"PLAYWRIGHT": "pw.json"}, {"JUNIT": ""}, {"JUNIT": " \n", "PLAYWRIGHT": "\n"}],
-    ids=["both", "none", "blank"],
+    [
+        {"PLAYWRIGHT": "pw.json"},
+        {"ALLURE": "allure-results"},
+        {"JUNIT": "", "PLAYWRIGHT": "pw.json", "ALLURE": "allure-results"},
+        {"JUNIT": ""},
+        {"JUNIT": " \n", "PLAYWRIGHT": "\n", "ALLURE": " "},
+    ],
+    ids=["junit-and-playwright", "junit-and-allure", "playwright-and-allure", "none", "blank"],
 )
 def test_exactly_one_report_format_is_required(tmp_path: Path, env: dict[str, str]) -> None:
     result, calls = run_script(tmp_path, **env)
@@ -353,11 +384,23 @@ def test_the_readme_documents_the_playwright_input() -> None:
     assert "one path per line" in text
 
 
-def test_the_script_gets_both_report_inputs_from_the_workflow() -> None:
+def test_the_allure_input_is_empty_by_default() -> None:
+    assert load_action()["inputs"]["allure"]["default"] == ""
+
+
+def test_the_readme_documents_the_allure_input() -> None:
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "`allure`" in text
+    assert "allure-results" in text
+
+
+def test_the_script_gets_all_report_inputs_from_the_workflow() -> None:
     (step,) = [s for s in load_action()["runs"]["steps"] if s.get("id") == "analyze"]
 
     assert step["env"]["JUNIT"] == "${{ inputs.junit }}"
     assert step["env"]["PLAYWRIGHT"] == "${{ inputs.playwright }}"
+    assert step["env"]["ALLURE"] == "${{ inputs.allure }}"
 
 
 def test_the_readme_says_the_action_never_uses_pull_request_target() -> None:

@@ -39,13 +39,14 @@ GitHub gives fork pull requests a read-only token and no secrets, so the action 
 |---|---|---|
 | `junit` | none | JUnit XML reports, one path per line |
 | `playwright` | none | Playwright JSON reports, one path per line |
+| `allure` | none | Allure results directories, one path per line |
 | `github-token` | `github.token` | token for the GitHub API |
 | `anthropic-api-key` | none | enables LLM classification |
 | `model` | `claude-sonnet-5-5` | model that classifies the groups |
 | `comment` | `true` | `false` keeps the report in the job summary only |
 | `comment-key` | `default` | name of the comment, to keep several per pull request |
 
-Set `junit` or `playwright`, not both. Several files of one format are fine, for example one report per shard:
+Set one of `junit`, `playwright` and `allure`. Several files of one format are fine, for example one report per shard:
 
 ```yaml
 with:
@@ -55,6 +56,8 @@ with:
 ```
 
 The Playwright reporter has to be `json`, for example `npx playwright test --reporter=json > reports/pw.json`.
+
+For Allure, point `allure` at the results directory, usually `allure-results`. The action reads the `*-result.json` files in it, not the HTML report. Attachments are listed by path and never opened. Retries of one test arrive as separate files that share a `historyId`, and they become the attempts of one test.
 
 `report` is the path of the JSON report and `groups` is the number of failure groups. The report is always written to the job summary too. A report that does not fit into a comment is cut there and the whole text stays in the summary.
 
@@ -78,10 +81,11 @@ Artifacts expire with your repository's retention setting (90 days by default). 
 uv sync
 uv run failtriage analyze --junit tests/fixtures/junit/mixed.xml --markdown
 uv run failtriage analyze --playwright tests/fixtures/playwright/mixed.json --markdown
+uv run failtriage analyze --allure tests/fixtures/allure/mixed --markdown
 ```
 
-`--junit` and `--playwright` exclude each other and can be repeated for several files of one format.
+`--junit`, `--playwright` and `--allure` exclude each other and can be repeated for several files or directories of one format.
 
 ## Limitations
 
-Only JUnit XML and Playwright JSON are read so far. A repository needs a few runs on main before history signals appear.
+Only JUnit XML, Playwright JSON and Allure result files are read. Allure steps and attachments are kept in the parsed data but do not reach the LLM yet. A repository needs a few runs on main before history signals appear.

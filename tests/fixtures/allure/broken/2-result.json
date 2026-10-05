@@ -1,0 +1,7 @@
+{
+  "uuid": "1a", "historyId": "h-login", "name": "shows welcome",
+  "fullName": "tests.login.LoginTest.shows_welcome", "status": "passed",
+  "start": 1000, "stop": 1800,
+  "labels": [{"name": "testClass", "value": "tests.login.LoginTest"}, {"name": "package", "value": "tests.login"}],
+  "steps": [], "attachments": []
+}
