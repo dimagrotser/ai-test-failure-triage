@@ -13,10 +13,12 @@ add_files() {
     fi
   done <<< "$2"
 }
-add_files --junit "${JUNIT:-}"
-add_files --playwright "${PLAYWRIGHT:-}"
+junit_paths=${JUNIT:-}
+playwright_paths=${PLAYWRIGHT:-}
+add_files --junit "$junit_paths"
+add_files --playwright "$playwright_paths"
 
-if [[ -n "${JUNIT//[[:space:]]/}" && -n "${PLAYWRIGHT//[[:space:]]/}" ]]; then
+if [[ -n "${junit_paths//[[:space:]]/}" && -n "${playwright_paths//[[:space:]]/}" ]]; then
   echo "::error::set either junit or playwright, not both"
   exit 1
 fi
