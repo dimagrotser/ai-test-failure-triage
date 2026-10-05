@@ -9,7 +9,7 @@ from failtriage.parsers.playwright import parse_playwright
 FIXTURES = Path(__file__).parent / "fixtures" / "playwright"
 
 
-def by_id(name: str) -> dict[str, TestResult]
+def by_id(name: str) -> dict[str, TestResult]:
     return {r.test_id: r for r in parse_playwright(FIXTURES / name)}
 
 
