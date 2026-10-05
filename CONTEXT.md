@@ -13,7 +13,7 @@ A single execution of a test within a run. A TestResult has one or more.
 _Avoid_: Retry (a retry is an Attempt after the first), run
 
 **Test id**:
-Stable key for a test across runs: `<file or classname>::<name>`, with the Playwright project included and parametrization excluded.
+Stable key for a test across runs: `<file or classname>::<name>`, with the Playwright project included and parametrization excluded. A Playwright test reads `login.spec.ts::chromium › checkout › pays by card`.
 _Avoid_: Test name
 
 **Passed on retry**:

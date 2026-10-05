@@ -1,6 +1,6 @@
 # failtriage
 
-After a CI run, failtriage reads the JUnit report, removes secrets and personal data, groups the failures by root cause and classifies each group as `product_bug`, `test_bug`, `flaky`, `environment` or `unknown`. It posts one report on the pull request. Fixed rules go first and an LLM second, and every verdict quotes its evidence.
+After a CI run, failtriage reads the JUnit or Playwright JSON report, removes secrets and personal data, groups the failures by root cause and classifies each group as `product_bug`, `test_bug`, `flaky`, `environment` or `unknown`. It posts one report on the pull request. Fixed rules go first and an LLM second, and every verdict quotes its evidence.
 
 ## Usage
 
@@ -37,12 +37,24 @@ GitHub gives fork pull requests a read-only token and no secrets, so the action 
 
 | Input | Default | Meaning |
 |---|---|---|
-| `junit` | required | JUnit XML report |
+| `junit` | none | JUnit XML reports, one path per line |
+| `playwright` | none | Playwright JSON reports, one path per line |
 | `github-token` | `github.token` | token for the GitHub API |
 | `anthropic-api-key` | none | enables LLM classification |
 | `model` | `claude-sonnet-5-5` | model that classifies the groups |
 | `comment` | `true` | `false` keeps the report in the job summary only |
 | `comment-key` | `default` | name of the comment, to keep several per pull request |
+
+Set `junit` or `playwright`, not both. Several files of one format are fine, for example one report per shard:
+
+```yaml
+with:
+  playwright: |
+    reports/shard-1.json
+    reports/shard-2.json
+```
+
+The Playwright reporter has to be `json`, for example `npx playwright test --reporter=json > reports/pw.json`.
 
 `report` is the path of the JSON report and `groups` is the number of failure groups. The report is always written to the job summary too. A report that does not fit into a comment is cut there and the whole text stays in the summary.
 
@@ -65,8 +77,11 @@ Artifacts expire with your repository's retention setting (90 days by default). 
 ```
 uv sync
 uv run failtriage analyze --junit tests/fixtures/junit/mixed.xml --markdown
+uv run failtriage analyze --playwright tests/fixtures/playwright/mixed.json --markdown
 ```
+
+`--junit` and `--playwright` exclude each other and can be repeated for several files of one format.
 
 ## Limitations
 
-Only JUnit XML is read so far. A repository needs a few runs on main before history signals appear.
+Only JUnit XML and Playwright JSON are read so far. A repository needs a few runs on main before history signals appear.
