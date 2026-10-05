@@ -1,0 +1,6 @@
+category: flaky
+source: injected
+kind: timing
+scenario: first ledger request reuses a connection the ledger already closed
+notes: >-
+  The ledger client keeps one pooled connection. The ledger closes it while it is idle, so the first request after that fails with a connection reset and the pool is dropped. The next request opens a fresh connection and succeeds. The ledger stub is running and answers normally, so the reset looks like a network error, but the same test passes on the retry in the same environment. That is evidence of nondeterminism, not of a broken environment.

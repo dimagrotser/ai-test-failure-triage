@@ -329,6 +329,11 @@ FLAKY_CASES = [
         "order_dependence",
         "tests.test_rates::test_convert_to_euros",
     ),
+    (
+        "flaky-ledger-stale-connection",
+        "timing",
+        "tests.test_ledger::test_transfer_is_recorded_in_the_ledger",
+    ),
 ]
 
 
