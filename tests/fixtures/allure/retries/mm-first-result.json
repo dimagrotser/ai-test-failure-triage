@@ -1,0 +1,3 @@
+{"uuid": "u3", "historyId": "h-flaky", "name": "flaky_pay", "fullName": "tests.pay.PayTest.flaky_pay", "status": "failed",
+ "statusDetails": {"message": "Timeout one"}, "start": 1000, "stop": 1100,
+ "labels": [{"name": "testClass", "value": "tests.pay.PayTest"}], "steps": [], "attachments": []}

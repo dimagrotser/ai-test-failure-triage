@@ -50,3 +50,20 @@ def test_a_passed_attempt_has_no_message() -> None:
 
     assert attempt.message is None
     assert attempt.stack_trace is None
+
+
+def test_result_files_with_one_history_id_are_attempts_of_one_test_ordered_by_start() -> None:
+    results = by_id("retries")
+
+    assert len(results) == 3
+    flaky = results["tests.pay.PayTest::flaky_pay"]
+    assert flaky.status is Status.PASSED_ON_RETRY
+    assert [a.status for a in flaky.attempts] == [Status.FAILED, Status.FAILED, Status.PASSED]
+    assert [a.message for a in flaky.attempts[:2]] == ["Timeout one", "Timeout two"]
+
+
+def test_failing_every_attempt_keeps_the_last_status_and_all_attempts() -> None:
+    result = by_id("retries")["tests.pay.PayTest::always_broken"]
+
+    assert result.status is Status.ERROR
+    assert [a.message for a in result.attempts] == ["boom one", "boom two"]

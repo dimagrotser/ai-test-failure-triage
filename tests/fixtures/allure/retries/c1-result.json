@@ -1,0 +1,3 @@
+{"uuid": "u6", "historyId": "h-single", "name": "single", "fullName": "tests.pay.PayTest.single", "status": "passed",
+ "statusDetails": {"message": ""}, "start": 1000, "stop": 1100,
+ "labels": [{"name": "testClass", "value": "tests.pay.PayTest"}], "steps": [], "attachments": []}

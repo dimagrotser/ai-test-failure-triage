@@ -26,6 +26,7 @@ class _Label(BaseModel):
 
 class _Result(BaseModel):
     name: str
+    historyId: str = ""
     fullName: str = ""
     status: str
     statusDetails: _StatusDetails | None = None
@@ -36,7 +37,15 @@ class _Result(BaseModel):
 
 def parse_allure(directory: Path) -> list[TestResult]:
     results = [_read(path) for path in sorted(directory.glob("*-result.json"))]
-    return [_to_test_result(r) for r in results]
+    # Allure writes one file per attempt, the history id ties the attempts of a test together.
+    by_test: dict[str, list[_Result]] = {}
+    for result in results:
+        by_test.setdefault(result.historyId or result.fullName or result.name, []).append(result)
+    return [_to_test_result(sorted(attempts, key=_start)) for attempts in by_test.values()]
+
+
+def _start(result: _Result) -> int:
+    return result.start or 0
 
 
 def _read(path: Path) -> _Result:
@@ -46,8 +55,9 @@ def _read(path: Path) -> _Result:
         raise ReportParseError(f"cannot read {path}: {type(exc).__name__}") from exc
 
 
-def _to_test_result(result: _Result) -> TestResult:
-    attempts = [_to_attempt(result)]
+def _to_test_result(results: list[_Result]) -> TestResult:
+    result = results[-1]
+    attempts = [_to_attempt(r) for r in results]
     return TestResult(
         test_id=f"{_group(result)}::{re.sub(r'\[.*\]$', '', result.name)}",
         status=final_status(attempts),
