@@ -295,10 +295,25 @@ LAB_VERDICTS = {
     "flaky-rates-cache-order": Category.FLAKY,
     "flaky-split-bill-leftover-cent": Category.FLAKY,
     "product-bug-deposit-float": Category.PRODUCT_BUG,
+    "product-bug-fee-rate-typo": None,
     "product-bug-fee-rounding": None,
+    # Known miss: DID NOT RAISE is reported in the test file, the broken check is in the app.
+    "product-bug-funds-check-ignores-fee": Category.TEST_BUG,
+    "product-bug-limit-off-by-one": Category.PRODUCT_BUG,
     "test-bug-expected-value": None,
     "test-bug-fixture-leak": None,
+    # Known miss: the fixture is set up with too little money and the app raises the error.
+    "test-bug-receipt-fixture-short-of-funds": Category.PRODUCT_BUG,
     "test-bug-stale-selector": Category.TEST_BUG,
+    # Known miss: a missing file in a test looks like a broken environment.
+    "test-bug-statement-relative-path": Category.ENVIRONMENT,
+    # Known miss: the wrong expectation fails inside the app, where the exception is raised.
+    "test-bug-wrong-exception-expected": Category.PRODUCT_BUG,
+    # Known miss: a TypeError in the test file reads as a test bug, but either side may be wrong.
+    "unknown-account-tier-keyword": Category.TEST_BUG,
+    "unknown-amount-formatting": None,
+    # Known miss: "timed out" is the product's own rule here, not a slow service.
+    "unknown-confirmation-window-boundary": Category.ENVIRONMENT,
     "unknown-dormant-new-account": None,
     "unknown-interest-rate-mismatch": None,
     # Known miss: a source-code exception that is really a missing feature, not a bug.
