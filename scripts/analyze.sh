@@ -29,3 +29,12 @@ groups=$(uv run --project "$GITHUB_ACTION_PATH" --locked --no-dev python -c \
   echo "report=$report"
   echo "groups=$groups"
 } >> "$GITHUB_OUTPUT"
+
+# Only a run of main feeds the history that pull request runs read (ADR 0002).
+if [ "$EVENT_NAME" != "pull_request" ] && [ "$REF" = "refs/heads/main" ]; then
+  history="$RUNNER_TEMP/failtriage-history/history.json"
+  mkdir -p "$(dirname "$history")"
+  uv run --project "$GITHUB_ACTION_PATH" --locked --no-dev failtriage history \
+    --junit "$JUNIT" --sha "$SHA" --run-id "$RUN_ID" > "$history"
+  echo "history=$history" >> "$GITHUB_OUTPUT"
+fi

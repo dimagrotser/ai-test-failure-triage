@@ -21,7 +21,9 @@ argv = sys.argv[1:]
 with open(os.environ["UV_LOG"], "a") as log:
     log.write(json.dumps({{"argv": argv, "anthropic_key": "ANTHROPIC_API_KEY" in os.environ,
                            "github_token": os.environ.get("GITHUB_TOKEN")}}) + "\\n")
-if "failtriage" in argv:
+if "history" in argv:
+    print("[]")
+elif "failtriage" in argv:
     if os.environ.get("UV_FAIL"):
         sys.exit(int(os.environ["UV_FAIL"]))
     print(json.dumps({{"groups": [{{}}, {{}}]}}))
@@ -49,6 +51,9 @@ def run_script(tmp_path: Path, **env: str) -> tuple[subprocess.CompletedProcess[
         "COMMENT": "true",
         "COMMENT_KEY": "",
         "EVENT_NAME": "pull_request",
+        "REF": "refs/pull/7/merge",
+        "SHA": "b" * 40,
+        "RUN_ID": "9001",
         "REPO": "acme/wallet",
         "HEAD_REPO": "acme/wallet",
         "PR_NUMBER": "7",
@@ -68,7 +73,11 @@ def run_script(tmp_path: Path, **env: str) -> tuple[subprocess.CompletedProcess[
 
 
 def analyze_call(calls: list[Any]) -> Any:
-    return next(c for c in calls if "failtriage" in c["argv"])
+    return next(c for c in calls if "analyze" in c["argv"])
+
+
+def history_calls(calls: list[Any]) -> list[Any]:
+    return [c for c in calls if "history" in c["argv"]]
 
 
 def test_a_pull_request_from_the_same_repo_gets_a_comment(tmp_path: Path) -> None:
@@ -137,6 +146,39 @@ def test_the_report_and_the_group_count_become_outputs(tmp_path: Path) -> None:
     assert f"report={report}" in lines
     assert "groups=2" in lines
     assert json.loads(report.read_text())["groups"] == [{}, {}]
+
+
+def test_a_run_on_main_writes_the_history_file(tmp_path: Path) -> None:
+    result, calls = run_script(tmp_path, EVENT_NAME="push", REF="refs/heads/main", PR_NUMBER="")
+
+    assert result.returncode == 0, result.stderr
+    (call,) = history_calls(calls)
+    argv = call["argv"]
+    assert argv[argv.index("--junit") + 1] == "reports/junit.xml"
+    assert argv[argv.index("--sha") + 1] == "b" * 40
+    assert argv[argv.index("--run-id") + 1] == "9001"
+    history = tmp_path / "failtriage-history" / "history.json"
+    assert history.read_text().strip() == "[]"
+    assert f"history={history}" in (tmp_path / "output").read_text().splitlines()
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        {},
+        {"REF": "refs/heads/main"},
+        {"EVENT_NAME": "push", "REF": "refs/heads/feature", "PR_NUMBER": ""},
+        {"EVENT_NAME": "push", "REF": "refs/tags/main", "PR_NUMBER": ""},
+    ],
+    ids=["pull-request", "pull-request-into-main", "other-branch", "tag-named-main"],
+)
+def test_only_a_run_on_main_writes_history(tmp_path: Path, env: dict[str, str]) -> None:
+    result, calls = run_script(tmp_path, **env)
+
+    assert result.returncode == 0, result.stderr
+    assert history_calls(calls) == []
+    assert not (tmp_path / "failtriage-history").exists()
+    assert "history=" not in (tmp_path / "output").read_text()
 
 
 def test_an_input_cannot_run_as_shell(tmp_path: Path) -> None:
