@@ -1,0 +1,18 @@
+diff --git a/wallet/transfers.py b/wallet/transfers.py
+--- a/wallet/transfers.py
++++ b/wallet/transfers.py
+@@ -2,6 +2,7 @@ from decimal import Decimal
+ 
+ from wallet.accounts import Account, InvalidAmount
+ from wallet.fees import transfer_fee
++from wallet.ledger import record_transfer
+ 
+ TRANSFER_LIMIT = Decimal("1000.00")
+ 
+@@ -22,5 +23,6 @@ def transfer(source: Account, target: Account, amount: Decimal) -> None:
+     total = amount + transfer_fee(amount)
+     if source.balance < total:
+         raise InsufficientFunds(f"{source.owner} has {source.balance}, needs {total}")
++    record_transfer(source, target, amount)
+     source.balance -= total
+     target.balance += amount

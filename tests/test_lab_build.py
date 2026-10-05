@@ -470,3 +470,29 @@ def test_unknown_case_is_byte_identical_across_builds(tmp_path: Path, scenario: 
 
     for name in ["junit.xml", "diff.patch", "history.json", "label.yaml"]:
         assert (first / name).read_bytes() == (second / name).read_bytes(), name
+
+
+def test_ledger_call_in_transfer_breaks_every_test_that_completes_a_transfer(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "environment-ledger-on-every-transfer", tmp_path)
+
+    results = parse_junit(case / "junit.xml")
+    broken = {r.test_id for r in results if r.status in (Status.FAILED, Status.ERROR)}
+    assert {test_id.split("::")[0] for test_id in broken} == {
+        "tests.test_ledger",
+        "tests.test_limits",
+        "tests.test_receipt",
+        "tests.test_transfers",
+    }
+    errors = [r for r in results if r.status is Status.ERROR]
+    assert {r.test_id.split("::")[0] for r in errors} == {"tests.test_receipt"}
+    assert all("timed out" in (r.attempts[0].message or "") for r in errors)
+    assert all(
+        r.status is Status.PASSED
+        for r in results
+        if r.test_id.startswith(("tests.test_fees::", "tests.test_balance::"))
+    )
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "environment"
+    assert label["condition"] == "timeout"
