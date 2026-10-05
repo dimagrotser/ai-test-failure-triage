@@ -1,0 +1,6 @@
+category: flaky
+source: injected
+kind: randomness
+scenario: the leftover cent of a split bill goes to a random person
+notes: >-
+  split_bill gives the cent that does not divide evenly to random.choice(people), and two tests assume it is always bob. The lab seeds each Attempt: the first Attempt picks carol, so both tests fail with different messages that name different people, and the second picks bob, so both pass. The two failures are not one defect with one message, but they share one nondeterministic cause and both pass on retry. test_shares_add_up_to_the_total passes every time.

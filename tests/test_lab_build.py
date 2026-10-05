@@ -334,6 +334,11 @@ FLAKY_CASES = [
         "timing",
         "tests.test_ledger::test_transfer_is_recorded_in_the_ledger",
     ),
+    (
+        "flaky-split-bill-leftover-cent",
+        "randomness",
+        "tests.test_split::test_the_leftover_cent_goes_to_bob",
+    ),
 ]
 
 
@@ -507,3 +512,17 @@ def test_ledger_call_in_transfer_breaks_every_test_that_completes_a_transfer(
     label = yaml.safe_load((case / "label.yaml").read_text())
     assert label["category"] == "environment"
     assert label["condition"] == "timeout"
+
+
+def test_split_bill_case_flakes_two_tests_with_the_same_message(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "flaky-split-bill-leftover-cent", tmp_path)
+
+    results = {r.test_id: r for r in parse_junit(case / "junit.xml")}
+    retried = {t for t, r in results.items() if r.status is Status.PASSED_ON_RETRY}
+    assert retried == {
+        "tests.test_split::test_the_leftover_cent_goes_to_bob",
+        "tests.test_split::test_bob_pays_the_most",
+    }
+    messages = {results[t].attempts[0].message for t in retried}
+    assert len(messages) == 2
+    assert results["tests.test_split::test_shares_add_up_to_the_total"].status is Status.PASSED
