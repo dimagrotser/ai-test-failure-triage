@@ -1,0 +1,30 @@
+diff --git a/tests/test_formatting.py b/tests/test_formatting.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_formatting.py
+@@ -0,0 +1,15 @@
++from decimal import Decimal
++
++from wallet.formatting import format_amount
++
++
++def test_plain_amount_has_two_decimals() -> None:
++    assert format_amount(Decimal("12.5")) == "12.50"
++
++
++def test_thousands_are_separated_by_a_space() -> None:
++    assert format_amount(Decimal("1234567.5")) == "1 234 567.50"
++
++
++def test_negative_amounts_are_wrapped_in_parentheses() -> None:
++    assert format_amount(Decimal("-5")) == "(5.00)"
+diff --git a/wallet/formatting.py b/wallet/formatting.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/formatting.py
+@@ -0,0 +1,5 @@
++from decimal import Decimal
++
++
++def format_amount(amount: Decimal) -> str:
++    return f"{amount:.2f}"

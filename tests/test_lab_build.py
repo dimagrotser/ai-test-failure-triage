@@ -479,6 +479,7 @@ def test_unknown_case_fails_without_passing_on_retry(
         ("unknown-amount-with-comma", True),
         ("unknown-interest-rate-mismatch", False),
         ("unknown-confirmation-window-boundary", True),
+        ("unknown-amount-formatting", True),
     ],
 )
 def test_history_is_empty_only_when_the_scenario_says_none(
@@ -631,3 +632,22 @@ def test_relative_path_case_fails_to_find_a_file_the_wallet_wrote_elsewhere(
     assert "No such file or directory: 'statements/alice.csv'" in (failed.attempts[0].message or "")
     label = yaml.safe_load((case / "label.yaml").read_text())
     assert label["category"] == "test_bug"
+
+
+def test_amount_formatting_case_fails_two_tests_for_two_different_conventions(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "unknown-amount-formatting", tmp_path)
+
+    results = parse_junit(case / "junit.xml")
+    failed = {r.test_id: r for r in results if r.status is Status.FAILED}
+    assert set(failed) == {
+        "tests.test_formatting::test_thousands_are_separated_by_a_space",
+        "tests.test_formatting::test_negative_amounts_are_wrapped_in_parentheses",
+    }
+    assert len({r.attempts[0].message for r in failed.values()}) == 2
+    assert {r.test_id: r.status for r in results}[
+        "tests.test_formatting::test_plain_amount_has_two_decimals"
+    ] is Status.PASSED
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "unknown"
