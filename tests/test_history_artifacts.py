@@ -6,6 +6,9 @@ from pathlib import Path
 import httpx
 import pytest
 
+from typer.testing import CliRunner
+
+from failtriage.cli import app
 from failtriage.github.client import GitHubClient, GitHubError
 from failtriage.github.history_artifacts import fetch_history
 
@@ -189,3 +192,29 @@ def test_a_zip_that_declares_a_small_file_but_inflates_is_skipped() -> None:
 
     assert result.skipped == [5003]
     assert [e.run_id for e in result.entries] == [9002]
+
+
+def _uploaded(report: str, run_id: int) -> bytes:
+    """What the action uploads for a run on main: the history command output as history.json."""
+    junit = Path(__file__).parent / "fixtures" / "junit" / report
+    args = ["history", "--junit", str(junit), "--sha", "a" * 40, "--run-id", str(run_id)]
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 0
+    return _zip(result.stdout.encode())
+
+
+def test_two_uploaded_runs_on_main_are_both_read_back() -> None:
+    github = FakeGitHub(
+        {5003: _uploaded("mixed.xml", 9003), 5002: _uploaded("all_green.xml", 9002)}
+    )
+
+    result = fetch_history(github.client(), "acme/wallet", 2)
+
+    assert result.skipped == []
+    assert {e.run_id for e in result.entries} == {9003, 9002}
+    assert {e.test_id for e in result.entries if e.run_id == 9002} == {
+        "tests.test_cart::test_total",
+        "tests.test_cart::test_empty_cart",
+        "tests.test_api::test_health",
+        "tests.test_api::test_legacy",
+    }
