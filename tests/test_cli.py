@@ -1135,3 +1135,116 @@ def test_an_empty_api_key_means_heuristics_only(monkeypatch: pytest.MonkeyPatch)
 
     assert result.exit_code == 0
     assert "heuristics only" in result.stderr
+
+
+PLAYWRIGHT = Path(__file__).parent / "fixtures" / "playwright"
+
+
+def test_analyze_reads_a_playwright_report() -> None:
+    result = runner.invoke(app, ["analyze", "--playwright", str(PLAYWRIGHT / "retries.json")])
+
+    assert result.exit_code == 0
+    assert "pay.spec.ts::chromium › always broken" in result.output
+    assert "1 passed on retry" in result.output
+
+
+def test_analyze_json_lists_every_input_file() -> None:
+    first, second = FIXTURES / "mixed.xml", FIXTURES / "retries_surefire.xml"
+
+    result = runner.invoke(
+        app, ["analyze", "--junit", str(first), "--junit", str(second), "--json"]
+    )
+
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["run"]["inputs"] == [str(first), str(second)]
+
+
+def test_several_files_of_one_format_are_analyzed_together() -> None:
+    one = runner.invoke(app, ["analyze", "--junit", str(FIXTURES / "mixed.xml")])
+    both = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--junit",
+            str(FIXTURES / "mixed.xml"),
+            "--junit",
+            str(FIXTURES / "retries_surefire.xml"),
+        ],
+    )
+
+    assert "6 tests total" in one.output
+    assert "9 tests total" in both.output
+
+
+def test_junit_and_playwright_cannot_be_combined() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--junit",
+            str(FIXTURES / "mixed.xml"),
+            "--playwright",
+            str(PLAYWRIGHT / "mixed.json"),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "only one of" in result.output
+
+
+def test_analyze_needs_a_report() -> None:
+    result = runner.invoke(app, ["analyze"])
+
+    assert result.exit_code == 2
+    assert "--junit or --playwright" in result.output
+
+
+@pytest.mark.parametrize("name", ["broken.json", "zero.json", "missing.json", "wrong_shape.json"])
+def test_analyze_unreadable_playwright_report_exits_two(name: str) -> None:
+    result = runner.invoke(app, ["analyze", "--playwright", str(PLAYWRIGHT / name)])
+
+    assert result.exit_code == 2
+    assert "cannot read" in result.output
+
+
+def test_analyze_empty_playwright_report_warns_and_exits_zero() -> None:
+    result = runner.invoke(app, ["analyze", "--playwright", str(PLAYWRIGHT / "empty.json")])
+
+    assert result.exit_code == 0
+    assert "no tests found" in result.output
+
+
+def test_what_a_playwright_run_sends_to_the_api_is_redacted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[dict[str, Any]] = []
+    fake_anthropic(monkeypatch, requests)
+
+    result = runner.invoke(
+        app, ["analyze", "--playwright", str(PLAYWRIGHT / "secrets.json"), "--json"]
+    )
+
+    sent = json.dumps(requests) + result.output
+    assert requests
+    assert "<CARD>" in sent
+    for secret in ["4111", "jane.doe", "hunter2", "abc.def.ghi", "ghp_", "MIIEvQ"]:
+        assert secret not in sent
+
+
+def test_history_reads_a_playwright_report() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "history",
+            "--playwright",
+            str(PLAYWRIGHT / "retries.json"),
+            "--sha",
+            "a" * 40,
+            "--run-id",
+            "1",
+        ],
+    )
+
+    entries = {e["test_id"]: e for e in json.loads(result.stdout)}
+    assert entries["pay.spec.ts::chromium › flaky pay"]["status"] == "passed_on_retry"
+    assert entries["pay.spec.ts::chromium › flaky pay"]["attempts"] == 3
