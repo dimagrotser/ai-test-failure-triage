@@ -87,12 +87,17 @@ def _git_patch(source: Path, path: str, diff: str) -> str | None:
     # rejects. Find the function's lines in the file and diff the real thing instead.
     lines = diff.splitlines()
     lines = lines[next(i for i, line in enumerate(lines) if line.startswith("@@")) + 1 :]
-    old = "".join(f"{line[1:]}\n" for line in lines if line.startswith((" ", "-")))
-    new = "".join(f"{line[1:]}\n" for line in lines if line.startswith((" ", "+")))
+    old = [f"{line[1:]}\n" for line in lines if line.startswith((" ", "-"))]
+    new = [f"{line[1:]}\n" for line in lines if line.startswith((" ", "+"))]
     original = source.read_text()
-    if original.count(old) != 1:
+    # mutmut strips the class indent from a method, so try the code one level deeper too.
+    for indent in ("", "    "):
+        before = "".join(_indented(indent, line) for line in old)
+        if original.count(before) == 1:
+            mutated = original.replace(before, "".join(_indented(indent, line) for line in new))
+            break
+    else:
         return None
-    mutated = original.replace(old, new)
     return "".join(
         difflib.unified_diff(
             original.splitlines(keepends=True),
@@ -101,6 +106,10 @@ def _git_patch(source: Path, path: str, diff: str) -> str | None:
             tofile=f"b/{path}",
         )
     )
+
+
+def _indented(indent: str, line: str) -> str:
+    return indent + line if line.strip() else line
 
 
 def _slug(local_name: str) -> str:

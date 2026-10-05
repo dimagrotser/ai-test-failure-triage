@@ -64,3 +64,12 @@ def test_rerun_replaces_old_mutant_scenarios_and_keeps_the_others(tmp_path: Path
 
     assert not (tmp_path / "product-bug-mutant-gone-function").exists()
     assert (tmp_path / "product-bug-fee-rounding").is_dir()
+
+
+def test_mutant_in_a_method_is_matched_although_mutmut_drops_the_class_indent(
+    tmp_path: Path,
+) -> None:
+    write_scenarios(_results("killed"), _show, tmp_path)
+
+    patch = (tmp_path / "product-bug-mutant-accounts-account-deposit" / "diff.patch").read_text()
+    assert "-        if amount <= 0:\n+        if amount < 0:\n" in patch

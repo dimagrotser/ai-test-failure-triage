@@ -6,3 +6,4 @@
     wallet.statements.x_export_statement__mutmut_2: suspicious
     wallet.ledger.x_record_transfer__mutmut_1: killed
     wallet.receipt.x_render_receipt__mutmut_1: killed
+    wallet.accounts.xǁAccountǁdeposit__mutmut_1: killed
