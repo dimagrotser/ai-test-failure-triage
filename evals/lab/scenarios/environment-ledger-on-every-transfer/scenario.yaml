@@ -1,0 +1,6 @@
+category: environment
+source: injected
+condition: timeout
+scenario: transfers now call a ledger that answers too slowly
+notes: >-
+  The patch makes transfer record every transfer in the ledger, which looks like a behavior change. The ledger stub takes 2 seconds to answer and the client gives up after 0.5, so every test that completes a transfer times out, in four files, and the receipt fixture errors in three tests. Tests that are rejected before the ledger call still pass. With a ledger that answers in time the same tree passes.

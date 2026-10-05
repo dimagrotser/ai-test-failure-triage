@@ -259,9 +259,21 @@ def test_environment_scenario_that_cannot_be_trusted_is_rejected(
     ("scenario", "condition", "failed_test", "marker"),
     [
         ("environment-ledger-down", "service_down", "test_ledger", "Connection refused"),
+        (
+            "environment-ledger-wrapped-error",
+            "service_down",
+            "test_ledger",
+            "LedgerUnavailable",
+        ),
         ("environment-ledger-dns", "dns_failure", "test_ledger", "urlopen error"),
         ("environment-ledger-timeout", "timeout", "test_ledger", "timed out"),
         ("environment-missing-ledger-url", "missing_env_var", "test_ledger", "WALLET_LEDGER_URL"),
+        (
+            "environment-ledger-url-default",
+            "missing_env_var",
+            "test_ledger",
+            "unknown url type",
+        ),
         (
             "environment-read-only-statements",
             "read_only_dir",
@@ -316,6 +328,21 @@ FLAKY_CASES = [
         "flaky-rates-cache-order",
         "order_dependence",
         "tests.test_rates::test_convert_to_euros",
+    ),
+    (
+        "flaky-ledger-stale-connection",
+        "timing",
+        "tests.test_ledger::test_transfer_is_recorded_in_the_ledger",
+    ),
+    (
+        "flaky-split-bill-leftover-cent",
+        "randomness",
+        "tests.test_split::test_the_leftover_cent_goes_to_bob",
+    ),
+    (
+        "flaky-rate-limit-window",
+        "order_dependence",
+        "tests.test_payouts::test_payout_is_accepted",
     ),
 ]
 
@@ -464,3 +491,54 @@ def test_unknown_case_is_byte_identical_across_builds(tmp_path: Path, scenario: 
 
     for name in ["junit.xml", "diff.patch", "history.json", "label.yaml"]:
         assert (first / name).read_bytes() == (second / name).read_bytes(), name
+
+
+def test_ledger_call_in_transfer_breaks_every_test_that_completes_a_transfer(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "environment-ledger-on-every-transfer", tmp_path)
+
+    results = parse_junit(case / "junit.xml")
+    broken = {r.test_id for r in results if r.status in (Status.FAILED, Status.ERROR)}
+    assert {test_id.split("::")[0] for test_id in broken} == {
+        "tests.test_ledger",
+        "tests.test_limits",
+        "tests.test_receipt",
+        "tests.test_transfers",
+    }
+    errors = [r for r in results if r.status is Status.ERROR]
+    assert {r.test_id.split("::")[0] for r in errors} == {"tests.test_receipt"}
+    assert all("timed out" in (r.attempts[0].message or "") for r in errors)
+    assert all(
+        r.status is Status.PASSED
+        for r in results
+        if r.test_id.startswith(("tests.test_fees::", "tests.test_balance::"))
+    )
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "environment"
+    assert label["condition"] == "timeout"
+
+
+def test_split_bill_case_flakes_two_tests_with_the_same_message(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "flaky-split-bill-leftover-cent", tmp_path)
+
+    results = {r.test_id: r for r in parse_junit(case / "junit.xml")}
+    retried = {t for t, r in results.items() if r.status is Status.PASSED_ON_RETRY}
+    assert retried == {
+        "tests.test_split::test_the_leftover_cent_goes_to_bob",
+        "tests.test_split::test_bob_pays_the_most",
+    }
+    messages = {results[t].attempts[0].message for t in retried}
+    assert len(messages) == 2
+    assert results["tests.test_split::test_shares_add_up_to_the_total"].status is Status.PASSED
+
+
+def test_rate_limit_failure_lands_on_a_test_in_another_file_than_the_one_that_used_the_quota(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "flaky-rate-limit-window", tmp_path)
+
+    history = json.loads((case / "history.json").read_text())
+    first_run = {e["test_id"]: e["status"] for e in history if e["run_id"] == 1}
+    assert first_run["tests.test_exports::test_export_is_accepted"] == "passed"
+    assert first_run["tests.test_payouts::test_payout_is_accepted"] == "failed"

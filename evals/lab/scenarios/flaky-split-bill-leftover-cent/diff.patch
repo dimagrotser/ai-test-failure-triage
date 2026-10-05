@@ -1,0 +1,44 @@
+diff --git a/tests/test_split.py b/tests/test_split.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_split.py
+@@ -0,0 +1,23 @@
++from decimal import Decimal
++
++from wallet.split import split_bill
++
++PEOPLE = ["alice", "bob", "carol"]
++
++
++def test_the_leftover_cent_goes_to_bob() -> None:
++    shares = split_bill(Decimal("10.00"), PEOPLE)
++
++    assert shares["bob"] == Decimal("3.34")
++
++
++def test_bob_pays_the_most() -> None:
++    shares = split_bill(Decimal("10.00"), PEOPLE)
++
++    assert max(shares, key=lambda person: shares[person]) == "bob"
++
++
++def test_shares_add_up_to_the_total() -> None:
++    shares = split_bill(Decimal("10.00"), PEOPLE)
++
++    assert sum(shares.values()) == Decimal("10.00")
+diff --git a/wallet/split.py b/wallet/split.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/split.py
+@@ -0,0 +1,11 @@
++import random
++from decimal import ROUND_DOWN, Decimal
++
++CENT = Decimal("0.01")
++
++
++def split_bill(total: Decimal, people: list[str]) -> dict[str, Decimal]:
++    share = (total / len(people)).quantize(CENT, rounding=ROUND_DOWN)
++    shares = {person: share for person in people}
++    shares[random.choice(people)] += total - share * len(people)
++    return shares

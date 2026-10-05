@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="59" time="0.000" timestamp="2026-01-01T00:00:00+00:00" hostname="lab"><testcase classname="tests.test_balance" name="test_new_account_has_the_opening_balance" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_increases_the_balance" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_rejects_non_positive_amounts[amount0]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_rejects_non_positive_amounts[amount1]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[1]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[2]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[3]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[4]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[5]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[6]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[7]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[8]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[9]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[10]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[11]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[12]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[13]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[14]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[15]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[16]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[17]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[18]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[19]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[20]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[21]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[22]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[23]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[24]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[25]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[26]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[27]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[28]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[29]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[30]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[31]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[32]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[33]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[34]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[35]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[36]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[37]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[38]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[39]" time="0.000" /><testcase classname="tests.test_balance" name="test_deposit_keeps_every_cent[40]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[100.00-1.50]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[99.00-1.49]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[10.00-0.15]" time="0.000" /><testcase classname="tests.test_fees" name="test_fee_is_one_and_a_half_percent_rounded_half_up[0.01-0.00]" time="0.000" /><testcase classname="tests.test_fees" name="test_zero_fee_rate_makes_transfers_free" time="0.000" /><testcase classname="tests.test_ledger" name="test_transfer_is_recorded_in_the_ledger" time="0.000"><failure message="wallet.ledger.LedgerUnavailable: ledger is unreachable">self = &lt;urllib.request.HTTPHandler object at 0x0000000000&gt;
+http_class = &lt;class 'http.client.HTTPConnection'&gt;
+req = &lt;urllib.request.Request object at 0x0000000000&gt;, http_conn_args = {}
+
+    def do_open(self, http_class, req, **http_conn_args):
+        """Return an HTTPResponse object for the request, using http_class.
+    
+        http_class must implement the HTTPConnection API from http.client.
+        """
+        host = req.host
+        if not host:
+            raise URLError('no host given')
+    
+        # will parse host:port
+        h = http_class(host, timeout=req.timeout, **http_conn_args)
+        h.set_debuglevel(self._debuglevel)
+    
+        headers = dict(req.unredirected_hdrs)
+        headers.update({k: v for k, v in req.headers.items()
+                        if k not in headers})
+    
+        # TODO(jhylton): Should this be redesigned to handle
+        # persistent connections?
+    
+        # We want to make an HTTP/1.1 request, but the addinfourl
+        # class isn't prepared to deal with a persistent connection.
+        # It will try to read all remaining data from the socket,
+        # which will block while the server waits for the next request.
+        # So make sure the connection gets closed after the (only)
+        # request.
+        headers["Connection"] = "close"
+        headers = {name.title(): val for name, val in headers.items()}
+    
+        if req._tunnel_host:
+            tunnel_headers = {}
+            proxy_auth_hdr = "Proxy-Authorization"
+            if proxy_auth_hdr in headers:
+                tunnel_headers[proxy_auth_hdr] = headers[proxy_auth_hdr]
+                # Proxy-Authorization should not be sent to origin
+                # server.
+                del headers[proxy_auth_hdr]
+            h.set_tunnel(req._tunnel_host, headers=tunnel_headers)
+    
+        try:
+            try:
+&gt;               h.request(req.get_method(), req.selector, req.data, headers,
+                          encode_chunked=req.has_header('Transfer-encoding'))
+
+/stdlib/urllib/request.py:1344: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/stdlib/http/client.py:1358: in request
+    self._send_request(method, url, body, headers, encode_chunked)
+/stdlib/http/client.py:1404: in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+/stdlib/http/client.py:1353: in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+/stdlib/http/client.py:1113: in _send_output
+    self.send(msg)
+/stdlib/http/client.py:1057: in send
+    self.connect()
+/stdlib/http/client.py:1023: in connect
+    self.sock = self._create_connection(
+/stdlib/socket.py:865: in create_connection
+    raise exceptions[0]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+address = ('127.0.0.1', 0), timeout = 0.5, source_address = None
+all_errors = False
+
+    def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
+                          source_address=None, *, all_errors=False):
+        """Connect to *address* and return the socket object.
+    
+        Convenience function.  Connect to *address* (a 2-tuple ``(host,
+        port)``) and return the socket object.  Passing the optional
+        *timeout* parameter will set the timeout on the socket instance
+        before attempting to connect.  If no *timeout* is supplied, the
+        global default timeout setting returned by :func:`getdefaulttimeout`
+        is used.  If *source_address* is set it must be a tuple of (host, port)
+        for the socket to bind as a source address before making the connection.
+        A host of '' or port 0 tells the OS to use the default. When a connection
+        cannot be created, raises the last error if *all_errors* is False,
+        and an ExceptionGroup of all errors if *all_errors* is True.
+        """
+    
+        host, port = address
+        exceptions = []
+        for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+            af, socktype, proto, canonname, sa = res
+            sock = None
+            try:
+                sock = socket(af, socktype, proto)
+                if timeout is not _GLOBAL_DEFAULT_TIMEOUT:
+                    sock.settimeout(timeout)
+                if source_address:
+                    sock.bind(source_address)
+&gt;               sock.connect(sa)
+E               ConnectionRefusedError: [Errno 61] Connection refused
+
+/stdlib/socket.py:850: ConnectionRefusedError
+
+During handling of the above exception, another exception occurred:
+
+source = &lt;wallet.accounts.Account object at 0x0000000000&gt;
+target = &lt;wallet.accounts.Account object at 0x0000000000&gt;
+amount = Decimal('100.00')
+
+    def record_transfer(source: Account, target: Account, amount: Decimal) -&gt; str:
+        url = os.environ["WALLET_LEDGER_URL"]
+        body = json.dumps({"from": source.owner, "to": target.owner, "amount": str(amount)})
+        request = urllib.request.Request(
+            url, data=body.encode(), headers={"Content-Type": "application/json"}, method="POST"
+        )
+        try:
+&gt;           with urllib.request.urlopen(request, timeout=0.5) as response:
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+wallet/ledger.py:20: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/stdlib/urllib/request.py:215: in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/stdlib/urllib/request.py:515: in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+/stdlib/urllib/request.py:532: in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+/stdlib/urllib/request.py:492: in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+/stdlib/urllib/request.py:1373: in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;urllib.request.HTTPHandler object at 0x0000000000&gt;
+http_class = &lt;class 'http.client.HTTPConnection'&gt;
+req = &lt;urllib.request.Request object at 0x0000000000&gt;, http_conn_args = {}
+
+    def do_open(self, http_class, req, **http_conn_args):
+        """Return an HTTPResponse object for the request, using http_class.
+    
+        http_class must implement the HTTPConnection API from http.client.
+        """
+        host = req.host
+        if not host:
+            raise URLError('no host given')
+    
+        # will parse host:port
+        h = http_class(host, timeout=req.timeout, **http_conn_args)
+        h.set_debuglevel(self._debuglevel)
+    
+        headers = dict(req.unredirected_hdrs)
+        headers.update({k: v for k, v in req.headers.items()
+                        if k not in headers})
+    
+        # TODO(jhylton): Should this be redesigned to handle
+        # persistent connections?
+    
+        # We want to make an HTTP/1.1 request, but the addinfourl
+        # class isn't prepared to deal with a persistent connection.
+        # It will try to read all remaining data from the socket,
+        # which will block while the server waits for the next request.
+        # So make sure the connection gets closed after the (only)
+        # request.
+        headers["Connection"] = "close"
+        headers = {name.title(): val for name, val in headers.items()}
+    
+        if req._tunnel_host:
+            tunnel_headers = {}
+            proxy_auth_hdr = "Proxy-Authorization"
+            if proxy_auth_hdr in headers:
+                tunnel_headers[proxy_auth_hdr] = headers[proxy_auth_hdr]
+                # Proxy-Authorization should not be sent to origin
+                # server.
+                del headers[proxy_auth_hdr]
+            h.set_tunnel(req._tunnel_host, headers=tunnel_headers)
+    
+        try:
+            try:
+                h.request(req.get_method(), req.selector, req.data, headers,
+                          encode_chunked=req.has_header('Transfer-encoding'))
+            except OSError as err: # timeout error
+&gt;               raise URLError(err)
+E               urllib.error.URLError: &lt;urlopen error [Errno 61] Connection refused&gt;
+
+/stdlib/urllib/request.py:1347: URLError
+
+The above exception was the direct cause of the following exception:
+
+    def test_transfer_is_recorded_in_the_ledger() -&gt; None:
+&gt;       entry_id = record_transfer(Account("alice"), Account("bob"), Decimal("100.00"))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_ledger.py:8: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+source = &lt;wallet.accounts.Account object at 0x0000000000&gt;
+target = &lt;wallet.accounts.Account object at 0x0000000000&gt;
+amount = Decimal('100.00')
+
+    def record_transfer(source: Account, target: Account, amount: Decimal) -&gt; str:
+        url = os.environ["WALLET_LEDGER_URL"]
+        body = json.dumps({"from": source.owner, "to": target.owner, "amount": str(amount)})
+        request = urllib.request.Request(
+            url, data=body.encode(), headers={"Content-Type": "application/json"}, method="POST"
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=0.5) as response:
+                entry_id: str = json.load(response)["id"]
+        except OSError as exc:
+&gt;           raise LedgerUnavailable("ledger is unreachable") from exc
+E           wallet.ledger.LedgerUnavailable: ledger is unreachable
+
+wallet/ledger.py:23: LedgerUnavailable</failure></testcase><testcase classname="tests.test_limits" name="test_transfer_up_to_the_limit_is_allowed" time="0.000" /><testcase classname="tests.test_limits" name="test_transfer_above_the_limit_is_rejected" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_amount" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_fee" time="0.000" /><testcase classname="tests.test_receipt" name="test_receipt_shows_the_sender_balance_after_the_transfer" time="0.000" /><testcase classname="tests.test_statements" name="test_statement_lists_the_owner_and_balance" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_moves_the_amount_and_charges_the_fee_to_the_sender" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_needs_enough_money_for_the_fee_too" time="0.000" /><testcase classname="tests.test_transfers" name="test_transfer_rejects_non_positive_amounts" time="0.000" /></testsuite></testsuites>

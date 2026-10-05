@@ -58,16 +58,16 @@ uv run failtriage eval evals/
 
 The command classifies every Failure group of every case with the heuristics only, compares it with the case's label and prints accuracy per category and per source, a confusion matrix and the list of misses. It needs no API key. A case with several groups counts once per group, so `test-bug-fixture-leak` contributes four rows. A case that cannot be scored (no label, a missing or broken `junit.xml`, no failures at all) stops the run and is named in the message.
 
-Baseline on the current 16 cases, 19 groups, all with source `injected`:
+Baseline on the current 22 cases, 27 groups, all with source `injected`:
 
 | Category | Groups | Correct |
 |---|---|---|
-| environment | 5 | 5 |
-| flaky | 3 | 3 |
+| environment | 9 | 8 |
+| flaky | 7 | 7 |
 | unknown | 3 | 2 |
 | product_bug | 2 | 1 |
 | test_bug | 6 | 2 |
 
-Overall 13 of 19. The `mutation` and `real` sources have no cases yet, so the output shows them with a dash.
+Overall 20 of 27. The `mutation` and `real` sources have no cases yet, so the output shows them with a dash.
 
-The weak spot is every assertion failure. A failing frame in test code together with an assertion mismatch is left undecided on purpose, because the test or the product could be wrong, so those groups come out as `unknown`. That accounts for `product-bug-fee-rounding`, `test-bug-expected-value` and three of the four groups of `test-bug-fixture-leak`. The other miss goes the opposite way: `unknown-amount-with-comma` is labeled `unknown` because nobody can say whether the input or the parser is at fault, but the frame sits in source code and the rules call it a product bug. The heuristics never see the diff or the history yet, which is where the LLM is expected to help.
+The weak spot is every assertion failure. A failing frame in test code together with an assertion mismatch is left undecided on purpose, because the test or the product could be wrong, so those groups come out as `unknown`. That accounts for `product-bug-fee-rounding`, `test-bug-expected-value` and three of the four groups of `test-bug-fixture-leak`. `environment-ledger-url-default` is the one new environment miss: the ValueError about an empty url has no network wording and the frame is in source code, so the rules call it a product bug. The last miss goes the opposite way: `unknown-amount-with-comma` is labeled `unknown` because nobody can say whether the input or the parser is at fault, but the frame sits in source code and the rules call it a product bug. The heuristics never see the diff or the history yet, which is where the LLM is expected to help.
