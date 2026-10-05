@@ -67,3 +67,40 @@ def test_failing_every_attempt_keeps_the_last_status_and_all_attempts() -> None:
 
     assert result.status is Status.ERROR
     assert [a.message for a in result.attempts] == ["boom one", "boom two"]
+
+
+def test_attachment_paths_of_the_result_and_its_steps_are_kept() -> None:
+    [attempt] = by_id("mixed")["tests.checkout.CheckoutTest::pays by card"].attempts
+
+    assert attempt.attachments == [
+        str(FIXTURES / "mixed" / "shot-1.png"),
+        str(FIXTURES / "mixed" / "missing-log.txt"),
+        str(FIXTURES / "mixed" / "step-response.json"),
+    ]
+
+
+def test_attachment_contents_are_never_read() -> None:
+    results = parse_allure(FIXTURES / "mixed")
+
+    assert "ATTACHMENT-CONTENT-MARKER" not in repr(results)
+
+
+def test_steps_keep_name_status_message_and_nesting() -> None:
+    [attempt] = by_id("mixed")["tests.checkout.CheckoutTest::pays by card"].attempts
+
+    assert [(s.name, s.status, s.message) for s in attempt.steps] == [
+        ("open cart", Status.PASSED, None),
+        ("pay", Status.FAILED, "total mismatch"),
+    ]
+    [nested] = attempt.steps[1].steps
+    assert (nested.name, nested.status, nested.message) == (
+        "submit form",
+        Status.FAILED,
+        "422 from /pay",
+    )
+
+
+def test_a_test_without_steps_has_none() -> None:
+    [attempt] = by_id("mixed")["tests.login.LoginTest::shows welcome"].attempts
+
+    assert attempt.steps == []

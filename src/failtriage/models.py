@@ -11,6 +11,13 @@ class Status(StrEnum):
     PASSED_ON_RETRY = "passed_on_retry"
 
 
+class Step(BaseModel):
+    name: str
+    status: Status
+    message: str | None = None
+    steps: list["Step"] = []
+
+
 class Attempt(BaseModel):
     status: Status
     message: str | None = None
@@ -19,6 +26,7 @@ class Attempt(BaseModel):
     stderr: str | None = None
     duration: float | None = None
     attachments: list[str] = []
+    steps: list[Step] = []
 
 
 class TestResult(BaseModel):
