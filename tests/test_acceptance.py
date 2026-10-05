@@ -93,8 +93,11 @@ class PullRequest:
         self.writes.append(request)
         body = json.loads(request.content)["body"]
         if request.method == "POST":
-            comment = {"id": 100 + len(self.comments), "body": body}
-            comment["user"] = {"login": "github-actions[bot]", "type": "Bot"}
+            comment = {
+                "id": 100 + len(self.comments),
+                "body": body,
+                "user": {"login": "github-actions[bot]", "type": "Bot"},
+            }
             self.comments.append(comment)
             return httpx.Response(201, json=comment)
         comment_id = int(path.rsplit("/", 1)[1])
@@ -121,9 +124,11 @@ def test_three_causes_become_three_groups_with_their_categories(
     assert len(report.groups) == 3
     classifications = [g.classification for g in report.groups]
     assert all(c.classified_by is ClassifiedBy.LLM for c in classifications)
-    assert sorted(c.category.value for c in classifications) == sorted(
-        [Category.PRODUCT_BUG.value, Category.FLAKY.value, Category.ENVIRONMENT.value]
-    )
+    assert {c.category for c in classifications} == {
+        Category.PRODUCT_BUG,
+        Category.FLAKY,
+        Category.ENVIRONMENT,
+    }
     raw_report = THREE_CAUSES.read_text(encoding="utf-8")
     for group in report.groups:
         # A quote is from the report itself or from a signal, which quotes its proof.
