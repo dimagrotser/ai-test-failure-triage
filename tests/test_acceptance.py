@@ -28,7 +28,8 @@ PR_FILES = [
         "filename": "shop/cart.py",
         "status": "modified",
         "patch": (
-            "@@ -19,3 +19,3 @@\n-    return self.subtotal - self.discount\n+    return self.subtotal"
+            "@@ -19,3 +19,3 @@\n-    return self.subtotal - self.discount\n"
+            "+    return self.subtotal"
         ),
     },
 ]
