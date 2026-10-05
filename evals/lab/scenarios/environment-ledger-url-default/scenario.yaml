@@ -1,0 +1,6 @@
+category: environment
+source: injected
+condition: missing_env_var
+scenario: missing ledger URL falls back to an empty string
+notes: >-
+  The patch makes record_transfer read WALLET_LEDGER_URL with an empty default instead of failing on a missing key. The runner has no WALLET_LEDGER_URL, so urlopen gets an empty URL and raises a ValueError about an unknown url type. The message names neither the variable nor the network. With the variable set the same tree passes.

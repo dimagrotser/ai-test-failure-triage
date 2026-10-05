@@ -269,6 +269,12 @@ def test_environment_scenario_that_cannot_be_trusted_is_rejected(
         ("environment-ledger-timeout", "timeout", "test_ledger", "timed out"),
         ("environment-missing-ledger-url", "missing_env_var", "test_ledger", "WALLET_LEDGER_URL"),
         (
+            "environment-ledger-url-default",
+            "missing_env_var",
+            "test_ledger",
+            "unknown url type",
+        ),
+        (
             "environment-read-only-statements",
             "read_only_dir",
             "test_statements",
