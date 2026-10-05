@@ -1,6 +1,6 @@
 import pytest
 
-from failtriage.models import Attempt, Status, TestResult
+from failtriage.models import Attempt, Status, Step, TestResult
 from failtriage.redaction import redact, redact_result
 
 JWT = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.c2lnbmF0dXJlX3BhcnQ"
@@ -221,3 +221,17 @@ def test_attachment_paths_are_redacted() -> None:
     redacted = redact_result(result).attempts[0]
 
     assert redacted.attachments == ["/runs/<EMAIL>/trace.zip", "shot.png"]
+
+
+def test_step_names_and_messages_are_redacted_at_every_depth() -> None:
+    inner = Step(name="mail jane@example.com", status=Status.FAILED, message="DB_PASSWORD=x")
+    outer = Step(name="pay", status=Status.FAILED, message=f"jwt {JWT}", steps=[inner])
+    attempt = Attempt(status=Status.FAILED, steps=[outer])
+    result = TestResult(test_id="t.py::a", status=Status.FAILED, attempts=[attempt])
+
+    [step] = redact_result(result).attempts[0].steps
+
+    assert step.name == "pay"
+    assert step.message == "jwt <JWT>"
+    assert step.steps[0].name == "mail <EMAIL>"
+    assert step.steps[0].message == "DB_PASSWORD=<SECRET>"

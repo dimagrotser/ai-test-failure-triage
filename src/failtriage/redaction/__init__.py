@@ -1,4 +1,4 @@
-from failtriage.models import Attempt, TestResult
+from failtriage.models import Attempt, Step, TestResult
 from failtriage.redaction.patterns import RULES
 
 
@@ -20,4 +20,15 @@ def _redact_attempt(attempt: Attempt) -> Attempt:
         if (value := getattr(attempt, field)) is not None
     }
     update["attachments"] = [redact(path) for path in attempt.attachments]
+    update["steps"] = [_redact_step(s) for s in attempt.steps]
     return attempt.model_copy(update=update)
+
+
+def _redact_step(step: Step) -> Step:
+    return step.model_copy(
+        update={
+            "name": redact(step.name),
+            "message": redact(step.message) if step.message is not None else None,
+            "steps": [_redact_step(s) for s in step.steps],
+        }
+    )
