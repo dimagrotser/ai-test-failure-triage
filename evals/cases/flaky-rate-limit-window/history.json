@@ -1,0 +1,884 @@
+[
+  {
+    "test_id": "tests.test_balance::test_new_account_has_the_opening_balance",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_increases_the_balance",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_rejects_non_positive_amounts",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_rejects_non_positive_amounts",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_exports::test_export_is_accepted",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_exports::test_second_export_is_accepted",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_exports::test_third_export_is_accepted",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_fees::test_fee_is_one_and_a_half_percent_rounded_half_up",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_fees::test_fee_is_one_and_a_half_percent_rounded_half_up",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_fees::test_fee_is_one_and_a_half_percent_rounded_half_up",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_fees::test_fee_is_one_and_a_half_percent_rounded_half_up",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_fees::test_zero_fee_rate_makes_transfers_free",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_ledger::test_transfer_is_recorded_in_the_ledger",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_limits::test_transfer_up_to_the_limit_is_allowed",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_limits::test_transfer_above_the_limit_is_rejected",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_payouts::test_payout_is_accepted",
+    "status": "failed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_receipt::test_receipt_shows_the_amount",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_receipt::test_receipt_shows_the_fee",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_receipt::test_receipt_shows_the_sender_balance_after_the_transfer",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_statements::test_statement_lists_the_owner_and_balance",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_transfers::test_transfer_moves_the_amount_and_charges_the_fee_to_the_sender",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_transfers::test_transfer_needs_enough_money_for_the_fee_too",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_transfers::test_transfer_rejects_non_positive_amounts",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 1
+  },
+  {
+    "test_id": "tests.test_balance::test_new_account_has_the_opening_balance",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_increases_the_balance",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_rejects_non_positive_amounts",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_rejects_non_positive_amounts",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_balance::test_deposit_keeps_every_cent",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_exports::test_export_is_accepted",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_exports::test_second_export_is_accepted",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_exports::test_third_export_is_accepted",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_fees::test_fee_is_one_and_a_half_percent_rounded_half_up",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_fees::test_fee_is_one_and_a_half_percent_rounded_half_up",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_fees::test_fee_is_one_and_a_half_percent_rounded_half_up",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_fees::test_fee_is_one_and_a_half_percent_rounded_half_up",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_fees::test_zero_fee_rate_makes_transfers_free",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_ledger::test_transfer_is_recorded_in_the_ledger",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_limits::test_transfer_up_to_the_limit_is_allowed",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_limits::test_transfer_above_the_limit_is_rejected",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_payouts::test_payout_is_accepted",
+    "status": "passed_on_retry",
+    "attempts": 2,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_receipt::test_receipt_shows_the_amount",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_receipt::test_receipt_shows_the_fee",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_receipt::test_receipt_shows_the_sender_balance_after_the_transfer",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_statements::test_statement_lists_the_owner_and_balance",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_transfers::test_transfer_moves_the_amount_and_charges_the_fee_to_the_sender",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_transfers::test_transfer_needs_enough_money_for_the_fee_too",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  },
+  {
+    "test_id": "tests.test_transfers::test_transfer_rejects_non_positive_amounts",
+    "status": "passed",
+    "attempts": 1,
+    "sha": "11fb70785a50a8b5b3510464b9f6e77c1adc4422",
+    "run_id": 2
+  }
+]

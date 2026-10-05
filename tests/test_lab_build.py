@@ -339,6 +339,11 @@ FLAKY_CASES = [
         "randomness",
         "tests.test_split::test_the_leftover_cent_goes_to_bob",
     ),
+    (
+        "flaky-rate-limit-window",
+        "order_dependence",
+        "tests.test_payouts::test_payout_is_accepted",
+    ),
 ]
 
 
@@ -526,3 +531,14 @@ def test_split_bill_case_flakes_two_tests_with_the_same_message(tmp_path: Path) 
     messages = {results[t].attempts[0].message for t in retried}
     assert len(messages) == 2
     assert results["tests.test_split::test_shares_add_up_to_the_total"].status is Status.PASSED
+
+
+def test_rate_limit_failure_lands_on_a_test_in_another_file_than_the_one_that_used_the_quota(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "flaky-rate-limit-window", tmp_path)
+
+    history = json.loads((case / "history.json").read_text())
+    first_run = {e["test_id"]: e["status"] for e in history if e["run_id"] == 1}
+    assert first_run["tests.test_exports::test_export_is_accepted"] == "passed"
+    assert first_run["tests.test_payouts::test_payout_is_accepted"] == "failed"

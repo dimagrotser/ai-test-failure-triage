@@ -1,0 +1,6 @@
+category: flaky
+source: injected
+kind: order_dependence
+scenario: a test in another file runs into the quota that earlier tests used
+notes: >-
+  check_quota allows three calls and resets its counter when it refuses one. The three tests in test_exports use the whole quota and pass. test_payouts runs next, gets RateLimited and fails, although nothing is wrong with it. The refusal resets the counter, so the retry passes. The failing test is not the one that causes the problem, and without retries the outcome depends on which test files ran before it.

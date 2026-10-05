@@ -1,0 +1,48 @@
+diff --git a/tests/test_exports.py b/tests/test_exports.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_exports.py
+@@ -0,0 +1,13 @@
++from wallet.rate_limit import check_quota
++
++
++def test_export_is_accepted() -> None:
++    check_quota()
++
++
++def test_second_export_is_accepted() -> None:
++    check_quota()
++
++
++def test_third_export_is_accepted() -> None:
++    check_quota()
+diff --git a/tests/test_payouts.py b/tests/test_payouts.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_payouts.py
+@@ -0,0 +1,5 @@
++from wallet.rate_limit import check_quota
++
++
++def test_payout_is_accepted() -> None:
++    check_quota()
+diff --git a/wallet/rate_limit.py b/wallet/rate_limit.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/rate_limit.py
+@@ -0,0 +1,15 @@
++LIMIT = 3
++
++_calls = 0
++
++
++class RateLimited(Exception):
++    pass
++
++
++def check_quota() -> None:
++    global _calls
++    if _calls >= LIMIT:
++        _calls = 0
++        raise RateLimited(f"more than {LIMIT} calls in this window")
++    _calls += 1
