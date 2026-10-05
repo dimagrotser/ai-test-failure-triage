@@ -184,3 +184,65 @@ def test_a_retry_after_date_is_not_a_crash() -> None:
 
     with pytest.raises(GitHubError, match="GitHub answered 429"):
         _client(transport).get_pages("/x")
+
+
+def test_get_json_returns_an_object_and_passes_the_params() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"total_count": 0, "artifacts": []})
+
+    body = _client(httpx.MockTransport(handler)).get_json(
+        "/repos/acme/wallet/actions/artifacts", {"name": "failtriage-history", "per_page": 100}
+    )
+
+    assert body == {"total_count": 0, "artifacts": []}
+    assert seen[0].url.params["name"] == "failtriage-history"
+    assert seen[0].url.params["per_page"] == "100"
+
+
+def test_get_json_rejects_a_list() -> None:
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, json=[]))
+
+    with pytest.raises(GitHubError, match="object"):
+        _client(transport).get_json("/x")
+
+
+def test_get_bytes_returns_the_body_and_retries_a_rate_limit() -> None:
+    answers = [
+        httpx.Response(429, headers={"Retry-After": "2"}),
+        httpx.Response(200, content=b"PK"),
+    ]
+    sleeps: list[float] = []
+
+    data = _client(httpx.MockTransport(lambda r: answers.pop(0)), sleeps).get_bytes("/x")
+
+    assert data == b"PK"
+    assert sleeps == [2]
+
+
+def test_get_bytes_raises_on_a_missing_artifact() -> None:
+    transport = httpx.MockTransport(lambda r: httpx.Response(410, json={"message": "expired"}))
+
+    with pytest.raises(GitHubError, match="410"):
+        _client(transport).get_bytes("/x")
+
+
+def test_the_token_does_not_follow_a_redirect_to_another_host() -> None:
+    # Artifact downloads answer 302 to blob storage.
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.host == "api.github.com":
+            return httpx.Response(302, headers={"Location": "https://blob.example.net/zip?sig=1"})
+        return httpx.Response(200, content=b"PK")
+
+    data = _client(httpx.MockTransport(handler)).get_bytes(
+        "/repos/acme/wallet/actions/artifacts/9/zip"
+    )
+
+    assert data == b"PK"
+    assert [r.url.host for r in seen] == ["api.github.com", "blob.example.net"]
+    assert "Authorization" not in seen[1].headers

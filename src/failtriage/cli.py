@@ -16,6 +16,7 @@ from failtriage.classify.payload import Limits
 from failtriage.classify.pricing import cost_usd
 from failtriage.evaluate import EvalError, evaluate, render_eval
 from failtriage.github.client import GitHubClient, GitHubError
+from failtriage.github.history_artifacts import fetch_history
 from failtriage.github.pr_files import list_pr_files, to_unified_diff
 from failtriage.grouping import group_failures
 from failtriage.history import HistoryEntry, HistoryError, history_schema, load_history
@@ -27,6 +28,7 @@ from failtriage.report.json_output import AnalysisReport, Cost, DiffInfo, build_
 from failtriage.report.markdown import render_markdown
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
+DEFAULT_HISTORY_RUNS = 10
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -82,6 +84,13 @@ def analyze(
         Path | None,
         typer.Option(help="JSON file with test statuses from earlier runs on main."),
     ] = None,
+    history_runs: Annotated[
+        int,
+        typer.Option(
+            min=1,
+            help="Runs on main to read history from, with --repo and --pr and no --history.",
+        ),
+    ] = DEFAULT_HISTORY_RUNS,
 ) -> None:
     """Group the failed tests of a report by cause and print the groups."""
     if json_output and markdown:
@@ -110,7 +119,11 @@ def analyze(
         raise typer.Exit(code=2)
     pull_request = (repo, pr) if repo is not None and pr is not None else None
     try:
-        entries = load_history(history) if history is not None else None
+        entries: list[HistoryEntry] | None = None
+        if history is not None:
+            entries = load_history(history)
+        elif pull_request is not None and (json_output or markdown):
+            entries = _fetch_history(pull_request[0], history_runs)
         _analyze(junit, json_output, markdown, model, record, pull_request, entries)
     except (ReportParseError, HistoryError) as exc:
         typer.echo(str(exc), err=True)
@@ -145,15 +158,31 @@ def _github_client(token: str) -> GitHubClient:
     return GitHubClient(token)
 
 
+def _github_reason(exc: GitHubError | ValidationError) -> str:
+    # Only the type or our own message: GitHub's answer may echo what we sent.
+    return str(exc) if isinstance(exc, GitHubError) else type(exc).__name__
+
+
+def _fetch_history(repo: str, runs: int) -> list[HistoryEntry] | None:
+    """History from the artifacts of recent runs on main. Without it the run goes on."""
+    client = _github_client(os.environ["GITHUB_TOKEN"])
+    try:
+        fetched = fetch_history(client, repo, runs)
+    except (GitHubError, ValidationError) as exc:
+        typer.echo(f"github: {_github_reason(exc)}, continuing without history", err=True)
+        return None
+    for artifact_id in fetched.skipped:
+        typer.echo(f"github: history artifact {artifact_id} skipped", err=True)
+    return fetched.entries
+
+
 def _read_diff(repo: str, pr: int) -> tuple[DiffInfo, str | None]:
     """The pull request files as a report entry and one diff. Without GitHub the run goes on."""
     client = _github_client(os.environ["GITHUB_TOKEN"])
     try:
         files = list_pr_files(client, repo, pr)
     except (GitHubError, ValidationError) as exc:
-        # Only the type or our own message: GitHub's answer may echo what we sent.
-        reason = str(exc) if isinstance(exc, GitHubError) else type(exc).__name__
-        typer.echo(f"github: {reason}, continuing without the diff", err=True)
+        typer.echo(f"github: {_github_reason(exc)}, continuing without the diff", err=True)
         return DiffInfo(available=False), None
     info = DiffInfo(
         changed_files=[f.filename for f in files],
