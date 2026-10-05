@@ -15,15 +15,23 @@ add_files() {
 }
 junit_paths=${JUNIT:-}
 playwright_paths=${PLAYWRIGHT:-}
+allure_paths=${ALLURE:-}
 add_files --junit "$junit_paths"
 add_files --playwright "$playwright_paths"
+add_files --allure "$allure_paths"
 
-if [[ -n "${junit_paths//[[:space:]]/}" && -n "${playwright_paths//[[:space:]]/}" ]]; then
-  echo "::error::set either junit or playwright, not both"
+formats=0
+for paths in "$junit_paths" "$playwright_paths" "$allure_paths"; do
+  if [[ -n "${paths//[[:space:]]/}" ]]; then
+    formats=$((formats + 1))
+  fi
+done
+if [ "$formats" -gt 1 ]; then
+  echo "::error::set only one of junit, playwright and allure"
   exit 1
 fi
-if [ ${#source_args[@]} -eq 0 ]; then
-  echo "::error::set junit or playwright to the report to analyze"
+if [ "$formats" -eq 0 ]; then
+  echo "::error::set junit, playwright or allure to the report to analyze"
   exit 1
 fi
 
