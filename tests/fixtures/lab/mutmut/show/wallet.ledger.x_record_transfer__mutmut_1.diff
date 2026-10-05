@@ -1,0 +1,8 @@
+# wallet.ledger.x_record_transfer__mutmut_1: killed
+--- wallet/ledger.py
++++ wallet/ledger.py
+@@ -1,3 +1,3 @@
+ def record_transfer(source: Account, target: Account, amount: Decimal) -> str:
+-    url = os.environ["WALLET_LEDGER_URL"]
++    url = os.environ["WALLET_LEDGER_URL"]  # unchanged behaviour
+     body = json.dumps({"from": source.owner, "to": target.owner, "amount": str(amount)})
