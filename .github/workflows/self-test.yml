@@ -1,0 +1,24 @@
+name: self-test
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+jobs:
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - id: failtriage
+        uses: ./
+        with:
+          junit: tests/fixtures/junit/mixed.xml
+          comment-key: self-test
+      - name: Check the fixture was grouped
+        env:
+          GROUPS_FOUND: ${{ steps.failtriage.outputs.groups }}
+        run: test "$GROUPS_FOUND" -gt 0

@@ -103,9 +103,15 @@ def analyze(
         str | None,
         typer.Option(help="Name of the comment to update, so one run can keep several."),
     ] = None,
+    summary: Annotated[
+        bool,
+        typer.Option(
+            "--summary", help="Append the Markdown report to the job summary file of the run."
+        ),
+    ] = False,
 ) -> None:
     """Group the failed tests of a report by cause and print the groups."""
-    reports = json_output or markdown or comment
+    reports = json_output or markdown or comment or summary
     if json_output and markdown:
         typer.echo("use either --json or --markdown, not both", err=True)
         raise typer.Exit(code=2)
@@ -133,6 +139,9 @@ def analyze(
     if comment_key is not None and not re.fullmatch(r"[A-Za-z0-9_.-]+", comment_key):
         typer.echo("--comment-key may hold letters, digits, dots, dashes and underscores", err=True)
         raise typer.Exit(code=2)
+    if summary and not os.environ.get("GITHUB_STEP_SUMMARY"):
+        typer.echo("--summary needs GITHUB_STEP_SUMMARY, which GitHub Actions sets", err=True)
+        raise typer.Exit(code=2)
     if repo is not None and not os.environ.get("GITHUB_TOKEN"):
         typer.echo("--repo and --pr read from GitHub and need GITHUB_TOKEN", err=True)
         raise typer.Exit(code=2)
@@ -147,7 +156,7 @@ def analyze(
         elif pull_request is not None:
             entries = _fetch_history(pull_request[0], history_runs)
         key = (comment_key or DEFAULT_COMMENT_KEY) if comment else None
-        _analyze(junit, json_output, markdown, model, record, pull_request, entries, key)
+        _analyze(junit, json_output, markdown, model, record, pull_request, entries, key, summary)
     except (ReportParseError, HistoryError) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
@@ -214,14 +223,20 @@ def _read_diff(repo: str, pr: int) -> tuple[DiffInfo, str | None]:
     return info, to_unified_diff(files)
 
 
-def _post_comment(repo: str, pr: int, key: str, markdown: str, has_failures: bool) -> None:
+def _write_summary(path: str, markdown: str) -> None:
+    with open(path, "a", encoding="utf-8") as file:
+        file.write(markdown)
+
+
+def _post_comment(
+    repo: str, pr: int, key: str, markdown: str, has_failures: bool, in_summary: bool
+) -> None:
     """Keep the report in the PR comment of `key`. Without GitHub the run goes on."""
     body, cut = comment_body(markdown, key)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
-    if cut and summary:
-        with open(summary, "a", encoding="utf-8") as file:
-            file.write(markdown)
-    elif cut:
+    if cut and not in_summary and summary:
+        _write_summary(summary, markdown)
+    elif cut and not in_summary:
         typer.echo(
             "report cut, GITHUB_STEP_SUMMARY is not set so the full report is lost", err=True
         )
@@ -244,15 +259,17 @@ def _analyze(
     pull_request: tuple[str, int] | None,
     history: list[HistoryEntry] | None = None,
     comment_key: str | None = None,
+    summary: bool = False,
 ) -> None:
+    reports = json_output or markdown or bool(comment_key) or summary
     results = [redact_result(r) for r in parse_junit(junit)]
     if not results:
         typer.echo(f"warning: no tests found in {junit}", err=True)
-        if not (json_output or markdown or comment_key):
+        if not reports:
             return
 
     groups = group_failures(results)
-    if json_output or markdown or comment_key:
+    if reports:
         diff_info, diff = _read_diff(*pull_request) if pull_request else (None, None)
         changed = diff_info.changed_files if diff_info else []
         classified, cost = _classify(groups, model, record, diff, changed, history or [])
@@ -267,12 +284,14 @@ def _analyze(
             history,
         )
         rendered = render_markdown(report)
+        if summary:
+            _write_summary(os.environ["GITHUB_STEP_SUMMARY"], rendered)
         if json_output:
             typer.echo(report.model_dump_json(indent=2))
         elif markdown:
             typer.echo(rendered, nl=False)
         if comment_key and pull_request:
-            _post_comment(*pull_request, comment_key, rendered, bool(report.groups))
+            _post_comment(*pull_request, comment_key, rendered, bool(report.groups), summary)
         return
     for number, group in enumerate(groups, start=1):
         _print_group(number, group)

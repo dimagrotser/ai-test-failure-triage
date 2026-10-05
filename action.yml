@@ -1,0 +1,56 @@
+name: failtriage
+description: Group failed tests by root cause, classify each group and report on the pull request.
+inputs:
+  junit:
+    description: JUnit XML report to analyze.
+    required: true
+  github-token:
+    description: Token for the GitHub API. Needs pull-requests write to comment.
+    default: ${{ github.token }}
+  anthropic-api-key:
+    description: Anthropic API key. Without it the groups are classified by heuristics only.
+    default: ""
+  model:
+    description: Anthropic model that classifies the groups.
+    default: claude-sonnet-5-5
+  comment:
+    description: Set to false when the workflow has no pull-requests write permission.
+    default: "true"
+  comment-key:
+    description: Name of the comment to update, so one workflow can keep several.
+    default: ""
+outputs:
+  report:
+    description: Path of the JSON report.
+    value: ${{ steps.analyze.outputs.report }}
+  groups:
+    description: Number of failure groups.
+    value: ${{ steps.analyze.outputs.groups }}
+runs:
+  using: composite
+  steps:
+    - name: Refuse pull_request_target
+      if: github.event_name == 'pull_request_target'
+      shell: bash
+      run: |
+        echo "::error::failtriage does not run on pull_request_target, it would hand a write token to code from a fork"
+        exit 1
+    - uses: astral-sh/setup-uv@v10.2.0
+      with:
+        version: "0.11.6"
+        enable-cache: false
+    - id: analyze
+      shell: bash
+      env:
+        JUNIT: ${{ inputs.junit }}
+        MODEL: ${{ inputs.model }}
+        COMMENT: ${{ inputs.comment }}
+        COMMENT_KEY: ${{ inputs.comment-key }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        EVENT_NAME: ${{ github.event_name }}
+        REPO: ${{ github.repository }}
+        HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        ACTOR: ${{ github.actor }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/analyze.sh"
