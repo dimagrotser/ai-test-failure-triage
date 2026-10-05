@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="0" failures="3" skipped="0" tests="5" time="1.912" timestamp="2026-10-04T09:15:41.220118" hostname="ci-runner-3">
+    <testcase classname="tests.test_cart" name="test_total_with_discount" file="tests/test_cart.py" time="0.012">
+      <failure message="assert 90 == 95">def test_total_with_discount():
+        cart = Cart(items=[Item("book", 100)])
+        cart.apply_discount(10)
+&gt;       assert cart.total() == 95
+E       assert 90 == 95
+
+shop/cart.py:21: AssertionError</failure>
+    </testcase>
+    <testcase classname="tests.test_checkout" name="test_pay_with_card" file="tests/test_checkout.py" time="0.410">
+      <failure message="TimeoutError: payment gateway did not respond in 5s">tests/test_checkout.py:33: TimeoutError</failure>
+    </testcase>
+    <testcase classname="tests.test_checkout" name="test_pay_with_card" file="tests/test_checkout.py" time="0.390"/>
+    <testcase classname="tests.test_api" name="test_fetch_profile" file="tests/test_api.py" time="0.340">
+      <failure message="requests.exceptions.ConnectionError: HTTPConnectionPool(host='staging.internal', port=8080): Max retries exceeded">self = &lt;urllib3.connection.HTTPConnection object at 0x7f3a1c2b5d90&gt;
+
+    def test_fetch_profile():
+&gt;       resp = client.get("/profile")
+E       requests.exceptions.ConnectionError: HTTPConnectionPool(host='staging.internal', port=8080): Max retries exceeded
+
+tests/test_api.py:44: ConnectionError</failure>
+    </testcase>
+    <testcase classname="tests.test_rates" name="test_convert" file="tests/test_rates.py" time="0.003"/>
+  </testsuite>
+</testsuites>

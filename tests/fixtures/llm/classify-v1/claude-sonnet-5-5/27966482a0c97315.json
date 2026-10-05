@@ -1,0 +1,10 @@
+{
+  "prompt_version": "classify-v1",
+  "model": "claude-sonnet-5-5",
+  "payload": "{\n  \"signature\": {\n    \"exception_type\": \"AssertionError\",\n    \"message\": \"assert <NUM> == <NUM>\",\n    \"frame\": \"shop/cart.py:test_total_with_discount\"\n  },\n  \"tests\": [\n    \"tests/test_cart.py::test_total_with_discount\"\n  ],\n  \"message\": \"assert 90 == 95\",\n  \"stack_trace\": \"def test_total_with_discount():\\n        cart = Cart(items=[Item(\\\"book\\\", 100)])\\n        cart.apply_discount(10)\\n>       assert cart.total() == 95\\nE       assert 90 == 95\\n\\nshop/cart.py:21: AssertionError\",\n  \"stdout\": null,\n  \"stderr\": null,\n  \"signals\": [\n    {\n      \"name\": \"frame_in_source_code\",\n      \"quote\": \"shop/cart.py:21: AssertionError\"\n    },\n    {\n      \"name\": \"assertion_mismatch\",\n      \"quote\": \"assert 90 == 95\"\n    },\n    {\n      \"name\": \"touches_changed_file\",\n      \"quote\": \"shop/cart.py is changed in this pull request\"\n    }\n  ],\n  \"heuristic_verdict\": null,\n  \"diff\": \"diff --git a/shop/cart.py b/shop/cart.py\\n--- a/shop/cart.py\\n+++ b/shop/cart.py\\n@@ -19,3 +19,3 @@\\n-    return self.subtotal - self.discount\\n+    return self.subtotal\"\n}",
+  "response": "{\"category\": \"product_bug\", \"confidence\": \"medium\", \"summary\": \"cart.total() returns 90 where the test expects 95 after a 10 discount, and the failing frame is in shop/cart.py, which this pull request changes.\", \"evidence\": [\"assert 90 == 95\", \"shop/cart.py:21: AssertionError\"], \"next_step\": \"Check how the discount is applied in shop/cart.py\", \"disagreement_reason\": null}",
+  "usage": {
+    "input_tokens": 900,
+    "output_tokens": 120
+  }
+}

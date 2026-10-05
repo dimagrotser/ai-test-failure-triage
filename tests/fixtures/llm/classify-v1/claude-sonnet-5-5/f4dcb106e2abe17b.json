@@ -1,0 +1,10 @@
+{
+  "prompt_version": "classify-v1",
+  "model": "claude-sonnet-5-5",
+  "payload": "{\n  \"signature\": {\n    \"exception_type\": \"TimeoutError\",\n    \"message\": \"payment gateway did not respond in <NUM>s\",\n    \"frame\": \"tests/test_checkout.py:\"\n  },\n  \"tests\": [\n    \"tests/test_checkout.py::test_pay_with_card\"\n  ],\n  \"message\": \"TimeoutError: payment gateway did not respond in 5s\",\n  \"stack_trace\": \"tests/test_checkout.py:33: TimeoutError\",\n  \"stdout\": null,\n  \"stderr\": null,\n  \"signals\": [\n    {\n      \"name\": \"passed_on_retry\",\n      \"quote\": \"tests/test_checkout.py::test_pay_with_card: failed, then passed on attempt 2\"\n    },\n    {\n      \"name\": \"timeout\",\n      \"quote\": \"TimeoutError: payment gateway did not respond in 5s\"\n    },\n    {\n      \"name\": \"frame_in_test_code\",\n      \"quote\": \"tests/test_checkout.py:33: TimeoutError\"\n    }\n  ],\n  \"heuristic_verdict\": \"flaky\",\n  \"diff\": null\n}",
+  "response": "{\"category\": \"flaky\", \"confidence\": \"high\", \"summary\": \"The test timed out on the payment gateway, then passed on attempt 2, so the failure is not deterministic.\", \"evidence\": [\"tests/test_checkout.py::test_pay_with_card: failed, then passed on attempt 2\", \"TimeoutError: payment gateway did not respond in 5s\"], \"next_step\": \"Find what makes the gateway call slow, or give the test a stub\", \"disagreement_reason\": null}",
+  "usage": {
+    "input_tokens": 900,
+    "output_tokens": 120
+  }
+}
