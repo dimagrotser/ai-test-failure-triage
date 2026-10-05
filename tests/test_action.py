@@ -289,3 +289,17 @@ def test_the_readme_lists_the_minimal_permissions() -> None:
 
 def test_the_readme_says_the_action_never_uses_pull_request_target() -> None:
     assert "pull_request_target" in (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+def test_the_readme_documents_the_history_artifact() -> None:
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert ARTIFACT_NAME in text
+    assert ARTIFACT_FILE in text
+    assert "failtriage schema --history" in text
+
+
+def test_the_self_test_also_runs_on_main_so_it_uploads_history() -> None:
+    triggers = yaml.safe_load((ROOT / ".github/workflows/self-test.yml").read_text())[True]
+
+    assert triggers["push"]["branches"] == ["main"]
