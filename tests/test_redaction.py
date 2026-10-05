@@ -210,3 +210,14 @@ def test_every_text_field_of_attempt_is_redacted() -> None:
 
     assert text_fields
     assert all(getattr(redacted, name) == "<EMAIL>" for name in text_fields)
+
+
+def test_attachment_paths_are_redacted() -> None:
+    attempt = Attempt(
+        status=Status.FAILED, attachments=["/runs/jane@example.com/trace.zip", "shot.png"]
+    )
+    result = TestResult(test_id="t.py::a", status=Status.FAILED, attempts=[attempt])
+
+    redacted = redact_result(result).attempts[0]
+
+    assert redacted.attachments == ["/runs/<EMAIL>/trace.zip", "shot.png"]

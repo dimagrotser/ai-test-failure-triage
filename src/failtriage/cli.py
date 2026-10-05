@@ -2,6 +2,7 @@ import json
 import os
 import re
 import textwrap
+from collections.abc import Callable
 from importlib.metadata import version as package_version
 from pathlib import Path
 from typing import Annotated
@@ -21,8 +22,10 @@ from failtriage.github.pr_comment import comment_body, upsert_comment
 from failtriage.github.pr_files import list_pr_files, to_unified_diff
 from failtriage.grouping import group_failures
 from failtriage.history import HistoryEntry, HistoryError, history_schema, load_history
-from failtriage.models import FailureGroup, Status
-from failtriage.parsers.junit import ReportParseError, parse_junit
+from failtriage.models import FailureGroup, Status, TestResult
+from failtriage.parsers import ReportParseError
+from failtriage.parsers.junit import parse_junit
+from failtriage.parsers.playwright import parse_playwright
 from failtriage.prompts import load_prompt
 from failtriage.redaction import redact_result
 from failtriage.report.json_output import AnalysisReport, Cost, DiffInfo, build_report
@@ -61,13 +64,19 @@ def schema(
 
 @app.command()
 def history(
-    junit: Annotated[Path, typer.Option(help="JUnit XML report of a run on main.")],
     sha: Annotated[str, typer.Option(help="Commit the run tested.")],
     run_id: Annotated[int, typer.Option(help="Id of the workflow run.")],
+    junit: Annotated[
+        list[Path] | None, typer.Option(help="JUnit XML report of a run on main.")
+    ] = None,
+    playwright: Annotated[
+        list[Path] | None, typer.Option(help="Playwright JSON report of a run on main.")
+    ] = None,
 ) -> None:
     """Print the history file for a run on main: one entry per test, no text from the report."""
+    paths, parse = _source(junit, playwright)
     try:
-        results = parse_junit(junit)
+        results = _parse_all(paths, parse)
     except ReportParseError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
@@ -82,7 +91,14 @@ def history(
 
 @app.command()
 def analyze(
-    junit: Annotated[Path, typer.Option(help="JUnit XML report to analyze.")],
+    junit: Annotated[
+        list[Path] | None,
+        typer.Option(help="JUnit XML report to analyze. Repeat it for several files."),
+    ] = None,
+    playwright: Annotated[
+        list[Path] | None,
+        typer.Option(help="Playwright JSON report to analyze. Repeat it for several files."),
+    ] = None,
     json_output: Annotated[
         bool, typer.Option("--json", help="Print the analysis as JSON instead of text.")
     ] = False,
@@ -132,6 +148,7 @@ def analyze(
     ] = False,
 ) -> None:
     """Group the failed tests of a report by cause and print the groups."""
+    paths, parse = _source(junit, playwright)
     reports = json_output or markdown or comment or summary
     if json_output and markdown:
         typer.echo("use either --json or --markdown, not both", err=True)
@@ -177,7 +194,9 @@ def analyze(
         elif pull_request is not None:
             entries = _fetch_history(pull_request[0], history_runs)
         key = (comment_key or DEFAULT_COMMENT_KEY) if comment else None
-        _analyze(junit, json_output, markdown, model, record, pull_request, entries, key, summary)
+        _analyze(
+            paths, parse, json_output, markdown, model, record, pull_request, entries, key, summary
+        )
     except (ReportParseError, HistoryError) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
@@ -271,8 +290,28 @@ def _post_comment(
     typer.echo(f"github: comment {outcome}{note}", err=True)
 
 
+def _source(
+    junit: list[Path] | None, playwright: list[Path] | None
+) -> tuple[list[Path], Callable[[Path], list[TestResult]]]:
+    """The report files and the parser for their format. Exactly one format is allowed."""
+    if junit and playwright:
+        typer.echo("use only one of --junit and --playwright", err=True)
+        raise typer.Exit(code=2)
+    if junit:
+        return junit, parse_junit
+    if playwright:
+        return playwright, parse_playwright
+    typer.echo("give a report with --junit or --playwright", err=True)
+    raise typer.Exit(code=2)
+
+
+def _parse_all(paths: list[Path], parse: Callable[[Path], list[TestResult]]) -> list[TestResult]:
+    return [result for path in paths for result in parse(path)]
+
+
 def _analyze(
-    junit: Path,
+    paths: list[Path],
+    parse: Callable[[Path], list[TestResult]],
     json_output: bool,
     markdown: bool,
     model: str,
@@ -283,9 +322,9 @@ def _analyze(
     summary: bool = False,
 ) -> None:
     reports = json_output or markdown or bool(comment_key) or summary
-    results = [redact_result(r) for r in parse_junit(junit)]
+    results = [redact_result(r) for r in _parse_all(paths, parse)]
     if not results:
-        typer.echo(f"warning: no tests found in {junit}", err=True)
+        typer.echo(f"warning: no tests found in {', '.join(map(str, paths))}", err=True)
         if not reports:
             return
 
@@ -296,7 +335,7 @@ def _analyze(
         classified, cost = _classify(groups, model, record, diff, changed, history or [])
         report = build_report(
             package_version("failtriage"),
-            [str(junit)],
+            [str(path) for path in paths],
             results,
             groups,
             classified.classifications if classified else None,

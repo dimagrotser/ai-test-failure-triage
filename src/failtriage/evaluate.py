@@ -9,7 +9,8 @@ from pydantic import BaseModel, ValidationError
 from failtriage.classify.heuristics import classify_with_heuristics
 from failtriage.grouping import group_failures
 from failtriage.models import Category
-from failtriage.parsers.junit import ReportParseError, parse_junit
+from failtriage.parsers import ReportParseError
+from failtriage.parsers.junit import parse_junit
 from failtriage.redaction import redact_result
 
 

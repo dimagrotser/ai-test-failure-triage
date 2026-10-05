@@ -1,0 +1,16 @@
+{
+  "config": {
+    "projects": []
+  },
+  "suites": [
+    {
+      "title": "login.spec.ts",
+      "file": "login.spec.ts",
+      "specs": [
+        {
+          "title": "shows welcome",
+          "file": "login.spec.ts",
+          "line": 5,
+          "column": 3,
+          "tests": [
+            {

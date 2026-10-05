@@ -49,6 +49,7 @@ def run_script(tmp_path: Path, **env: str) -> tuple[subprocess.CompletedProcess[
         "RUNNER_TEMP": str(tmp_path),
         "GITHUB_ACTION_PATH": str(ROOT),
         "JUNIT": "reports/junit.xml",
+        "PLAYWRIGHT": "",
         "MODEL": "claude-sonnet-5-5",
         "COMMENT": "true",
         "COMMENT_KEY": "",
@@ -193,6 +194,59 @@ def test_an_input_cannot_run_as_shell(tmp_path: Path) -> None:
     assert not (tmp_path / "pwned").exists()
 
 
+def test_a_playwright_report_is_passed_as_playwright(tmp_path: Path) -> None:
+    result, calls = run_script(tmp_path, JUNIT="", PLAYWRIGHT="reports/pw.json")
+
+    assert result.returncode == 0, result.stderr
+    argv = analyze_call(calls)["argv"]
+    assert argv[argv.index("--playwright") + 1] == "reports/pw.json"
+    assert "--junit" not in argv
+
+
+def test_one_path_per_line_becomes_one_flag_each_and_blank_lines_are_skipped(
+    tmp_path: Path,
+) -> None:
+    _, calls = run_script(tmp_path, JUNIT="a.xml\n\n  \nb dir/b.xml\n")
+
+    argv = analyze_call(calls)["argv"]
+    assert [argv[i + 1] for i, arg in enumerate(argv) if arg == "--junit"] == [
+        "a.xml",
+        "b dir/b.xml",
+    ]
+
+
+def test_the_history_of_a_run_on_main_gets_every_playwright_file(tmp_path: Path) -> None:
+    _, calls = run_script(
+        tmp_path,
+        EVENT_NAME="push",
+        REF="refs/heads/main",
+        PR_NUMBER="",
+        JUNIT="",
+        PLAYWRIGHT="one.json\ntwo.json",
+    )
+
+    (call,) = history_calls(calls)
+    argv = call["argv"]
+    assert [argv[i + 1] for i, arg in enumerate(argv) if arg == "--playwright"] == [
+        "one.json",
+        "two.json",
+    ]
+    assert "--junit" not in argv
+
+
+@pytest.mark.parametrize(
+    "env",
+    [{"PLAYWRIGHT": "pw.json"}, {"JUNIT": ""}, {"JUNIT": " \n", "PLAYWRIGHT": "\n"}],
+    ids=["both", "none", "blank"],
+)
+def test_exactly_one_report_format_is_required(tmp_path: Path, env: dict[str, str]) -> None:
+    result, calls = run_script(tmp_path, **env)
+
+    assert result.returncode == 1
+    assert "::error::" in result.stdout
+    assert calls == []
+
+
 def test_a_failed_analysis_fails_the_step(tmp_path: Path) -> None:
     result, _ = run_script(tmp_path, UV_FAIL="2")
 
@@ -217,7 +271,8 @@ def test_the_action_is_a_composite_with_the_documented_inputs_and_outputs() -> N
     action = load_action()
 
     assert action["runs"]["using"] == "composite"
-    assert action["inputs"]["junit"]["required"] is True
+    assert action["inputs"]["junit"]["default"] == ""
+    assert action["inputs"]["playwright"]["default"] == ""
     assert action["inputs"]["github-token"]["default"] == "${{ github.token }}"
     assert action["inputs"]["comment"]["default"] == "true"
     assert set(action["outputs"]) == {"report", "groups"}
@@ -289,6 +344,20 @@ def test_the_readme_lists_the_minimal_permissions() -> None:
 
     for permission in ["pull-requests: write", "actions: read", "contents: read"]:
         assert permission in text
+
+
+def test_the_readme_documents_the_playwright_input() -> None:
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "`playwright`" in text
+    assert "one path per line" in text
+
+
+def test_the_script_gets_both_report_inputs_from_the_workflow() -> None:
+    (step,) = [s for s in load_action()["runs"]["steps"] if s.get("id") == "analyze"]
+
+    assert step["env"]["JUNIT"] == "${{ inputs.junit }}"
+    assert step["env"]["PLAYWRIGHT"] == "${{ inputs.playwright }}"
 
 
 def test_the_readme_says_the_action_never_uses_pull_request_target() -> None:

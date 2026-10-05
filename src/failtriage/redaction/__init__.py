@@ -14,10 +14,10 @@ def redact_result(result: TestResult) -> TestResult:
 
 
 def _redact_attempt(attempt: Attempt) -> Attempt:
-    return attempt.model_copy(
-        update={
-            field: redact(value)
-            for field in ("message", "stack_trace", "stdout", "stderr")
-            if (value := getattr(attempt, field)) is not None
-        }
-    )
+    update: dict[str, object] = {
+        field: redact(value)
+        for field in ("message", "stack_trace", "stdout", "stderr")
+        if (value := getattr(attempt, field)) is not None
+    }
+    update["attachments"] = [redact(path) for path in attempt.attachments]
+    return attempt.model_copy(update=update)
