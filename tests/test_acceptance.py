@@ -111,6 +111,13 @@ def analyze_pr(*extra: str) -> Any:
     return runner.invoke(app, [*args, *extra])
 
 
+def assert_report_in(body: str) -> None:
+    assert body.startswith("<!-- failtriage:default -->\n")
+    assert "3 failure groups" in body
+    for text in ("product_bug", "flaky", "environment", "assert 90 == 95", "staging.internal"):
+        assert text in body
+
+
 def test_three_causes_become_three_groups_with_their_categories(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -124,10 +131,11 @@ def test_three_causes_become_three_groups_with_their_categories(
     assert len(report.groups) == 3
     classifications = [g.classification for g in report.groups]
     assert all(c.classified_by is ClassifiedBy.LLM for c in classifications)
-    assert {c.category for c in classifications} == {
-        Category.PRODUCT_BUG,
-        Category.FLAKY,
-        Category.ENVIRONMENT,
+    by_test = {g.tests[0].test_id: g.classification.category for g in report.groups}
+    assert by_test == {
+        "tests/test_cart.py::test_total_with_discount": Category.PRODUCT_BUG,
+        "tests/test_checkout.py::test_pay_with_card": Category.FLAKY,
+        "tests/test_api.py::test_fetch_profile": Category.ENVIRONMENT,
     }
     raw_report = THREE_CAUSES.read_text(encoding="utf-8")
     for group in report.groups:
@@ -149,9 +157,7 @@ def test_the_three_groups_go_into_one_comment(monkeypatch: pytest.MonkeyPatch) -
     assert result.exit_code == 0
     assert [w.method for w in github.writes] == ["POST"]
     [comment] = github.comments
-    assert comment["body"].startswith("<!-- failtriage:default -->\n")
-    for text in ("product_bug", "flaky", "environment", "test_total_with_discount"):
-        assert text in comment["body"]
+    assert_report_in(comment["body"])
 
 
 def test_a_second_run_updates_the_comment_instead_of_adding_one(
@@ -163,9 +169,9 @@ def test_a_second_run_updates_the_comment_instead_of_adding_one(
 
     analyze_pr("--comment")
     [first] = github.comments
-    second_run = analyze_pr("--comment")
+    analyze_pr("--comment")
 
     assert [w.method for w in github.writes] == ["POST", "PATCH"]
     assert github.writes[1].url.path.endswith(f"/issues/comments/{first['id']}")
     assert len(github.comments) == 1
-    assert "comment updated" in second_run.stderr
+    assert_report_in(github.comments[0]["body"])
