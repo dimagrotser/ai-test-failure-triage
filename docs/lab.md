@@ -79,7 +79,7 @@ The case goes to `evals/lab/real/<id>/` with a `junit.xml` and a `label.yaml` wh
 
 `make lab` copies the filled cases into `evals/cases/` next to the built ones and runs the redaction check on them again. A case stops the build if its category is empty or unknown, if `scenario` or `notes` is blank, or if redaction would still change its text.
 
-A real case has no counterfactual, since the app is not here to revert ([ADR 0007](adr/0007-real-cases-labeled-by-hand.md)). Its label is my judgment, and the `real` row in the eval output keeps those groups apart from the verified ones. It has no `history.json` or `diff.patch` either, so only JUnit reports can be imported.
+A real case has no counterfactual, since the app is not here to revert ([ADR 0007](adr/0007-real-cases-labeled-by-hand.md)). Its label is my judgment, and the `real` row in the eval output keeps those groups apart from the verified ones. It has no `history.json`, and the importer only reads JUnit reports. A `diff.patch` can be added by hand next to `label.yaml`, in the redacted form, since the LLM gets the diff in the eval. `make lab` copies it after checking that redaction would not change it.
 
 ## Running the evals
 
