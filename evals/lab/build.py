@@ -6,18 +6,21 @@ import subprocess
 import sys
 import sysconfig
 import tempfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import yaml
 
 from evals.lab.environment import CONDITIONS, lab_environment
-from failtriage.models import Status
+from failtriage.models import Category, Status
 from failtriage.parsers.junit import parse_junit
+from failtriage.redaction import redact
 
 LAB = Path(__file__).parent
 WALLET = LAB / "wallet"
 SCENARIOS = LAB / "scenarios"
 CASES = LAB.parent / "cases"
+REAL = LAB / "real"
 
 # Per category: the directory a patch may change and the one that must stay as it was.
 # That is what makes the counterfactual meaningful: a product_bug is fixed in the app
@@ -106,7 +109,64 @@ def _normalize_junit(xml: str, tmp: Path) -> str:
     return re.sub(r' hostname="[^"]*"', ' hostname="lab"', xml)
 
 
-def build_all(scenarios_dir: Path = SCENARIOS, cases_dir: Path = CASES) -> None:
+def redact_tree(root: ET.Element) -> None:
+    """Redact every text and attribute value of a JUnit tree in place."""
+    for element in root.iter():
+        if element.text:
+            element.text = redact(element.text)
+        if element.tail:
+            element.tail = redact(element.tail)
+        name, value = element.get("name"), element.get("value")
+        if element.tag == "property" and name and value:
+            # A property is an env var: the name is what marks the value as a secret.
+            masked = redact(f"{name}={value}")
+            element.set("value", masked[len(name) + 1 :] if masked.startswith(f"{name}=") else "")
+        for key, attribute in element.attrib.items():
+            element.set(key, redact(attribute))
+
+
+def check_redacted(junit: Path) -> None:
+    """Fail unless a second redaction pass changes nothing in the file.
+
+    Nothing is quoted: the message must not leak the text it complains about.
+    """
+    try:
+        root = ET.parse(junit).getroot()
+    except (OSError, ET.ParseError) as exc:
+        raise LabError(f"{junit.parent.name}: cannot read junit.xml") from exc
+    # Tags and attribute names stay as they are, so a secret there cannot be masked.
+    names = [element.tag for element in root.iter()] + [k for e in root.iter() for k in e.attrib]
+    before = ET.tostring(root)
+    redact_tree(root)
+    if ET.tostring(root) != before or any(redact(name) != name for name in names):
+        raise LabError(f"{junit.parent.name}: junit.xml still contains redactable text")
+
+
+def build_real_case(case_dir: Path, cases_dir: Path) -> Path:
+    """Copy a hand-labeled real case into the dataset after checking it again."""
+    try:
+        label = yaml.safe_load((case_dir / "label.yaml").read_text())
+    except (OSError, yaml.YAMLError) as exc:
+        raise LabError(f"real case {case_dir.name} has no readable label.yaml") from exc
+    if not isinstance(label, dict):
+        raise LabError(f"real case {case_dir.name} has no category, fill label.yaml by hand")
+    if label.get("category") not in {c.value for c in Category}:
+        raise LabError(f"real case {case_dir.name} has no category, fill label.yaml by hand")
+    for field in ("scenario", "notes"):
+        if not isinstance(label.get(field), str) or not label[field].strip():
+            raise LabError(f"real case {case_dir.name} has no {field}, fill label.yaml by hand")
+    check_redacted(case_dir / "junit.xml")
+    case = cases_dir / case_dir.name
+    shutil.rmtree(case, ignore_errors=True)
+    case.mkdir(parents=True)
+    for name in ("junit.xml", "label.yaml"):
+        shutil.copy(case_dir / name, case / name)
+    return case
+
+
+def build_all(
+    scenarios_dir: Path = SCENARIOS, cases_dir: Path = CASES, real_dir: Path = REAL
+) -> None:
     # Build next to the target and swap at the end, so a scenario that fails its check
     # leaves the old dataset alone and a removed scenario does not leave its case behind.
     cases_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -114,6 +174,8 @@ def build_all(scenarios_dir: Path = SCENARIOS, cases_dir: Path = CASES) -> None:
     try:
         for scenario in sorted(p for p in scenarios_dir.iterdir() if p.is_dir()):
             build_case(scenario, staging)
+        for real in sorted(p for p in real_dir.glob("*") if p.is_dir() and p.name[0] != "."):
+            build_real_case(real, staging)
         shutil.rmtree(cases_dir, ignore_errors=True)
         staging.rename(cases_dir)
     except BaseException:
