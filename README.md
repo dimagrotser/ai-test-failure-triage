@@ -136,26 +136,26 @@ uv run failtriage analyze --allure tests/fixtures/allure/mixed --markdown
 
 ## Accuracy
 
-I scored the classifier on 39 failing runs, 49 failure groups in all. 48 groups come from a small wallet app, and every label there was verified by a counterfactual run, for example by reverting the patch that broke the app ([docs/lab.md](docs/lab.md) explains how). The 49th is a failure from another repository ([docs/adoption.md](docs/adoption.md)), labeled by me. The numbers below come from one run of the `eval` workflow on 2026-10-06, committed as `evals/results/2026-10-06-after-diff-fallback.json`.
+I scored the classifier on 39 failing runs, 49 failure groups in all. 48 groups come from a small wallet app, and every label there was verified by a counterfactual run, for example by reverting the patch that broke the app ([docs/lab.md](docs/lab.md) explains how). The 49th is a failure from another repository ([docs/adoption.md](docs/adoption.md)), labeled by me. The numbers below come from one run of the `eval` workflow on 2026-10-06, committed as `evals/results/2026-10-06-with-haiku.json`.
 
-| Category | Groups | Heuristics | Heuristics and Sonnet |
-|---|---|---|---|
-| product_bug | 17 | 7 | 13 |
-| test_bug | 9 | 2 | 9 |
-| environment | 9 | 8 | 6 |
-| flaky | 7 | 7 | 4 |
-| unknown | 7 | 4 | 4 |
-| all | 49 | 28 (57%) | 36 (73%) |
+| Category | Groups | Heuristics | Heuristics and Sonnet | Heuristics and Haiku |
+|---|---|---|---|---|
+| product_bug | 17 | 7 | 13 | 16 |
+| test_bug | 9 | 2 | 9 | 5 |
+| environment | 9 | 8 | 6 | 8 |
+| flaky | 7 | 7 | 4 | 4 |
+| unknown | 7 | 4 | 4 | 1 |
+| all | 49 | 28 (57%) | 36 (73%) | 34 (69%) |
 
-By source, the 40 injected groups score 23 with the heuristics and 31 with Sonnet. The 8 mutation groups score 5 and 4. The one `real` group scores 0 and 1. One group says nothing about accuracy.
+By source, the 40 injected groups score 23 with the heuristics, 31 with Sonnet and 26 with Haiku. The 8 mutation groups score 5, 4 and 7. The one `real` group scores 0, 1 and 1. One group says nothing about accuracy.
 
-Sonnet beats the rules, but the margin comes from the diff. An earlier run of the same dataset, before the LLM got the whole diff for groups whose trace names no changed file, gave Sonnet 27 of 49, one fewer than the rules. The details are in [docs/lab.md](docs/lab.md). The rules do well on `environment` and `flaky`, where Sonnet is worse: it lost 3 of the 7 flaky groups, which have passed-on-retry evidence the rules read correctly. `product_bug` stays the weak spot for the rules at 41%: when a test fails on an assertion, nobody can tell from the log alone whether the test or the product is wrong, so they say `unknown` on purpose. Of its `high` confidence answers Sonnet got 19 of 22 right.
+Sonnet beats the rules, but the margin comes from the diff. An earlier run of the same dataset, before the LLM got the whole diff for groups whose trace names no changed file, gave Sonnet 27 of 49, one fewer than the rules. The details are in [docs/lab.md](docs/lab.md). The rules do well on `environment` and `flaky`, where Sonnet is worse: it lost 3 of the 7 flaky groups, which have passed-on-retry evidence the rules read correctly. `product_bug` stays the weak spot for the rules at 41%: when a test fails on an assertion, nobody can tell from the log alone whether the test or the product is wrong, so they say `unknown` on purpose. Of its `high` confidence answers Sonnet got 18 of 21 right.
 
-I could not compare models. `claude-haiku-4-5` made no successful call in that run, every group fell back to the heuristics, and I have not found out why. With 49 groups, one case moves a category by several points, and I ran each configuration once.
+Haiku is two groups behind Sonnet at 37% of the cost, but I would not trust its confidence. It answered `high` for 47 of 49 groups and was right 33 times, 70%. It said `unknown` only twice, so for 6 of the 7 groups that are labeled `unknown` it named a cause anyway. Sonnet's `high` answers hold up better, and it keeps the default. Haiku never worked in the first runs because the request carried an `effort` parameter that Haiku rejects with a 400, see [docs/lab.md](docs/lab.md). With 49 groups, one case moves a category by several points, and I ran Haiku once and Sonnet twice, with 36 right both times.
 
 ## Cost
 
-The same run cost $0.37 for Sonnet: 49 calls, 115,016 input tokens and 14,027 output tokens, about $0.0076 per group. A run sends at most 10 groups to the LLM, so a pull request costs up to about $0.07 and usually less, because groups with the same cause are classified once. Every run logs its tokens and cost. Without `anthropic-api-key` it costs nothing and uses the rules only.
+The same run cost $0.37 for Sonnet: 49 calls, 115,016 input tokens and 14,247 output tokens, about $0.0076 per group. Haiku cost $0.14 for the same 49 calls, about $0.0028 per group. A run sends at most 10 groups to the LLM, so a pull request costs up to about $0.07 and usually less, because groups with the same cause are classified once. Every run logs its tokens and cost. Without `anthropic-api-key` it costs nothing and uses the rules only.
 
 ## Design decisions
 

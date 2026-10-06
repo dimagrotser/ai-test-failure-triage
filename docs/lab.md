@@ -128,7 +128,7 @@ The rules also go wrong where the frame is not the place of the mistake, and the
 
 Some `unknown` cases get a verdict they should not have. `unknown-amount-with-comma` raises from source code, so it comes out as a product bug. `unknown-confirmation-window-boundary` says "timed out" about the product's own 900 second rule, which the timeout pattern takes for a slow service. `unknown-account-tier-keyword` fails with a TypeError in the test file and is called a test bug, although the product could just as well have been meant to use the other name. `unknown-amount-formatting` and the two oldest unknown cases stay undecided, as they should.
 
-The heuristics read the history of a case but never its diff, so the diff is where the LLM was expected to help. The first run of the `eval` workflow on 2026-10-06 is committed as `evals/results/2026-10-06.json`. It is only half a comparison. `claude-sonnet-5-5` classified all 48 groups. `claude-haiku-4-5` made no successful call, every group fell back to the heuristics, and its 28 of 48 only repeats the baseline. I have not found out why yet, so there is no Sonnet against Haiku result.
+The heuristics read the history of a case but never its diff, so the diff is where the LLM was expected to help. The first run of the `eval` workflow on 2026-10-06 is committed as `evals/results/2026-10-06.json`. It is only half a comparison. `claude-sonnet-5-5` classified all 48 groups. `claude-haiku-4-5` made no successful call, every group fell back to the heuristics, and its 28 of 48 only repeats the baseline. I found the cause later, see "Why Haiku made no calls" below, so there is no Sonnet against Haiku result for this run.
 
 Sonnet scored 29 of 48, or 60%, against 28 of 48 for the heuristics alone. The injected groups went from 23 to 25 of 40 and the mutation groups from 5 to 4 of 8.
 
@@ -165,4 +165,27 @@ By source, the injected groups went from 23 to 31 of 40, the mutation groups sta
 
 Ten groups turned from wrong to right and one turned from right to wrong. The gains are `product-bug-fee-rate-typo` (3 groups), `product-bug-fee-rounding`, `product-bug-funds-check-ignores-fee`, `test-bug-fixture-leak` (4 groups) and the real group. The loss is `environment-ledger-on-every-transfer`: the diff adds the ledger call to every transfer, and the model now blames that change instead of the unreachable ledger.
 
-Read these numbers with care. Each configuration ran once. That one group went the other way in the first run on this page, was right in the run before the change and wrong in the run after, so it flips between runs on its own. Seven of the ten gained groups belong to two cases, and no mutation group changed its result, although seven mutation cases had no path match. The dataset has 39 cases, so I would trust the direction more than the size. The change cost about 4,300 input tokens over 49 groups: $0.358 before and $0.370 after, so $0.0076 per group. `claude-haiku-4-5` again made no successful call in either run.
+Read these numbers with care. Each configuration ran once. That one group went the other way in the first run on this page, was right in the run before the change and wrong in the run after, so it flips between runs on its own. Seven of the ten gained groups belong to two cases, and no mutation group changed its result, although seven mutation cases had no path match. The dataset has 39 cases, so I would trust the direction more than the size. The change cost about 4,300 input tokens over 49 groups: $0.358 before and $0.370 after, so $0.0076 per group. `claude-haiku-4-5` again made no successful call in either run, the cause is in the next section.
+
+### Why Haiku made no calls, and what it scores
+
+Every request carried `output_config.effort: low`, to keep the answers cheap. Haiku 4.5 rejects that parameter. The API answered each call with a 400, `AnthropicProvider` turned it into a `ProviderError`, and the group fell back to the rules. That is why Haiku scored exactly like the heuristics and showed `llm_calls: 0`. Since #74 the log says so: `analyze --model claude-haiku-4-5` printed `the request failed: BadRequestError, HTTP 400` for every group. The `eval` command prints no reason per group, only the counts, so the eval runs themselves said nothing about it.
+
+The provider now leaves `effort` out for models whose name starts with `claude-haiku`, and Sonnet still gets `effort: low`. The same `analyze` call then made 3 calls and cost $0.0064. The `eval` workflow was run again on the same 49 groups, result in `evals/results/2026-10-06-with-haiku.json`:
+
+| Category | Groups | Heuristics | Sonnet | Haiku |
+|---|---|---|---|---|
+| product_bug | 17 | 7 | 13 | 16 |
+| test_bug | 9 | 2 | 9 | 5 |
+| environment | 9 | 8 | 6 | 8 |
+| flaky | 7 | 7 | 4 | 4 |
+| unknown | 7 | 4 | 4 | 1 |
+| all | 49 | 28 (57%) | 36 (73%) | 34 (69%) |
+
+By source, the injected groups score 23, 31 and 26 of 40, the mutation groups 5, 4 and 7 of 8, and the `real` group 0, 1 and 1. Sonnet got 36 of 49 right a second time, with the same score in every category. 47 of its 49 groups got the same answer and confidence as in the first run, and the other two were wrong both times.
+
+Haiku is two groups behind Sonnet. It is better on `product_bug` (16 of 17 against 13) and on the mutation groups, where Sonnet answered `unknown` more often, and worse on `test_bug` (5 of 9 against 9) and on `unknown`. It was right on 9 groups where Sonnet was wrong and wrong on 11 where Sonnet was right, among them all four groups of `test-bug-fixture-leak`, which it called product bugs.
+
+The confidence is what worries me. Haiku answered `high` for 47 of 49 groups and was right on 33 of them, 70%. Sonnet answered `high` for 21 groups and was right on 18, 86%. Haiku said `unknown` for 2 groups and Sonnet for 8, and 6 of the 7 groups labeled `unknown` got a confident verdict from Haiku. The prompt asks for `unknown` with low confidence when the evidence is weak, and Haiku mostly does not follow it. That makes a `high` from Haiku nearly meaningless, so Sonnet stays the default.
+
+The cost is the other side. Haiku used 87,857 input and 10,280 output tokens for $0.139, about $0.0028 per group. Sonnet used 115,016 and 14,247 for $0.373, about $0.0076. Haiku ran once. Read the 2-group gap as no difference in accuracy and the confidence problem as the finding.

@@ -1,0 +1,1220 @@
+{
+  "date": "2026-10-06",
+  "runs": [
+    {
+      "model": null,
+      "cases": 39,
+      "groups": [
+        {
+          "case_id": "environment-ledger-dns",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "environment-ledger-down",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "environment-ledger-on-every-transfer",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "environment-ledger-on-every-transfer",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "environment-ledger-timeout",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "environment-ledger-url-default",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "product_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "environment-ledger-wrapped-error",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "environment-missing-ledger-url",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "environment-read-only-statements",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "flaky-cold-settlement-clock",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "flaky-ledger-stale-connection",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "flaky-random-transfer-id",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "flaky-rate-limit-window",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "flaky-rates-cache-order",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "flaky-split-bill-leftover-cent",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "flaky-split-bill-leftover-cent",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-deposit-float",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-fee-rounding",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-funds-check-ignores-fee",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "test_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-limit-off-by-one",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-mutant-accounts-account-deposit",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "test_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-mutant-accounts-account-init",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-mutant-fees-transfer-fee",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-mutant-fees-transfer-fee",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-mutant-ledger-record-transfer",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-mutant-receipt-render-receipt",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-mutant-statements-export-statement",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "product-bug-mutant-transfers-transfer",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "test_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "real-preview-item-title",
+          "source": "real",
+          "expected": "product_bug",
+          "predicted": "test_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "test-bug-expected-value",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "test-bug-receipt-fixture-short-of-funds",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "product_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "test-bug-stale-selector",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "test-bug-statement-relative-path",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "test-bug-wrong-exception-expected",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "product_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "unknown-account-tier-keyword",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "test_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "unknown-amount-formatting",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "unknown-amount-formatting",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "unknown-amount-with-comma",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "product_bug",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "unknown-confirmation-window-boundary",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "unknown-dormant-new-account",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        },
+        {
+          "case_id": "unknown-interest-rate-mismatch",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "heuristics"
+        }
+      ],
+      "cost": {
+        "model": null,
+        "llm_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "usd": 0.0
+      }
+    },
+    {
+      "model": "claude-sonnet-5-5",
+      "cases": 39,
+      "groups": [
+        {
+          "case_id": "environment-ledger-dns",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-down",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-on-every-transfer",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "product_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-on-every-transfer",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "product_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-timeout",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-url-default",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "product_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-wrapped-error",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-missing-ledger-url",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-read-only-statements",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-cold-settlement-clock",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-ledger-stale-connection",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-random-transfer-id",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-rate-limit-window",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "test_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-rates-cache-order",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-split-bill-leftover-cent",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-split-bill-leftover-cent",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-deposit-float",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-fee-rounding",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-funds-check-ignores-fee",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-limit-off-by-one",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-accounts-account-deposit",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-accounts-account-init",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-fees-transfer-fee",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-fees-transfer-fee",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-ledger-record-transfer",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-receipt-render-receipt",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-statements-export-statement",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-transfers-transfer",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "real-preview-item-title",
+          "source": "real",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-expected-value",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-receipt-fixture-short-of-funds",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-stale-selector",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-statement-relative-path",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-wrong-exception-expected",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-account-tier-keyword",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "test_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-amount-formatting",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-amount-formatting",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-amount-with-comma",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-confirmation-window-boundary",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "product_bug",
+          "confidence": "medium",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-dormant-new-account",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-interest-rate-mismatch",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "llm"
+        }
+      ],
+      "cost": {
+        "model": "claude-sonnet-5-5",
+        "llm_calls": 49,
+        "input_tokens": 115016,
+        "output_tokens": 14247,
+        "usd": 0.372502
+      }
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "cases": 39,
+      "groups": [
+        {
+          "case_id": "environment-ledger-dns",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-down",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-on-every-transfer",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-on-every-transfer",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-timeout",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-url-default",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-ledger-wrapped-error",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-missing-ledger-url",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "environment-read-only-statements",
+          "source": "injected",
+          "expected": "environment",
+          "predicted": "environment",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-cold-settlement-clock",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-ledger-stale-connection",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-random-transfer-id",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-rate-limit-window",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-rates-cache-order",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-split-bill-leftover-cent",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "flaky",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "flaky-split-bill-leftover-cent",
+          "source": "injected",
+          "expected": "flaky",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-deposit-float",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-fee-rate-typo",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-fee-rounding",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-funds-check-ignores-fee",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-limit-off-by-one",
+          "source": "injected",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-accounts-account-deposit",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-accounts-account-init",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-fees-transfer-fee",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-fees-transfer-fee",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-ledger-record-transfer",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-receipt-render-receipt",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-statements-export-statement",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "product-bug-mutant-transfers-transfer",
+          "source": "mutation",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "real-preview-item-title",
+          "source": "real",
+          "expected": "product_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-expected-value",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-fixture-leak",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-receipt-fixture-short-of-funds",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-stale-selector",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-statement-relative-path",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "test-bug-wrong-exception-expected",
+          "source": "injected",
+          "expected": "test_bug",
+          "predicted": "test_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-account-tier-keyword",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "test_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-amount-formatting",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-amount-formatting",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-amount-with-comma",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-confirmation-window-boundary",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "unknown",
+          "confidence": "low",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-dormant-new-account",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "product_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        },
+        {
+          "case_id": "unknown-interest-rate-mismatch",
+          "source": "injected",
+          "expected": "unknown",
+          "predicted": "test_bug",
+          "confidence": "high",
+          "classified_by": "llm"
+        }
+      ],
+      "cost": {
+        "model": "claude-haiku-4-5",
+        "llm_calls": 49,
+        "input_tokens": 87857,
+        "output_tokens": 10280,
+        "usd": 0.139257
+      }
+    }
+  ]
+}
