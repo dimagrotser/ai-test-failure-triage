@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from failtriage.evaluate import EvalError, evaluate, render_eval
-from failtriage.models import Category
+from failtriage.models import Category, ClassifiedBy, Confidence
 
 DATASET = Path(__file__).parent / "fixtures" / "evals"
 
@@ -28,7 +28,7 @@ def test_every_failure_group_is_scored_against_the_label_of_its_case() -> None:
 
 
 def test_accuracy_is_reported_per_category_with_weak_ones_included() -> None:
-    output = render_eval(evaluate(DATASET))
+    output = render_eval([evaluate(DATASET)])
 
     assert "5 failure groups" in output
     assert "Accuracy: 3/5 (60%)" in output
@@ -38,13 +38,13 @@ def test_accuracy_is_reported_per_category_with_weak_ones_included() -> None:
 
 
 def test_a_category_without_cases_is_listed_with_a_dash() -> None:
-    output = render_eval(evaluate(DATASET))
+    output = render_eval([evaluate(DATASET)])
 
     assert _row(output, "unknown") == ["unknown", "0", "0", "-"]
 
 
 def test_accuracy_is_reported_per_source() -> None:
-    output = render_eval(evaluate(DATASET))
+    output = render_eval([evaluate(DATASET)])
 
     assert _row(output, "injected") == ["injected", "2", "2", "100%"]
     assert _row(output, "mutation") == ["mutation", "1", "0", "0%"]
@@ -54,14 +54,14 @@ def test_accuracy_is_reported_per_source() -> None:
 def test_a_source_without_cases_is_listed_with_a_dash(tmp_path: Path) -> None:
     shutil.copytree(DATASET / "cases" / "flaky-retry", tmp_path / "cases" / "flaky-retry")
 
-    output = render_eval(evaluate(tmp_path))
+    output = render_eval([evaluate(tmp_path)])
 
     assert _row(output, "mutation") == ["mutation", "0", "0", "-"]
     assert _row(output, "real") == ["real", "0", "0", "-"]
 
 
 def test_confusion_matrix_counts_label_against_prediction() -> None:
-    output = render_eval(evaluate(DATASET))
+    output = render_eval([evaluate(DATASET)])
 
     assert "Confusion matrix (rows: label, columns: predicted)" in output
     matrix = output.split("Confusion matrix")[1].split("Misses")[0]
@@ -71,7 +71,7 @@ def test_confusion_matrix_counts_label_against_prediction() -> None:
 
 
 def test_misses_name_the_case_and_both_categories() -> None:
-    output = render_eval(evaluate(DATASET))
+    output = render_eval([evaluate(DATASET)])
 
     misses = output.split("Misses")[1]
     assert "product-bug-assert: product_bug -> unknown" in misses
@@ -82,7 +82,7 @@ def test_misses_name_the_case_and_both_categories() -> None:
 def test_no_misses_is_said_plainly(tmp_path: Path) -> None:
     shutil.copytree(DATASET / "cases" / "flaky-retry", tmp_path / "cases" / "flaky-retry")
 
-    assert "Misses: none" in render_eval(evaluate(tmp_path))
+    assert "Misses: none" in render_eval([evaluate(tmp_path)])
 
 
 def _dataset(tmp_path: Path, label: str | None, junit: str | None) -> Path:
@@ -150,3 +150,52 @@ def test_a_case_without_history_is_scored_cold(tmp_path: Path) -> None:
 def test_an_invalid_history_stops_the_run_and_is_named(tmp_path: Path) -> None:
     with pytest.raises(EvalError, match="product-bug-assert.*history.json"):
         evaluate(_with_history(tmp_path, "not json"))
+
+
+def test_every_scored_group_keeps_its_confidence_and_who_classified_it() -> None:
+    result = evaluate(DATASET)
+
+    by_case = {(g.case_id, g.predicted): (g.confidence, g.classified_by) for g in result.groups}
+    assert by_case[("flaky-retry", Category.FLAKY)] == (Confidence.HIGH, ClassifiedBy.HEURISTICS)
+    assert by_case[("product-bug-assert", Category.UNKNOWN)][0] is Confidence.LOW
+
+
+def test_the_run_states_the_share_of_unknown_and_accuracy_among_high_confidence() -> None:
+    output = render_eval([evaluate(DATASET)])
+
+    assert "Predicted unknown: 2/5 (40%)" in output
+    assert "High confidence: 1/1 correct (100%)" in output
+
+
+def test_a_run_without_high_confidence_answers_says_so(tmp_path: Path) -> None:
+    shutil.copytree(DATASET / "cases" / "environment-refused", tmp_path / "cases" / "e")
+
+    assert "High confidence: no answers" in render_eval([evaluate(tmp_path)])
+
+
+def test_categories_below_half_are_named_as_weak() -> None:
+    output = render_eval([evaluate(DATASET)])
+
+    assert "Weak categories: product_bug 0%" in output
+
+
+def test_no_weak_category_is_said_plainly(tmp_path: Path) -> None:
+    shutil.copytree(DATASET / "cases" / "flaky-retry", tmp_path / "cases" / "flaky-retry")
+
+    assert "Weak categories: none below 50%" in render_eval([evaluate(tmp_path)])
+
+
+def test_the_small_size_of_real_is_stated() -> None:
+    output = render_eval([evaluate(DATASET)])
+
+    assert "The real source has 2 groups from 1 case, too few to draw conclusions." in output
+
+
+def test_a_dataset_without_real_cases_says_nothing_is_known_about_real_failures(
+    tmp_path: Path,
+) -> None:
+    shutil.copytree(DATASET / "cases" / "flaky-retry", tmp_path / "cases" / "flaky-retry")
+
+    output = render_eval([evaluate(tmp_path)])
+
+    assert "The real source has no cases yet" in output

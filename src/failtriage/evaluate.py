@@ -9,10 +9,15 @@ from pydantic import BaseModel, ValidationError
 from failtriage.classify.heuristics import classify_with_heuristics
 from failtriage.grouping import group_failures
 from failtriage.history import HistoryEntry, HistoryError, load_history
-from failtriage.models import Category
+from failtriage.models import Category, ClassifiedBy, Confidence
 from failtriage.parsers import ReportParseError
 from failtriage.parsers.junit import parse_junit
 from failtriage.redaction import redact_result
+from failtriage.report.json_output import Cost
+
+# Below this many groups a source says little about real-world accuracy.
+_ENOUGH_REAL_GROUPS = 30
+_WEAK_BELOW = 0.5
 
 
 class EvalError(Exception):
@@ -35,24 +40,38 @@ class ScoredGroup(BaseModel):
     source: Source
     expected: Category
     predicted: Category
+    confidence: Confidence
+    classified_by: ClassifiedBy
 
     @property
     def correct(self) -> bool:
         return self.expected is self.predicted
 
 
-class EvalResult(BaseModel):
+class EvalRun(BaseModel):
+    """One configuration scored on every case."""
+
+    # Without a model the heuristics classified alone.
+    model: str | None = None
     cases: int
     groups: list[ScoredGroup]
+    cost: Cost = Cost()
 
 
-def evaluate(evals_dir: Path) -> EvalResult:
+class EvalReport(BaseModel):
+    """What `evals/results/<date>.json` holds."""
+
+    date: str
+    runs: list[EvalRun]
+
+
+def evaluate(evals_dir: Path) -> EvalRun:
     """Classify every failure group of every Lab case with heuristics only and score it."""
     case_dirs = sorted(p for p in (evals_dir / "cases").glob("*") if p.is_dir())
     if not case_dirs:
         raise EvalError(f"no cases found in {evals_dir / 'cases'}")
     groups = [group for case_dir in case_dirs for group in _score_case(case_dir)]
-    return EvalResult(cases=len(case_dirs), groups=groups)
+    return EvalRun(cases=len(case_dirs), groups=groups)
 
 
 def _score_case(case_dir: Path) -> list[ScoredGroup]:
@@ -65,15 +84,20 @@ def _score_case(case_dir: Path) -> list[ScoredGroup]:
     if not groups:
         raise EvalError(f"case {case_dir.name}: junit.xml has no failures to classify")
     history = _read_history(case_dir)
-    return [
-        ScoredGroup(
-            case_id=case_dir.name,
-            source=label.source,
-            expected=label.category,
-            predicted=classify_with_heuristics(group, history).category,
+    scored = []
+    for group in groups:
+        classification = classify_with_heuristics(group, history)
+        scored.append(
+            ScoredGroup(
+                case_id=case_dir.name,
+                source=label.source,
+                expected=label.category,
+                predicted=classification.category,
+                confidence=classification.confidence,
+                classified_by=classification.classified_by,
+            )
         )
-        for group in groups
-    ]
+    return scored
 
 
 def _read_history(case_dir: Path) -> list[HistoryEntry]:
@@ -93,14 +117,27 @@ def _read_label(case_dir: Path) -> Label:
         raise EvalError(f"case {case_dir.name}: label.yaml is missing or invalid") from exc
 
 
-def render_eval(result: EvalResult) -> str:
-    groups = result.groups
+def render_eval(runs: list[EvalRun]) -> str:
+    lines: list[str] = []
+    for run in runs:
+        lines += [*_render_run(run), ""]
+    lines += _real_note(runs[0].groups if runs else [])
+    return "\n".join(lines) + "\n"
+
+
+def _render_run(run: EvalRun) -> list[str]:
+    groups = run.groups
     correct = sum(g.correct for g in groups)
+    unknown = sum(g.predicted is Category.UNKNOWN for g in groups)
+    high = [g for g in groups if g.confidence is Confidence.HIGH]
     by_category = {c.value: [g for g in groups if g.expected is c] for c in Category}
     by_source = {s.value: [g for g in groups if g.source is s] for s in Source}
-    lines = [
-        f"Heuristics-only baseline: {result.cases} cases, {len(groups)} failure groups",
+    return [
+        f"{_title(run)}: {run.cases} cases, {len(groups)} failure groups",
         f"Accuracy: {correct}/{len(groups)} ({_percent(correct, len(groups))})",
+        f"Predicted unknown: {unknown}/{len(groups)} ({_percent(unknown, len(groups))})",
+        _high_confidence(high),
+        _weak_categories(by_category),
         "",
         *_accuracy_table("Category", by_category),
         "",
@@ -110,7 +147,39 @@ def render_eval(result: EvalResult) -> str:
         "",
         *_misses(groups),
     ]
-    return "\n".join(lines) + "\n"
+
+
+def _title(run: EvalRun) -> str:
+    return "Heuristics-only" if run.model is None else f"Heuristics and LLM ({run.model})"
+
+
+def _high_confidence(high: list[ScoredGroup]) -> str:
+    if not high:
+        return "High confidence: no answers"
+    hits = sum(g.correct for g in high)
+    return f"High confidence: {hits}/{len(high)} correct ({_percent(hits, len(high))})"
+
+
+def _weak_categories(by_category: Mapping[str, list[ScoredGroup]]) -> str:
+    weak = [
+        f"{name} {_percent(sum(g.correct for g in found), len(found))}"
+        for name, found in by_category.items()
+        if found and sum(g.correct for g in found) / len(found) < _WEAK_BELOW
+    ]
+    return f"Weak categories: {', '.join(weak) if weak else f'none below {_WEAK_BELOW:.0%}'}"
+
+
+def _real_note(groups: list[ScoredGroup]) -> list[str]:
+    real = [g for g in groups if g.source is Source.REAL]
+    if not real:
+        return [
+            "The real source has no cases yet, so nothing here shows how the classifier "
+            "does on real failures."
+        ]
+    cases = len({g.case_id for g in real})
+    sizes = f"{len(real)} groups from {cases} {'case' if cases == 1 else 'cases'}"
+    verdict = "" if len(real) >= _ENOUGH_REAL_GROUPS else ", too few to draw conclusions"
+    return [f"The real source has {sizes}{verdict}."]
 
 
 def _percent(correct: int, total: int) -> str:

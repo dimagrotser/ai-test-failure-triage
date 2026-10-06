@@ -220,7 +220,7 @@ def eval_(
 ) -> None:
     """Score the heuristics-only classifier against the labeled Lab cases."""
     try:
-        typer.echo(render_eval(evaluate(evals_dir)), nl=False)
+        typer.echo(render_eval([evaluate(evals_dir)]), nl=False)
     except EvalError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
