@@ -358,13 +358,27 @@ def test_groups_over_the_cap_are_classified_by_heuristics_and_not_sent() -> None
     assert result.failed == {}
 
 
-def test_a_failing_call_falls_back_to_heuristics_and_records_only_the_error_type() -> None:
+def test_a_failing_call_falls_back_to_heuristics_and_records_the_reason() -> None:
     groups = group_failures(parse_junit(MIXED))
 
     result = classify_groups(groups, FailingProvider(NO_PROOF), load_prompt(), Limits())
 
     assert [c.classified_by for c in result.classifications] == [ClassifiedBy.HEURISTICS] * 3
-    assert result.failed == {0: "ProviderError", 1: "ProviderError", 2: "ProviderError"}
+    assert result.failed == {0: "down", 1: "down", 2: "down"}
+
+
+def test_a_secret_in_the_reason_of_a_failing_call_is_redacted() -> None:
+    groups = group_failures(parse_junit(MIXED))
+    token = "ghp_a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8"
+
+    class LeakingProvider(StubProvider):
+        def complete(self, prompt: Prompt, payload: str) -> str:
+            raise ProviderError(f"the request failed for GITHUB_TOKEN={token}")
+
+    result = classify_groups(groups, LeakingProvider(NO_PROOF), load_prompt(), Limits())
+
+    assert len(result.failed) == 3
+    assert token not in "".join(result.failed.values())
 
 
 def test_an_invalid_answer_falls_back_for_that_group_only() -> None:

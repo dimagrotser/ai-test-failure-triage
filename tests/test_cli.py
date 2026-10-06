@@ -497,7 +497,7 @@ def test_a_failing_call_falls_back_to_heuristics_and_the_run_succeeds(
     assert result.exit_code == 0
     report = AnalysisReport.model_validate_json(result.stdout)
     assert report.groups[0].classification.classified_by is ClassifiedBy.HEURISTICS
-    assert "group 1: ProviderError" in result.stderr
+    assert "group 1: the request failed: AuthenticationError, HTTP 401" in result.stderr
 
 
 @pytest.mark.parametrize("status", [200, 401])
