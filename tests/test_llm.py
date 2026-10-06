@@ -105,6 +105,58 @@ def test_a_disagreement_with_a_reason_is_kept() -> None:
     assert result.disagreement_reason == "The test pins a port that changed in the diff"
 
 
+def _retry_quote(payload: GroupPayload) -> str:
+    return next(s.quote for s in payload.signals if s.name is SignalName.PASSED_ON_RETRY)
+
+
+def test_a_high_answer_against_a_group_that_passed_on_retry_is_capped_at_medium() -> None:
+    payload = payload_for("flaky-retry")
+    reply = answer(
+        category="product_bug",
+        confidence="high",
+        evidence=[_retry_quote(payload)],
+        disagreement_reason="The code raises on the first call",
+    )
+
+    result = classify_with_llm(payload, StubProvider(reply), load_prompt())
+
+    assert (result.category, result.confidence) == (Category.PRODUCT_BUG, Confidence.MEDIUM)
+    assert result.agrees_with_heuristics is False
+
+
+def test_agreeing_with_a_group_that_passed_on_retry_keeps_high() -> None:
+    payload = payload_for("flaky-retry")
+    reply = answer(category="flaky", confidence="high", evidence=[_retry_quote(payload)])
+
+    result = classify_with_llm(payload, StubProvider(reply), load_prompt())
+
+    assert (result.category, result.confidence) == (Category.FLAKY, Confidence.HIGH)
+
+
+def test_a_low_answer_against_a_group_that_passed_on_retry_stays_low() -> None:
+    payload = payload_for("flaky-retry")
+    reply = answer(
+        category="unknown",
+        confidence="low",
+        evidence=[_retry_quote(payload)],
+        disagreement_reason="Not enough to say",
+    )
+
+    result = classify_with_llm(payload, StubProvider(reply), load_prompt())
+
+    assert result.confidence is Confidence.LOW
+
+
+def test_a_high_answer_against_a_verdict_without_a_retry_keeps_high() -> None:
+    reply = answer(category="test_bug", confidence="high", disagreement_reason="The port moved")
+
+    result = classify_with_llm(
+        payload_for("environment-refused"), StubProvider(reply), load_prompt()
+    )
+
+    assert (result.category, result.confidence) == (Category.TEST_BUG, Confidence.HIGH)
+
+
 def test_a_disagreement_without_a_reason_is_an_invalid_answer() -> None:
     reply = answer(category="test_bug")
 

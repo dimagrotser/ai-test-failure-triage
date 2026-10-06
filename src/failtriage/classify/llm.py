@@ -8,7 +8,14 @@ from failtriage.classify.heuristics import classify_with_heuristics
 from failtriage.classify.payload import GroupPayload, Limits, build_payloads
 from failtriage.classify.provider import Provider, ProviderError
 from failtriage.history import HistoryEntry
-from failtriage.models import Category, Classification, ClassifiedBy, Confidence, FailureGroup
+from failtriage.models import (
+    Category,
+    Classification,
+    ClassifiedBy,
+    Confidence,
+    FailureGroup,
+    SignalName,
+)
 from failtriage.prompts import Prompt
 from failtriage.redaction import redact
 
@@ -97,9 +104,14 @@ def classify_with_llm(payload: GroupPayload, provider: Provider, prompt: Prompt)
                 update={"confidence": Confidence.LOW, "disagreement_reason": NO_PROOF_REASON}
             )
         verdict = payload.heuristic_verdict
+        confidence = answer.confidence
+        if answer.category is not verdict and _passed_on_retry(payload):
+            # The model may overrule proof of nondeterminism, but two high answers that
+            # contradict each other should not both read as certain.
+            confidence = min(confidence, Confidence.MEDIUM, key=_CONFIDENCE_ORDER.index)
         return Classification(
             category=answer.category,
-            confidence=answer.confidence,
+            confidence=confidence,
             summary=answer.summary,
             evidence=evidence,
             next_step=answer.next_step,
@@ -112,6 +124,15 @@ def classify_with_llm(payload: GroupPayload, provider: Provider, prompt: Prompt)
         # Only the error locations: the messages quote the model's output.
         where = ", ".join(sorted({".".join(map(str, e["loc"])) or "answer" for e in exc.errors()}))
         raise InvalidAnswerError(f"the answer does not fit the schema: {where}") from None
+
+
+_CONFIDENCE_ORDER = [Confidence.LOW, Confidence.MEDIUM, Confidence.HIGH]
+
+
+def _passed_on_retry(payload: GroupPayload) -> bool:
+    return payload.heuristic_verdict is Category.FLAKY and any(
+        s.name is SignalName.PASSED_ON_RETRY for s in payload.signals
+    )
 
 
 def _verified(quotes: list[str], payload: GroupPayload) -> list[str]:
