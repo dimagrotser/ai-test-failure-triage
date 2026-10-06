@@ -128,6 +128,20 @@ The rules also go wrong where the frame is not the place of the mistake, and the
 
 Some `unknown` cases get a verdict they should not have. `unknown-amount-with-comma` raises from source code, so it comes out as a product bug. `unknown-confirmation-window-boundary` says "timed out" about the product's own 900 second rule, which the timeout pattern takes for a slow service. `unknown-account-tier-keyword` fails with a TypeError in the test file and is called a test bug, although the product could just as well have been meant to use the other name. `unknown-amount-formatting` and the two oldest unknown cases stay undecided, as they should.
 
-The heuristics read the history of a case but never its diff, so the diff is where the LLM is expected to help. I have not scored the LLM yet. Its numbers will go here after the first run of the `eval` workflow, whatever they turn out to be.
+The heuristics read the history of a case but never its diff, so the diff is where the LLM was expected to help. The first run of the `eval` workflow on 2026-10-06 is committed as `evals/results/2026-10-06.json`. It is only half a comparison. `claude-sonnet-5-5` classified all 48 groups. `claude-haiku-4-5` made no successful call, every group fell back to the heuristics, and its 28 of 48 only repeats the baseline. I have not found out why yet, so there is no Sonnet against Haiku result.
 
-Two cautions apply to any number in this section. The dataset is small, 48 groups, so one case moves a category by several points. And `real` has no cases at all, so nothing here says how the classifier does on failures I did not write myself. The weak categories are `product_bug` (44%) and `test_bug` (22%), both because an assertion failure is left as `unknown` on purpose. The heuristics answered `high` for 7 groups and were right 7 times, but flaky is the only category that can reach `high`, so that says little about the other four.
+Sonnet scored 29 of 48, or 60%, against 28 of 48 for the heuristics alone. The injected groups went from 23 to 25 of 40 and the mutation groups from 5 to 4 of 8.
+
+| Category | Groups | Heuristics | Sonnet |
+|---|---|---|---|
+| environment | 9 | 8 | 7 |
+| flaky | 7 | 7 | 6 |
+| unknown | 7 | 4 | 4 |
+| product_bug | 16 | 7 | 7 |
+| test_bug | 9 | 2 | 5 |
+
+The gain is all in `test_bug`, where the diff shows that only test files changed. `product_bug` did not move: Sonnet answered `unknown` for 9 of the 16 groups, among them `product-bug-fee-rate-typo` and `product-bug-fee-rounding`, so it is as cautious about assertion failures as the rules are. It also lost three groups the heuristics had right. `environment-ledger-on-every-transfer` and `environment-ledger-url-default` came out as `product_bug`, and `flaky-rates-cache-order` too. That last one is a flaky group with passed-on-retry evidence, which the rules get right. Sonnet answered `unknown` for 17 groups (35%) and its `high` answers were right 14 times out of 16.
+
+The run cost $0.35: 48 calls, 108,156 input tokens and 13,295 output tokens, about $0.007 and 2,250 input tokens per group. One run is one sample, and I did not repeat it, so I cannot say how much of the difference between 29 and 28 is noise. I read it as no clear gain overall.
+
+Two cautions apply to any number in this section. The dataset is small, 48 groups, so one case moves a category by several points. And `real` has no cases at all, so nothing here says how the classifier does on failures I did not write myself. The weak categories are `product_bug` (44%, with or without the LLM) and `test_bug` (22% for the heuristics, 56% with Sonnet), both because an assertion failure is left as `unknown` on purpose. The heuristics answered `high` for 7 groups and were right 7 times, but flaky is the only category that can reach `high`, so that says little about the other four.
