@@ -327,6 +327,8 @@ LAB_VERDICTS = {
     "unknown-interest-rate-mismatch": None,
     # Known miss: a source-code exception that is really a missing feature, not a bug.
     "unknown-amount-with-comma": Category.PRODUCT_BUG,
+    # Known miss: an e2e assertion on rendered text looks like a test bug, the cause is in the app.
+    "real-preview-item-title": Category.TEST_BUG,
 }
 
 
