@@ -141,7 +141,7 @@ I scored the classifier on 38 failing runs of a small wallet app, 48 failure gro
 | unknown | 7 | 4 | 4 |
 | all | 48 | 28 (58%) | 29 (60%) |
 
-By source, the 40 injected groups score 23 with the heuristics and 25 with Sonnet. The 8 mutation groups score 5 and 4. There are no `real` groups, so nothing here says how it does on failures I did not write myself.
+By source, the 40 injected groups score 23 with the heuristics and 25 with Sonnet. The 8 mutation groups score 5 and 4. The one `real` group, a failure from another repository ([docs/adoption.md](docs/adoption.md)), is not in these numbers, because the model run happened before I imported it. The heuristics call it a test bug. One group says nothing about accuracy.
 
 Sonnet barely beats the rules: it gets 5 groups right that the rules missed and loses 4 they had right. Most of its gains are `test_bug`. `product_bug` is the weak spot in both columns, at 44%: when a test fails on an assertion, nobody can tell from the log alone whether the test or the product is wrong, so the tool says `unknown` on purpose. Of its `high` confidence answers Sonnet got 14 of 16 right.
 
@@ -169,6 +169,8 @@ Only JUnit XML, Playwright JSON and Allure result files are read, and Allure ste
 
 Fork pull requests get no comment and no LLM, because GitHub gives them a read-only token and no secrets. The report goes to the job summary and the verdicts come from the rules.
 
+The LLM sees only the part of the pull request diff that touches files named in the stack trace. An end-to-end test names the test file, so for those failures the changed application code is not sent and the answer is often `unknown`. [docs/adoption.md](docs/adoption.md) shows an example.
+
 History has gaps. A repository needs a few runs on main before history signals appear, artifacts expire after the retention period, and fork runs cannot read them. Until then the report says `History: none` and nothing is called flaky from history, so a truly intermittent failure with no retry can come out as `unknown`.
 
-The accuracy numbers are a rough guide. The dataset is small and written by me, it has no real failures, and Sonnet scores 60% on it.
+The accuracy numbers are a rough guide. The dataset is small and written by me, it has one real failure, and Sonnet scores 60% on it.

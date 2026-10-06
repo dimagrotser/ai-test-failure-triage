@@ -107,9 +107,9 @@ def _seed_cases(cases: Path) -> dict[str, bytes]:
 def test_build_all_rebuilds_the_whole_dataset_byte_for_byte(tmp_path: Path) -> None:
     cases = tmp_path / "cases"
 
-    build_all(SCENARIOS, cases)
+    build_all(SCENARIOS, cases, tmp_path / "real")
     first = _snapshot(cases)
-    build_all(SCENARIOS, cases)
+    build_all(SCENARIOS, cases, tmp_path / "real")
 
     assert {name.split("/")[0] for name in first} == {p.name for p in SCENARIOS.iterdir()}
     assert _snapshot(cases) == first
@@ -135,7 +135,7 @@ def test_rebuild_drops_cases_whose_scenario_is_gone(tmp_path: Path) -> None:
     scenarios = tmp_path / "scenarios"
     shutil.copytree(SCENARIO, scenarios / SCENARIO.name)
 
-    build_all(scenarios, cases)
+    build_all(scenarios, cases, tmp_path / "real")
 
     assert [p.name for p in cases.iterdir()] == ["product-bug-fee-rounding"]
 
@@ -145,7 +145,7 @@ def test_files_next_to_the_scenarios_are_ignored(tmp_path: Path) -> None:
     shutil.copytree(SCENARIO, scenarios / SCENARIO.name)
     (scenarios / ".DS_Store").write_text("")
 
-    build_all(scenarios, tmp_path / "cases")
+    build_all(scenarios, tmp_path / "cases", tmp_path / "real")
 
     assert [p.name for p in (tmp_path / "cases").iterdir()] == ["product-bug-fee-rounding"]
 

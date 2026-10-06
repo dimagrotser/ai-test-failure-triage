@@ -113,7 +113,7 @@ Baseline on the current 38 cases, 48 groups. 40 groups have source `injected` an
 | product_bug | 16 | 7 |
 | test_bug | 9 | 2 |
 
-Overall 28 of 48, or 58%. By source, the injected groups score 23 of 40 and the mutation groups 5 of 8. The `real` source has no cases yet, so the output shows it with a dash.
+Overall 28 of 48, or 58%. By source, the injected groups score 23 of 40 and the mutation groups 5 of 8. The first `real` case, `real-preview-item-title`, came after this run. With it the heuristics score 28 of 49 and `real` is 0 of 1.
 
 The mutation misses repeat the known weak spots. `product-bug-mutant-accounts-account-deposit` and `product-bug-mutant-transfers-transfer` change `<=` to `<` in the amount check, so a test fails with `DID NOT RAISE` in the test file and the rules call it a test bug, like `product-bug-funds-check-ignores-fee`. `product-bug-mutant-accounts-account-init` turns the owner into `None`, which shows up as an assertion mismatch in a test and stays `unknown`.
 
@@ -144,4 +144,4 @@ Compared group by group, Sonnet got 5 right that the heuristics missed and lost 
 
 The run cost $0.35: 48 calls, 108,156 input tokens and 13,295 output tokens, about $0.007 and 2,250 input tokens per group. One run is one sample, and I did not repeat it, so I cannot say how much of the difference between 29 and 28 is noise. I read it as no clear gain overall.
 
-Two cautions apply to any number in this section. The dataset is small, 48 groups, so one case moves a category by several points. And `real` has no cases at all, so nothing here says how the classifier does on failures I did not write myself. The weak categories are `product_bug` (44%, with or without the LLM) and `test_bug` (22% for the heuristics, 56% with Sonnet), both because an assertion failure is left as `unknown` on purpose. The heuristics answered `high` for 7 groups and were right 7 times, but flaky is the only category that can reach `high`, so that says little about the other four.
+Two cautions apply to any number in this section. The dataset is small, 48 groups, so one case moves a category by several points. And `real` has one case, added after the model run, so almost nothing here says how the classifier does on failures I did not write myself ([adoption.md](adoption.md)). The weak categories are `product_bug` (44%, with or without the LLM) and `test_bug` (22% for the heuristics, 56% with Sonnet), both because an assertion failure is left as `unknown` on purpose. The heuristics answered `high` for 7 groups and were right 7 times, but flaky is the only category that can reach `high`, so that says little about the other four.
