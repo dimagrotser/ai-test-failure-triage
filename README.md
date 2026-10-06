@@ -49,13 +49,13 @@ Without `anthropic-api-key` the groups are classified by heuristics only.
 
 ## Pinning
 
-`@v1` is a floating tag. It moves to each 1.x release, so you get fixes without touching the workflow. If you want a fixed version, use `@v1.0.0`. If your policy asks for immutable references, use the full commit SHA of the release and keep the version in a comment:
+`@v1` is a floating tag. It moves to each 1.x release, so you get fixes without touching the workflow. If you want a fixed version, use `@v1.0.1`. If your policy asks for immutable references, use the full commit SHA of the release and keep the version in a comment:
 
 ```yaml
-- uses: dimagrotser/ai-test-failure-triage@<full commit sha>  # v1.0.0
+- uses: dimagrotser/ai-test-failure-triage@<full commit sha>  # v1.0.1
 ```
 
-Dependabot bumps a SHA or an exact version when a new release comes out. The inputs, outputs and known limits of each release are in [docs/releases](docs/releases/v1.0.0.md).
+Dependabot bumps a SHA or an exact version when a new release comes out. The inputs, outputs and known limits are in the notes of each release in [docs/releases](docs/releases/v1.0.1.md), the inputs and outputs in the [v1.0.0 notes](docs/releases/v1.0.0.md).
 
 ## Permissions
 
