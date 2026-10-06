@@ -141,7 +141,7 @@ I scored the classifier on 38 failing runs of a small wallet app, 48 failure gro
 | unknown | 7 | 4 | 4 |
 | all | 48 | 28 (58%) | 29 (60%) |
 
-By source, the 40 injected groups score 23 with the heuristics and 25 with Sonnet. The 8 mutation groups score 5 and 4. The one `real` group, a failure from another repository ([docs/adoption.md](docs/adoption.md)), is not in these numbers, because the model run came first. The heuristics get it wrong. One group says nothing about accuracy.
+By source, the 40 injected groups score 23 with the heuristics and 25 with Sonnet. The 8 mutation groups score 5 and 4. The one `real` group, a failure from another repository ([docs/adoption.md](docs/adoption.md)), is not in these numbers, because the model run happened before I imported it. The heuristics call it a test bug. One group says nothing about accuracy.
 
 Sonnet barely beats the rules: it gets 5 groups right that the rules missed and loses 4 they had right. Most of its gains are `test_bug`. `product_bug` is the weak spot in both columns, at 44%: when a test fails on an assertion, nobody can tell from the log alone whether the test or the product is wrong, so the tool says `unknown` on purpose. Of its `high` confidence answers Sonnet got 14 of 16 right.
 

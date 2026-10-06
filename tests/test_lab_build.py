@@ -107,11 +107,9 @@ def _seed_cases(cases: Path) -> dict[str, bytes]:
 def test_build_all_rebuilds_the_whole_dataset_byte_for_byte(tmp_path: Path) -> None:
     cases = tmp_path / "cases"
 
-    no_real = tmp_path / "real"
-
-    build_all(SCENARIOS, cases, no_real)
+    build_all(SCENARIOS, cases, tmp_path / "real")
     first = _snapshot(cases)
-    build_all(SCENARIOS, cases, no_real)
+    build_all(SCENARIOS, cases, tmp_path / "real")
 
     assert {name.split("/")[0] for name in first} == {p.name for p in SCENARIOS.iterdir()}
     assert _snapshot(cases) == first
