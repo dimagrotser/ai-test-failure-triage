@@ -359,3 +359,16 @@ def test_a_heuristics_only_report_has_no_llm_cost_lines() -> None:
 
     assert "LLM:" not in output
     assert "Total LLM cost" not in output
+
+
+def test_a_file_deleted_by_the_diff_counts_as_changed(tmp_path: Path) -> None:
+    root = _one_case(tmp_path)
+    (root / "cases" / "environment-refused" / "diff.patch").write_text(
+        "diff --git a/wallet/ledger.py b/wallet/ledger.py\ndeleted file mode 100644\n"
+        "--- a/wallet/ledger.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-x = 1\n"
+    )
+    provider = FakeProvider()
+
+    evaluate(root, provider)
+
+    assert "wallet/ledger.py is changed in this pull request" in provider.payloads[0]

@@ -24,7 +24,7 @@ from failtriage.report.json_output import Cost
 # Below this many groups a source says little about real-world accuracy.
 _ENOUGH_REAL_GROUPS = 30
 _WEAK_BELOW = 0.5
-_DIFF_TARGET = re.compile(r"^\+\+\+ b/(.+)$", re.MULTILINE)
+_DIFF_TARGET = re.compile(r"^diff --git a/.+ b/(.+)$", re.MULTILINE)
 
 
 class EvalError(Exception):
