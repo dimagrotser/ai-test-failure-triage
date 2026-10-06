@@ -6,7 +6,7 @@ A red CI run with forty failures rarely has forty causes. Usually it is two or t
 
 ## Example report
 
-This is what `failtriage analyze --junit tests/fixtures/junit/mixed.xml --markdown` prints, with no API key set, so the verdicts come from the rules alone:
+This is group 2 of the 3 that `failtriage analyze --junit tests/fixtures/junit/mixed.xml --markdown` prints with no API key set, so the verdicts come from the rules alone (the report adds a line saying so under each group):
 
 > **3 failure groups**: 3 failed tests, 0 passed on retry, 6 tests total.
 >
@@ -133,7 +133,7 @@ I scored the classifier on 38 failing runs of a small wallet app, 48 failure gro
 
 By source, the 40 injected groups score 23 with the heuristics and 25 with Sonnet. The 8 mutation groups score 5 and 4. There are no `real` groups, so nothing here says how it does on failures I did not write myself.
 
-Sonnet barely beats the rules. It helps on `test_bug` and loses a few groups the rules had right. `product_bug` is the weak spot in both columns, at 44%: when a test fails on an assertion, nobody can tell from the log alone whether the test or the product is wrong, so the tool says `unknown` on purpose. Of its `high` confidence answers Sonnet got 14 of 16 right.
+Sonnet barely beats the rules: it gets 5 groups right that the rules missed and loses 4 they had right. Most of its gains are `test_bug`. `product_bug` is the weak spot in both columns, at 44%: when a test fails on an assertion, nobody can tell from the log alone whether the test or the product is wrong, so the tool says `unknown` on purpose. Of its `high` confidence answers Sonnet got 14 of 16 right.
 
 I could not compare models. `claude-haiku-4-5` made no successful call in that run, every group fell back to the heuristics, and I have not found out why. With 48 groups, one case moves a category by several points, and I ran it once.
 
