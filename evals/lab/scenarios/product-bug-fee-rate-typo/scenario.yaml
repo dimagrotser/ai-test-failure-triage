@@ -1,0 +1,8 @@
+category: product_bug
+source: injected
+scenario: fee rate is 15 percent instead of 1.5
+notes: >-
+  The patch moves the decimal point in FEE_RATE, so every transfer is charged ten times the
+  fee. The failures are spread over the fee, transfer and receipt tests and read differently
+  in each (a wrong fee, a wrong balance, a wrong receipt value), but they share one cause in
+  wallet/fees.py. The tests are untouched and pass again once the patch is reverted.

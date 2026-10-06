@@ -1,0 +1,21 @@
+diff --git a/tests/test_limits.py b/tests/test_limits.py
+--- a/tests/test_limits.py
++++ b/tests/test_limits.py
+@@ -3,7 +3,7 @@ from decimal import Decimal
+ import pytest
+ 
+ from wallet.accounts import Account
+-from wallet.transfers import LimitExceeded, transfer
++from wallet.transfers import InsufficientFunds, transfer
+ 
+ 
+ def test_transfer_up_to_the_limit_is_allowed() -> None:
+@@ -19,7 +19,7 @@ def test_transfer_above_the_limit_is_rejected() -> None:
+     source = Account("alice", Decimal("5000.00"))
+     target = Account("bob")
+ 
+-    with pytest.raises(LimitExceeded):
++    with pytest.raises(InsufficientFunds):
+         transfer(source, target, Decimal("1000.01"))
+ 
+     assert source.balance == Decimal("5000.00")

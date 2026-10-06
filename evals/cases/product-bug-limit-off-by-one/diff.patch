@@ -1,0 +1,12 @@
+diff --git a/wallet/transfers.py b/wallet/transfers.py
+--- a/wallet/transfers.py
++++ b/wallet/transfers.py
+@@ -17,7 +17,7 @@ class InsufficientFunds(Exception):
+ def transfer(source: Account, target: Account, amount: Decimal) -> None:
+     if amount <= 0:
+         raise InvalidAmount(f"amount must be positive, got {amount}")
+-    if amount > TRANSFER_LIMIT:
++    if amount >= TRANSFER_LIMIT:
+         raise LimitExceeded(f"{amount} is above the limit of {TRANSFER_LIMIT}")
+     total = amount + transfer_fee(amount)
+     if source.balance < total:

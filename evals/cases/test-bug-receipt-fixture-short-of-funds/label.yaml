@@ -1,0 +1,9 @@
+category: test_bug
+source: injected
+scenario: receipt fixture opens the sender with too little money
+notes: >-
+  The fixture funds alice with 100.00 and then transfers 100.00, which needs 101.50 with the
+  fee. The wallet is right to raise InsufficientFunds, and the transfer tests prove the same
+  rule. The error happens while the fixture is set up, so all three receipt tests end as
+  errors without running their own code, and no assertion fails. Reverting the patch, which
+  only touches the test, makes the run green.

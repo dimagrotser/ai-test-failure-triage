@@ -447,6 +447,11 @@ UNKNOWN_CASES = [
         "tests.test_interest::test_monthly_interest_on_a_thousand",
         "Decimal('2.50')",
     ),
+    (
+        "unknown-confirmation-window-boundary",
+        "tests.test_confirmations::test_confirmation_after_exactly_the_window_is_accepted",
+        "confirmation timed out after 900 seconds",
+    ),
 ]
 
 
@@ -473,6 +478,9 @@ def test_unknown_case_fails_without_passing_on_retry(
         ("unknown-dormant-new-account", True),
         ("unknown-amount-with-comma", True),
         ("unknown-interest-rate-mismatch", False),
+        ("unknown-confirmation-window-boundary", True),
+        ("unknown-amount-formatting", True),
+        ("unknown-account-tier-keyword", False),
     ],
 )
 def test_history_is_empty_only_when_the_scenario_says_none(
@@ -542,3 +550,116 @@ def test_rate_limit_failure_lands_on_a_test_in_another_file_than_the_one_that_us
     first_run = {e["test_id"]: e["status"] for e in history if e["run_id"] == 1}
     assert first_run["tests.test_exports::test_export_is_accepted"] == "passed"
     assert first_run["tests.test_payouts::test_payout_is_accepted"] == "failed"
+
+
+def test_limit_off_by_one_case_rejects_the_transfer_that_is_exactly_at_the_limit(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "product-bug-limit-off-by-one", tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert failed.test_id == "tests.test_limits::test_transfer_up_to_the_limit_is_allowed"
+    assert "LimitExceeded" in (failed.attempts[0].message or "")
+    assert "1000.00 is above the limit" in (failed.attempts[0].message or "")
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "product_bug"
+
+
+def test_fee_rate_typo_case_breaks_tests_in_three_files_with_different_messages(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "product-bug-fee-rate-typo", tmp_path)
+
+    failed = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert {r.test_id.split("::")[0] for r in failed} == {
+        "tests.test_fees",
+        "tests.test_receipt",
+        "tests.test_transfers",
+    }
+    assert len({r.attempts[0].message for r in failed}) > 3
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "product_bug"
+
+
+def test_funds_check_case_fails_where_the_test_expects_an_exception_that_never_comes(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "product-bug-funds-check-ignores-fee", tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert (
+        failed.test_id == "tests.test_transfers::test_transfer_needs_enough_money_for_the_fee_too"
+    )
+    assert "DID NOT RAISE" in (failed.attempts[0].message or "")
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "product_bug"
+
+
+def test_wrong_exception_case_fails_with_an_exception_raised_inside_the_wallet(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "test-bug-wrong-exception-expected", tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert failed.test_id == "tests.test_limits::test_transfer_above_the_limit_is_rejected"
+    assert "LimitExceeded" in (failed.attempts[0].message or "")
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "test_bug"
+
+
+def test_short_fixture_case_errors_in_setup_of_every_receipt_test(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "test-bug-receipt-fixture-short-of-funds", tmp_path)
+
+    results = parse_junit(case / "junit.xml")
+    broken = [r for r in results if r.status in (Status.FAILED, Status.ERROR)]
+    assert {r.test_id for r in broken} == {
+        "tests.test_receipt::test_receipt_shows_the_amount",
+        "tests.test_receipt::test_receipt_shows_the_fee",
+        "tests.test_receipt::test_receipt_shows_the_sender_balance_after_the_transfer",
+    }
+    assert {r.status for r in broken} == {Status.ERROR}
+    assert all("InsufficientFunds" in (r.attempts[0].message or "") for r in broken)
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "test_bug"
+
+
+def test_relative_path_case_fails_to_find_a_file_the_wallet_wrote_elsewhere(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "test-bug-statement-relative-path", tmp_path)
+
+    [failed] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.FAILED]
+    assert failed.test_id == "tests.test_statements::test_statement_lists_the_owner_and_balance"
+    assert "No such file or directory: 'statements/alice.csv'" in (failed.attempts[0].message or "")
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "test_bug"
+
+
+def test_amount_formatting_case_fails_two_tests_for_two_different_conventions(
+    tmp_path: Path,
+) -> None:
+    case = build_case(SCENARIOS / "unknown-amount-formatting", tmp_path)
+
+    results = parse_junit(case / "junit.xml")
+    failed = {r.test_id: r for r in results if r.status is Status.FAILED}
+    assert set(failed) == {
+        "tests.test_formatting::test_thousands_are_separated_by_a_space",
+        "tests.test_formatting::test_negative_amounts_are_wrapped_in_parentheses",
+    }
+    assert len({r.attempts[0].message for r in failed.values()}) == 2
+    assert {r.test_id: r.status for r in results}[
+        "tests.test_formatting::test_plain_amount_has_two_decimals"
+    ] is Status.PASSED
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "unknown"
+
+
+def test_tier_keyword_case_errors_in_the_fixture_of_a_new_test(tmp_path: Path) -> None:
+    case = build_case(SCENARIOS / "unknown-account-tier-keyword", tmp_path)
+
+    [broken] = [r for r in parse_junit(case / "junit.xml") if r.status is Status.ERROR]
+    assert broken.test_id == "tests.test_tiers::test_a_premium_account_has_the_premium_level"
+    assert "unexpected keyword argument 'tier'" in (broken.attempts[0].message or "")
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert label["category"] == "unknown"
+    assert label["history"] == "none"

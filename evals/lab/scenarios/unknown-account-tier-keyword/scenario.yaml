@@ -1,0 +1,12 @@
+category: unknown
+source: injected
+history: none
+scenario: new test passes a keyword the account does not have, no history
+notes: >-
+  The patch gives Account a level argument and adds a test whose fixture creates an account
+  with tier="premium". The call raises TypeError about an unexpected keyword argument, and
+  the traceback ends in the test file, so the error looks like a plain test mistake. But
+  the product could just as well have been meant to call the argument tier, and the diff
+  does not say which name was intended. The error happens in fixture setup, so it is
+  reported as an error and no assertion ran. Both the argument and the test are new and no
+  history exists for either, so there is no earlier run to compare with.

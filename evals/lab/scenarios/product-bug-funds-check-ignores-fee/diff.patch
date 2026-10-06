@@ -1,0 +1,12 @@
+diff --git a/wallet/transfers.py b/wallet/transfers.py
+--- a/wallet/transfers.py
++++ b/wallet/transfers.py
+@@ -20,7 +20,7 @@ def transfer(source: Account, target: Account, amount: Decimal) -> None:
+     if amount > TRANSFER_LIMIT:
+         raise LimitExceeded(f"{amount} is above the limit of {TRANSFER_LIMIT}")
+     total = amount + transfer_fee(amount)
+-    if source.balance < total:
++    if source.balance < amount:
+         raise InsufficientFunds(f"{source.owner} has {source.balance}, needs {total}")
+     source.balance -= total
+     target.balance += amount

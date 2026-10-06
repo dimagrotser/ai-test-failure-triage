@@ -73,18 +73,29 @@ uv run failtriage eval evals/
 
 The command classifies every Failure group of every case with the heuristics only, compares it with the case's label and prints accuracy per category and per source, a confusion matrix and the list of misses. It needs no API key. A case with several groups counts once per group, so `test-bug-fixture-leak` contributes four rows. A case that cannot be scored (no label, a missing or broken `junit.xml`, no failures at all) stops the run and is named in the message.
 
-Baseline on the current 29 cases, 35 groups. 27 groups have source `injected` and 8 have source `mutation`:
+Baseline on the current 38 cases, 48 groups. 40 groups have source `injected` and 8 have source `mutation`:
 
 | Category | Groups | Correct |
 |---|---|---|
 | environment | 9 | 8 |
 | flaky | 7 | 7 |
-| unknown | 3 | 2 |
-| product_bug | 10 | 6 |
-| test_bug | 6 | 2 |
+| unknown | 7 | 4 |
+| product_bug | 16 | 7 |
+| test_bug | 9 | 2 |
 
-Overall 25 of 35, or 71%. By source, the injected groups score 20 of 27 and the mutation groups 5 of 8. The `real` source has no cases yet, so the output shows it with a dash.
+Overall 28 of 48, or 58%. By source, the injected groups score 23 of 40 and the mutation groups 5 of 8. The `real` source has no cases yet, so the output shows it with a dash.
 
 The mutation misses repeat the known weak spots. `product-bug-mutant-accounts-account-deposit` and `product-bug-mutant-transfers-transfer` change `<=` to `<` in the amount check, so a test fails with `DID NOT RAISE` in the test file and the rules call it a test bug, like `product-bug-funds-check-ignores-fee`. `product-bug-mutant-accounts-account-init` turns the owner into `None`, which shows up as an assertion mismatch in a test and stays `unknown`.
 
-The weak spot is every assertion failure. A failing frame in test code together with an assertion mismatch is left undecided on purpose, because the test or the product could be wrong, so those groups come out as `unknown`. That accounts for `product-bug-fee-rounding`, `test-bug-expected-value` and three of the four groups of `test-bug-fixture-leak`. `environment-ledger-url-default` is the one new environment miss: the ValueError about an empty url has no network wording and the frame is in source code, so the rules call it a product bug. The last miss goes the opposite way: `unknown-amount-with-comma` is labeled `unknown` because nobody can say whether the input or the parser is at fault, but the frame sits in source code and the rules call it a product bug. The heuristics never see the diff or the history yet, which is where the LLM is expected to help.
+The weak spot is every assertion failure. A failing frame in test code together with an assertion mismatch is left undecided on purpose, because the test or the product could be wrong, so those groups come out as `unknown`. That accounts for `product-bug-fee-rounding`, `test-bug-expected-value` and three of the four groups of `test-bug-fixture-leak`. `product-bug-fee-rate-typo` is the same problem at a larger scale: one wrong constant produces four groups, and all four are assertion failures.
+
+The rules also go wrong where the frame is not the place of the mistake, and the last batch added several of these:
+
+- `product-bug-funds-check-ignores-fee` fails with `DID NOT RAISE` in the test file, so the rules call it a test bug. The broken check is in `wallet/transfers.py`.
+- `test-bug-wrong-exception-expected` and `test-bug-receipt-fixture-short-of-funds` go the other way. The exception is raised inside the app, so the rules call them product bugs, but the fault is in what the test expects or sets up.
+- `test-bug-statement-relative-path` reads as an environment problem because the error is a missing file.
+- `environment-ledger-url-default` has no network wording in the ValueError about an empty url and the frame is in source code, so the rules call it a product bug.
+
+Some `unknown` cases get a verdict they should not have. `unknown-amount-with-comma` raises from source code, so it comes out as a product bug. `unknown-confirmation-window-boundary` says "timed out" about the product's own 900 second rule, which the timeout pattern takes for a slow service. `unknown-account-tier-keyword` fails with a TypeError in the test file and is called a test bug, although the product could just as well have been meant to use the other name. `unknown-amount-formatting` and the two oldest unknown cases stay undecided, as they should.
+
+The heuristics never see the diff or the history yet, which is where the LLM is expected to help.

@@ -1,0 +1,11 @@
+category: unknown
+source: injected
+scenario: amount formatting with two conventions nobody wrote down
+notes: >-
+  The patch adds format_amount, which prints two decimals and nothing else, and three tests.
+  The plain amount passes. Two more tests expect a space as the thousands separator and
+  parentheses for negative amounts, and fail with different messages, so they make two
+  failure groups. Neither convention is stated anywhere in the repository or the diff, so
+  the function may be incomplete or the tests may expect a format the product never
+  promised. The failures are deterministic and the tests are new, so there is no history
+  to say which side is wrong.

@@ -1,0 +1,10 @@
+category: test_bug
+source: injected
+scenario: statement test reads a relative path instead of the one the wallet returns
+notes: >-
+  The test exports a statement and then opens statements/alice.csv relative to the working
+  directory, ignoring the path export_statement returns. The wallet writes into
+  WALLET_STATEMENTS_DIR and the directory is writable, so the export works and the file
+  exists, just not where the test looks. The error is a FileNotFoundError in the test file,
+  which can pass for a missing file in the environment, but nothing in the environment is
+  broken. Reverting the patch, which only touches the test, makes the run green.

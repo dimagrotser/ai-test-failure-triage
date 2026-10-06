@@ -1,0 +1,9 @@
+category: test_bug
+source: injected
+scenario: limit test expects the wrong exception
+notes: >-
+  The test sends 1000.01, above the limit, and expects InsufficientFunds. The wallet raises
+  LimitExceeded, as its message says, and the sender has 5000.00, so there is nothing
+  insufficient about the funds. The exception comes from wallet/transfers.py, which makes the
+  log look like a product failure, but the app behaves as designed and the other limit test
+  passes. Reverting the patch, which only touches the test, makes the run green.

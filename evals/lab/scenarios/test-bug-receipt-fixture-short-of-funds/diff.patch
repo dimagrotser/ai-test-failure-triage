@@ -1,0 +1,12 @@
+diff --git a/tests/test_receipt.py b/tests/test_receipt.py
+--- a/tests/test_receipt.py
++++ b/tests/test_receipt.py
+@@ -35,7 +35,7 @@ def text_by_testid(html: str, testid: str) -> str:
+ 
+ @pytest.fixture
+ def receipt() -> str:
+-    source = Account("alice", Decimal("200.00"))
++    source = Account("alice", Decimal("100.00"))
+     target = Account("bob")
+     transfer(source, target, Decimal("100.00"))
+     return render_receipt(source, target, Decimal("100.00"))
