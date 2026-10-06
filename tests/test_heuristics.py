@@ -296,6 +296,15 @@ LAB_VERDICTS = {
     "flaky-split-bill-leftover-cent": Category.FLAKY,
     "product-bug-deposit-float": Category.PRODUCT_BUG,
     "product-bug-fee-rounding": None,
+    "product-bug-mutant-fees-transfer-fee": Category.PRODUCT_BUG,
+    "product-bug-mutant-ledger-record-transfer": Category.PRODUCT_BUG,
+    "product-bug-mutant-receipt-render-receipt": Category.PRODUCT_BUG,
+    "product-bug-mutant-statements-export-statement": Category.PRODUCT_BUG,
+    # Known misses: DID NOT RAISE in the test file reads as a test bug, an assertion
+    # mismatch stays undecided.
+    "product-bug-mutant-transfers-transfer": Category.TEST_BUG,
+    "product-bug-mutant-accounts-account-deposit": Category.TEST_BUG,
+    "product-bug-mutant-accounts-account-init": None,
     "test-bug-expected-value": None,
     "test-bug-fixture-leak": None,
     "test-bug-stale-selector": Category.TEST_BUG,

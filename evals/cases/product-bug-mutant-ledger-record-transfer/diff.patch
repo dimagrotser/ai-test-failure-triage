@@ -1,0 +1,11 @@
+--- a/wallet/ledger.py
++++ b/wallet/ledger.py
+@@ -7,7 +7,7 @@
+ 
+ 
+ def record_transfer(source: Account, target: Account, amount: Decimal) -> str:
+-    url = os.environ["WALLET_LEDGER_URL"]
++    url = None
+     body = json.dumps({"from": source.owner, "to": target.owner, "amount": str(amount)})
+     request = urllib.request.Request(
+         url, data=body.encode(), headers={"Content-Type": "application/json"}, method="POST"

@@ -1,0 +1,5 @@
+category: product_bug
+source: mutation
+scenario: mutmut changes transfer fee in wallet/fees.py
+notes: mutmut mutant wallet.fees.x_transfer_fee__mutmut_1. The wallet tests kill it, so they fail on the
+  changed code and pass again once the patch is reverted.
