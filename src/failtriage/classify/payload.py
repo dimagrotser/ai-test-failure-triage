@@ -10,6 +10,11 @@ from failtriage.models import Category, FailureGroup, Signal, Signature, Status
 from failtriage.redaction import redact, redact_result
 
 GROUP_CAP_NOTE = "not sent to LLM: group cap"
+# A `#` line is ignored by anything that reads a diff, and tells the model the files below were
+# not picked because the stack trace names them.
+NO_PATH_MATCH_NOTE = (
+    "# No file of this diff is named in the stack trace, so this is the start of the whole diff."
+)
 
 
 class Limits(BaseModel):
@@ -114,10 +119,16 @@ def truncate_message(text: str, limit: int) -> str:
 
 
 def select_hunks(diff: str, trace: str, limit: int) -> str:
-    """Keep the diff of files whose path appears in the trace, at most `limit` lines."""
-    relevant = [f for f in _split_files(diff) if _mentions(trace, _path(f))]
-    kept = [line for file_diff in relevant for line in file_diff]
-    return truncate_lines("\n".join(kept), head=limit, tail=0)
+    """Keep the diff of files whose path appears in the trace, at most `limit` lines.
+
+    A test that drives the app from outside, like an end-to-end test, names only the test file
+    in its trace. When no changed file is named, the diff goes in as it comes, after a note.
+    """
+    files = _split_files(diff)
+    relevant = [f for f in files if _mentions(trace, _path(f))]
+    kept = [line for file_diff in relevant or files for line in file_diff]
+    cut = truncate_lines("\n".join(kept), head=limit, tail=0)
+    return cut if relevant or not files else f"{NO_PATH_MATCH_NOTE}\n{cut}"
 
 
 def _split_files(diff: str) -> list[list[str]]:

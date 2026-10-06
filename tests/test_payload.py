@@ -1,5 +1,6 @@
 from failtriage.classify.payload import (
     GROUP_CAP_NOTE,
+    NO_PATH_MATCH_NOTE,
     Limits,
     build_payloads,
     select_hunks,
@@ -79,10 +80,23 @@ def test_diff_keeps_only_files_named_in_the_trace() -> None:
     assert "src/wallet/ledger.py" in result
     assert "+balance = 0.0" in result
     assert "README.md" not in result
+    assert NO_PATH_MATCH_NOTE not in result
 
 
-def test_diff_without_a_relevant_file_is_empty() -> None:
-    assert select_hunks(DIFF, "nothing here", limit=150) == ""
+def test_diff_with_no_file_named_in_the_trace_is_kept_whole_after_a_note() -> None:
+    result = select_hunks(DIFF, "nothing here", limit=150)
+
+    assert result == NO_PATH_MATCH_NOTE + "\n" + DIFF.rstrip("\n")
+
+
+def test_diff_with_no_file_named_in_the_trace_is_cut_at_the_line_limit() -> None:
+    result = select_hunks(DIFF, "nothing here", limit=3).splitlines()
+
+    omitted = len(DIFF.splitlines()) - 3
+    assert result[0] == NO_PATH_MATCH_NOTE
+    assert result[1:4] == DIFF.splitlines()[:3]
+    assert result[4] == f"... {omitted} lines omitted ..."
+    assert len(result) == 5
 
 
 def test_empty_diff_is_empty() -> None:
@@ -244,10 +258,32 @@ def test_signals_in_the_payload_come_from_redacted_text() -> None:
     assert all("user@example.com" not in s.quote for s in payload.signals)
 
 
-def test_a_diff_without_relevant_files_is_left_out() -> None:
+def test_a_diff_the_trace_does_not_name_is_sent_with_a_note() -> None:
     group = failed_group("other", stack_trace="File other.py, line 1")
 
     [payload] = build_payloads([group], Limits(), diff=DIFF).sent
+
+    assert payload.diff is not None
+    assert payload.diff.startswith(NO_PATH_MATCH_NOTE)
+    assert "src/wallet/ledger.py" in payload.diff
+    assert "README.md" in payload.diff
+
+
+def test_a_diff_sent_without_a_path_match_is_redacted() -> None:
+    diff = DIFF.replace("+new\n", "+new\n+API_KEY = 'hunter2hunter2'\n")
+    group = failed_group("other", stack_trace="File other.py, line 1")
+
+    [payload] = build_payloads([group], Limits(), diff=diff).sent
+
+    assert payload.diff is not None
+    assert "API_KEY" in payload.diff
+    assert "hunter2" not in payload.diff
+
+
+def test_no_diff_stays_no_diff_when_the_trace_names_nothing() -> None:
+    group = failed_group("other", stack_trace="File other.py, line 1")
+
+    [payload] = build_payloads([group], Limits(), diff="").sent
 
     assert payload.diff is None
 
@@ -265,7 +301,7 @@ def test_a_path_only_matches_whole_path_components() -> None:
     diff = DIFF.replace("ledger.py", "ger.py")
     trace = 'File "/work/src/wallet/ledger.py", line 9'
 
-    assert select_hunks(diff, trace, limit=150) == ""
+    assert select_hunks(diff, trace, limit=150).startswith(NO_PATH_MATCH_NOTE)
 
 
 def test_trace_stdout_and_stderr_are_redacted() -> None:
