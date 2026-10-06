@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from failtriage.classify.provider import ProviderError, Usage
-from failtriage.evaluate import EvalError, evaluate, render_eval
+from failtriage.evaluate import EvalError, EvalReport, evaluate, render_eval
 from failtriage.models import Category, ClassifiedBy, Confidence
 from failtriage.prompts import Prompt
 
@@ -274,6 +274,55 @@ def test_the_run_says_how_many_groups_fell_back_to_the_heuristics(tmp_path: Path
     output = render_eval([evaluate(_one_case(tmp_path), FakeProvider(fail=True))])
 
     assert "Classified by heuristics instead of the LLM: 1" in output
+
+
+class FailsOnce(FakeProvider):
+    def complete(self, prompt: Prompt, payload: str) -> str:
+        self.fail = not self.payloads
+        return super().complete(prompt, payload)
+
+
+def test_a_failed_call_is_counted_with_its_reason(tmp_path: Path) -> None:
+    run = evaluate(_one_case(tmp_path), FakeProvider(fail=True))
+
+    assert run.fallbacks == {"down": 1}
+
+
+def test_a_healthy_run_has_no_fallbacks_and_no_warning(tmp_path: Path) -> None:
+    root = _one_case(tmp_path)
+    run = evaluate(root, FakeProvider())
+
+    assert run.fallbacks == {}
+    assert "WARNING" not in render_eval([evaluate(root), run])
+
+
+def test_the_report_starts_with_a_warning_that_names_the_model_and_the_reason(
+    tmp_path: Path,
+) -> None:
+    root = _one_case(tmp_path)
+
+    output = render_eval([evaluate(root), evaluate(root, FakeProvider("claude-haiku-4-5", True))])
+
+    assert output.startswith("WARNING: claude-haiku-4-5 made no successful call")
+    assert "1 x down" in output
+
+
+def test_a_run_where_only_some_calls_failed_lists_the_reasons_without_a_warning() -> None:
+    run = evaluate(DATASET, FailsOnce())
+
+    output = render_eval([run])
+
+    assert run.fallbacks == {"down": 1}
+    assert "1 x down" in output
+    assert "WARNING" not in output
+
+
+def test_a_result_file_from_before_the_reasons_still_loads() -> None:
+    old = Path(__file__).parent.parent / "evals" / "results" / "2026-10-06.json"
+
+    report = EvalReport.model_validate_json(old.read_text())
+
+    assert all(run.fallbacks == {} for run in report.runs)
 
 
 def test_the_diff_of_a_case_reaches_the_llm(tmp_path: Path) -> None:

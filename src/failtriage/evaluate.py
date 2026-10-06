@@ -63,6 +63,8 @@ class EvalRun(BaseModel):
     cases: int
     groups: list[ScoredGroup]
     cost: Cost = Cost()
+    # Why the LLM did not classify a group, by reason. Results from before this field load as empty.
+    fallbacks: dict[str, int] = {}
 
 
 class EvalReport(BaseModel):
@@ -79,7 +81,10 @@ def evaluate(evals_dir: Path, provider: Provider | None = None) -> EvalRun:
     case_dirs = sorted(p for p in (evals_dir / "cases").glob("*") if p.is_dir())
     if not case_dirs:
         raise EvalError(f"no cases found in {evals_dir / 'cases'}")
-    groups = [group for case_dir in case_dirs for group in _score_case(case_dir, provider)]
+    fallbacks: Counter[str] = Counter()
+    groups = [
+        group for case_dir in case_dirs for group in _score_case(case_dir, provider, fallbacks)
+    ]
     if provider is None:
         return EvalRun(cases=len(case_dirs), groups=groups)
     usage = provider.usage
@@ -90,10 +95,25 @@ def evaluate(evals_dir: Path, provider: Provider | None = None) -> EvalRun:
         output_tokens=usage.output_tokens,
         usd=cost_usd(provider.model, usage),
     )
-    return EvalRun(model=provider.model, cases=len(case_dirs), groups=groups, cost=cost)
+    return EvalRun(
+        model=provider.model,
+        cases=len(case_dirs),
+        groups=groups,
+        cost=cost,
+        fallbacks=dict(fallbacks),
+    )
 
 
-def _score_case(case_dir: Path, provider: Provider | None) -> list[ScoredGroup]:
+def made_no_successful_call(run: EvalRun) -> bool:
+    """A run of a model whose every group was classified by the heuristics scores like them."""
+    return run.model is not None and all(
+        g.classified_by is ClassifiedBy.HEURISTICS for g in run.groups
+    )
+
+
+def _score_case(
+    case_dir: Path, provider: Provider | None, fallbacks: Counter[str]
+) -> list[ScoredGroup]:
     label = _read_label(case_dir)
     try:
         results = [redact_result(r) for r in parse_junit(case_dir / "junit.xml")]
@@ -112,7 +132,7 @@ def _score_case(case_dir: Path, provider: Provider | None) -> list[ScoredGroup]:
             confidence=c.confidence,
             classified_by=c.classified_by,
         )
-        for c in _classify(case_dir, groups, history, provider)
+        for c in _classify(case_dir, groups, history, provider, fallbacks)
     ]
 
 
@@ -121,14 +141,15 @@ def _classify(
     groups: list[FailureGroup],
     history: list[HistoryEntry],
     provider: Provider | None,
+    fallbacks: Counter[str],
 ) -> list[Classification]:
     if provider is None:
         return [classify_with_heuristics(group, history) for group in groups]
     diff = _read_diff(case_dir)
     changed = _DIFF_TARGET.findall(diff) if diff else []
-    return classify_groups(
-        groups, provider, load_prompt(), Limits(), diff, changed, history
-    ).classifications
+    classified = classify_groups(groups, provider, load_prompt(), Limits(), diff, changed, history)
+    fallbacks.update(classified.failed.values())
+    return classified.classifications
 
 
 def _read_diff(case_dir: Path) -> str | None:
@@ -158,7 +179,13 @@ def _read_label(case_dir: Path) -> Label:
 
 
 def render_eval(runs: list[EvalRun]) -> str:
-    lines: list[str] = []
+    lines: list[str] = [
+        f"WARNING: {run.model} made no successful call, every group was classified by the "
+        "heuristics, so its scores repeat the baseline."
+        for run in runs
+        if made_no_successful_call(run)
+    ]
+    lines += [""] if lines else []
     for run in runs:
         lines += [*_render_run(run), ""]
     lines += _total_cost(runs)
@@ -201,7 +228,12 @@ def _fallbacks(run: EvalRun) -> list[str]:
         f"LLM: {cost.llm_calls} calls, {cost.input_tokens} input tokens, "
         f"{cost.output_tokens} output tokens, {price}",
         f"Classified by heuristics instead of the LLM: {fell_back}",
+        *(f"  {n} x {reason}" for reason, n in sorted(run.fallbacks.items(), key=_by_count)),
     ]
+
+
+def _by_count(item: tuple[str, int]) -> tuple[int, str]:
+    return (-item[1], item[0])
 
 
 def _total_cost(runs: list[EvalRun]) -> list[str]:
