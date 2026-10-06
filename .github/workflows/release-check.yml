@@ -1,0 +1,23 @@
+name: release-check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  quickstart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - id: failtriage
+        uses: dimagrotser/ai-test-failure-triage@v1
+        with:
+          junit: tests/fixtures/junit/mixed.xml
+          comment: "false"
+      - name: Check the fixture was grouped
+        env:
+          GROUPS_FOUND: ${{ steps.failtriage.outputs.groups }}
+        run: test "$GROUPS_FOUND" -gt 0
