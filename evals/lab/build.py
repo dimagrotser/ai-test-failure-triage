@@ -116,12 +116,13 @@ def redact_tree(root: ET.Element) -> None:
             element.text = redact(element.text)
         if element.tail:
             element.tail = redact(element.tail)
-        for key, attribute in element.attrib.items():
-            element.set(key, redact(attribute))
         name, value = element.get("name"), element.get("value")
         if element.tag == "property" and name and value:
             # A property is an env var: the name is what marks the value as a secret.
-            element.set("value", redact(f"{name}={value}")[len(name) + 1 :])
+            masked = redact(f"{name}={value}")
+            element.set("value", masked[len(name) + 1 :] if masked.startswith(f"{name}=") else "")
+        for key, attribute in element.attrib.items():
+            element.set(key, redact(attribute))
 
 
 def check_redacted(junit: Path) -> None:
@@ -133,15 +134,22 @@ def check_redacted(junit: Path) -> None:
         root = ET.parse(junit).getroot()
     except (OSError, ET.ParseError) as exc:
         raise LabError(f"{junit.parent.name}: cannot read junit.xml") from exc
+    # Tags and attribute names stay as they are, so a secret there cannot be masked.
+    names = [element.tag for element in root.iter()] + [k for e in root.iter() for k in e.attrib]
     before = ET.tostring(root)
     redact_tree(root)
-    if ET.tostring(root) != before:
+    if ET.tostring(root) != before or any(redact(name) != name for name in names):
         raise LabError(f"{junit.parent.name}: junit.xml still contains redactable text")
 
 
 def build_real_case(case_dir: Path, cases_dir: Path) -> Path:
     """Copy a hand-labeled real case into the dataset after checking it again."""
-    label = yaml.safe_load((case_dir / "label.yaml").read_text())
+    try:
+        label = yaml.safe_load((case_dir / "label.yaml").read_text())
+    except (OSError, yaml.YAMLError) as exc:
+        raise LabError(f"real case {case_dir.name} has no readable label.yaml") from exc
+    if not isinstance(label, dict):
+        raise LabError(f"real case {case_dir.name} has no category, fill label.yaml by hand")
     if label.get("category") not in {c.value for c in Category}:
         raise LabError(f"real case {case_dir.name} has no category, fill label.yaml by hand")
     for field in ("scenario", "notes"):

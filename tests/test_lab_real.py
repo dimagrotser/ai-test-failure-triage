@@ -98,11 +98,6 @@ def test_cli_refusal_exits_2_and_prints_only_our_message(tmp_path: Path) -> None
     assert "already exists" in result.output
 
 
-@pytest.fixture(autouse=True)
-def _no_scenarios(tmp_path: Path) -> None:
-    (tmp_path / "scenarios").mkdir()
-
-
 def _fill_label(case: Path, category: str = "test_bug") -> None:
     (case / "label.yaml").write_text(
         yaml.safe_dump(
@@ -111,6 +106,12 @@ def _fill_label(case: Path, category: str = "test_bug") -> None:
     )
 
 
+@pytest.fixture
+def _no_scenarios(tmp_path: Path) -> None:
+    (tmp_path / "scenarios").mkdir()
+
+
+@pytest.mark.usefixtures("_no_scenarios")
 def test_build_all_keeps_a_filled_real_case_next_to_the_scenarios(tmp_path: Path) -> None:
     real = tmp_path / "real"
     _fill_label(import_case(REPORT, "real-checkout-card", real))
@@ -122,6 +123,7 @@ def test_build_all_keeps_a_filled_real_case_next_to_the_scenarios(tmp_path: Path
     assert (group.source.value, group.expected.value) == ("real", "test_bug")
 
 
+@pytest.mark.usefixtures("_no_scenarios")
 def test_build_all_rejects_a_real_case_nobody_labeled(tmp_path: Path) -> None:
     real = tmp_path / "real"
     import_case(REPORT, "real-checkout-card", real)
@@ -135,6 +137,7 @@ def test_build_all_rejects_a_real_case_nobody_labeled(tmp_path: Path) -> None:
     assert (cases / "old.txt").read_text() == "kept"
 
 
+@pytest.mark.usefixtures("_no_scenarios")
 def test_build_all_rejects_a_real_case_with_a_secret_added_after_the_import(
     tmp_path: Path,
 ) -> None:
@@ -148,3 +151,75 @@ def test_build_all_rejects_a_real_case_with_a_secret_added_after_the_import(
         build_all(tmp_path / "scenarios", tmp_path / "cases", real)
 
     assert "a@b.io" not in str(exc.value)
+
+
+@pytest.mark.usefixtures("_no_scenarios")
+@pytest.mark.parametrize(
+    "label",
+    [
+        "",
+        "[unclosed",
+        "category: nonsense\nsource: real\nscenario: s\nnotes: n\n",
+        "category: test_bug\nsource: real\nscenario: ' '\nnotes: n\n",
+        "category: test_bug\nsource: real\nscenario: s\n",
+    ],
+    ids=["empty", "malformed", "bad-category", "blank-scenario", "no-notes"],
+)
+def test_build_all_rejects_a_real_case_with_an_unusable_label(tmp_path: Path, label: str) -> None:
+    case = import_case(REPORT, "real-checkout-card", tmp_path / "real")
+    (case / "label.yaml").write_text(label)
+
+    with pytest.raises(LabError, match="real-checkout-card"):
+        build_all(tmp_path / "scenarios", tmp_path / "cases", tmp_path / "real")
+
+
+@pytest.mark.usefixtures("_no_scenarios")
+def test_build_all_rejects_a_real_case_with_a_broken_junit(tmp_path: Path) -> None:
+    case = import_case(REPORT, "real-checkout-card", tmp_path / "real")
+    _fill_label(case)
+    (case / "junit.xml").write_text("<testsuites>")
+
+    with pytest.raises(LabError, match="cannot read junit.xml"):
+        build_all(tmp_path / "scenarios", tmp_path / "cases", tmp_path / "real")
+
+
+def test_secret_in_a_tag_or_attribute_name_is_refused_and_leaves_nothing(tmp_path: Path) -> None:
+    token = "ghp_a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8"
+    for report in (
+        f'<testsuites><testcase name="t" {token}="1"><failure message="x"/></testcase>'
+        "</testsuites>",
+        f'<testsuites><testcase name="t"><failure message="x"/><{token}/></testcase></testsuites>',
+    ):
+        source = tmp_path / "report.xml"
+        source.write_text(report)
+
+        with pytest.raises(LabError) as exc:
+            import_case(source, "real-leaky", tmp_path / "real")
+
+        assert token not in str(exc.value)
+        assert list((tmp_path / "real").iterdir()) == []
+
+
+def test_report_that_declares_entities_is_refused(tmp_path: Path) -> None:
+    source = tmp_path / "report.xml"
+    source.write_text(
+        '<!DOCTYPE r [<!ENTITY s "hunter2">]><testsuites><testcase name="t">'
+        '<failure message="&s;"/></testcase></testsuites>'
+    )
+
+    with pytest.raises(LabError, match="declares XML entities"):
+        import_case(source, "real-entity", tmp_path / "real")
+
+    assert not (tmp_path / "real").exists()
+
+
+def test_property_whose_name_is_redacted_loses_its_value(tmp_path: Path) -> None:
+    source = tmp_path / "report.xml"
+    source.write_text(
+        '<testsuites><properties><property name="jane.doe@example.com" value="hunter2"/>'
+        '</properties><testcase name="t"><failure message="x"/></testcase></testsuites>'
+    )
+
+    case = import_case(source, "real-prop", tmp_path / "real")
+
+    assert "hunter2" not in (case / "junit.xml").read_text()

@@ -34,8 +34,11 @@ def import_case(report: Path, case_id: str, real_dir: Path = REAL) -> Path:
     if case.exists():
         raise LabError(f"real case {case_id} already exists")
     try:
+        # An entity expands into text that no pattern can tell from a harmless word.
+        if "<!ENTITY" in report.read_text():
+            raise LabError(f"{report} declares XML entities, remove them first")
         tree = ET.parse(report)
-    except (OSError, ET.ParseError) as exc:
+    except (OSError, UnicodeDecodeError, ET.ParseError) as exc:
         raise ReportParseError(f"cannot read {report}: {type(exc).__name__}") from exc
     redact_tree(tree.getroot())
     real_dir.mkdir(parents=True, exist_ok=True)

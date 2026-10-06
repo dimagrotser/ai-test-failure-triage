@@ -73,11 +73,11 @@ Injected and mutated bugs only cover what I thought of or what `mutmut` tried. A
 uv run python -m evals.lab.real path/to/junit.xml real-checkout-card
 ```
 
-The command reads a JUnit XML report, redacts every text and attribute value in it and runs a second pass over the result. If that pass still changes anything, nothing is written. Only the redacted file is ever on disk, and the command prints the number of tests, the first message line of each Failure group and nothing else from the report. It refuses an existing case id and a report without failures.
+The command reads a JUnit XML report, redacts every text and attribute value in it and runs a second pass over the result. If that pass still changes anything, nothing is written. Only the redacted file is ever on disk, and the command prints the number of tests, the first message line of each Failure group and nothing else from the report. It refuses an existing case id, a report without failures, a report that declares XML entities and one with something secret-looking in a tag or attribute name, since those cannot be masked.
 
-The case goes to `evals/lab/real/<id>/` with a `junit.xml` and a `label.yaml` whose `category`, `scenario` and `notes` are empty. Read the redacted `junit.xml`, decide the category yourself and fill in the three fields. No LLM is involved, because a label that a model made up would only measure the model against itself. Redaction can miss things, so read the file for anything private before you commit it.
+The case goes to `evals/lab/real/<id>/` with a `junit.xml` and a `label.yaml` whose `category`, `scenario` and `notes` fields are empty. Read the redacted `junit.xml`, decide the category yourself and fill in all of them. No LLM is involved, because a label that a model made up would only measure the model against itself. Redaction can miss things, so read the file for anything private before you commit it.
 
-`make lab` copies the filled cases into `evals/cases/` next to the built ones and runs the redaction check on them again. A case with an empty or unknown category, a missing `scenario` or `notes`, or text that redaction would still change stops the build.
+`make lab` copies the filled cases into `evals/cases/` next to the built ones and runs the redaction check on them again. A case stops the build if its category is empty or unknown, if `scenario` or `notes` is blank, or if redaction would still change its text.
 
 A real case has no counterfactual, since the app is not here to revert ([ADR 0007](adr/0007-real-cases-labeled-by-hand.md)). Its label is my judgment, and the `real` row in the eval output keeps those groups apart from the verified ones. It has no `history.json` or `diff.patch` either, so only JUnit reports can be imported.
 
