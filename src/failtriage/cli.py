@@ -16,7 +16,14 @@ from failtriage.classify.anthropic_provider import AnthropicProvider
 from failtriage.classify.llm import GroupClassifications, answer_schema, classify_groups
 from failtriage.classify.payload import Limits
 from failtriage.classify.pricing import cost_usd
-from failtriage.evaluate import EvalError, EvalReport, EvalRun, evaluate, render_eval
+from failtriage.evaluate import (
+    EvalError,
+    EvalReport,
+    EvalRun,
+    evaluate,
+    made_no_successful_call,
+    render_eval,
+)
 from failtriage.github.client import GitHubClient, GitHubError
 from failtriage.github.history_artifacts import fetch_history
 from failtriage.github.pr_comment import comment_body, upsert_comment
@@ -227,7 +234,12 @@ def eval_(
         Path | None, typer.Option("--json", help="Write the scored runs to this file.")
     ] = None,
 ) -> None:
-    """Score the heuristics alone and, with ANTHROPIC_API_KEY, the heuristics plus the LLM."""
+    """Score the heuristics alone and, with ANTHROPIC_API_KEY, the heuristics plus the LLM.
+
+    Exits with 3 after the report when a model made no successful call, since its scores then
+    only repeat the heuristics.
+    """
+    silent: list[str] = []
     try:
         runs = _eval_runs(evals_dir, model or list(EVAL_MODELS))
         if json_path:
@@ -237,12 +249,16 @@ def eval_(
             json_path.parent.mkdir(parents=True, exist_ok=True)
             json_path.write_text(report.model_dump_json(indent=2))
         typer.echo(render_eval(runs), nl=False)
+        silent = [r.model for r in runs if r.model is not None and made_no_successful_call(r)]
     except EvalError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
     except Exception as exc:
         typer.echo(f"internal error: {type(exc).__name__}", err=True)
         raise typer.Exit(code=1) from None
+    if silent:
+        typer.echo(f"eval: {', '.join(silent)} made no successful call", err=True)
+        raise typer.Exit(code=3)
 
 
 def _eval_runs(evals_dir: Path, models: list[str]) -> list[EvalRun]:
