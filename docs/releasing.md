@@ -7,7 +7,7 @@ git checkout main && git pull
 gh run list --branch main --limit 4
 ```
 
-`ci` and `self-test` have to be green on the HEAD commit. Neither uses an API key, so a green run means the release works without one.
+`ci` and `self-test` have to be green on the commit you are about to tag, compare `git rev-parse HEAD` with the SHA in the run list. Neither uses an API key, so a green run means the release works without one.
 
 ```
 git tag -a v1.0.0 -m "v1.0.0" && git push origin v1.0.0
