@@ -1,5 +1,7 @@
+import datetime
 import io
 import json
+import shutil
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -12,6 +14,7 @@ from typer.testing import CliRunner
 
 from failtriage import cli
 from failtriage.cli import app
+from failtriage.evaluate import EvalReport
 from failtriage.github.client import GitHubClient
 from failtriage.models import Category, ClassifiedBy, SignalName
 from failtriage.report.json_output import AnalysisReport
@@ -255,6 +258,86 @@ def test_eval_prints_the_baseline_without_an_api_key(monkeypatch: pytest.MonkeyP
     assert result.exit_code == 0
     assert "Accuracy: 3/5 (60%)" in result.output
     assert "Confusion matrix" in result.output
+
+
+def test_eval_without_a_key_runs_the_heuristics_only_and_says_so(tmp_path: Path) -> None:
+    out = tmp_path / "result.json"
+
+    result = runner.invoke(app, ["eval", str(EVALS), "--json", str(out)])
+
+    assert result.exit_code == 0
+    assert "ANTHROPIC_API_KEY not set, scoring the heuristics only" in result.stderr
+    report = EvalReport.model_validate_json(out.read_text())
+    assert report.date == datetime.datetime.now(datetime.UTC).date().isoformat()
+    assert [run.model for run in report.runs] == [None]
+
+
+def test_eval_with_a_key_scores_sonnet_and_haiku_on_the_same_cases(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    requests: list[dict[str, Any]] = []
+    fake_anthropic(monkeypatch, requests)
+    out = tmp_path / "result.json"
+
+    result = runner.invoke(app, ["eval", str(EVALS), "--json", str(out)])
+
+    assert result.exit_code == 0
+    report = EvalReport.model_validate_json(out.read_text())
+    assert [run.model for run in report.runs] == [None, "claude-sonnet-5-5", "claude-haiku-4-5"]
+    assert {len(run.groups) for run in report.runs} == {5}
+    assert [(g.case_id, g.expected) for g in report.runs[1].groups] == [
+        (g.case_id, g.expected) for g in report.runs[0].groups
+    ]
+    assert [r["model"] for r in requests] == ["claude-sonnet-5-5"] * 5 + ["claude-haiku-4-5"] * 5
+    sonnet, haiku = report.runs[1].cost, report.runs[2].cost
+    assert (sonnet.llm_calls, sonnet.input_tokens, sonnet.output_tokens) == (5, 5000, 1000)
+    assert sonnet.usd == pytest.approx(0.02)
+    assert haiku.usd == pytest.approx(0.01)
+    assert "Total LLM cost: $0.0300" in result.output
+
+
+def test_eval_scores_only_the_models_that_are_asked_for(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake_anthropic(monkeypatch, [])
+    out = tmp_path / "result.json"
+
+    result = runner.invoke(
+        app, ["eval", str(EVALS), "--model", "claude-haiku-4-5", "--json", str(out)]
+    )
+
+    assert result.exit_code == 0
+    report = EvalReport.model_validate_json(out.read_text())
+    assert [run.model for run in report.runs] == [None, "claude-haiku-4-5"]
+
+
+def test_eval_redacts_a_case_before_it_reaches_the_api(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    case = tmp_path / "cases" / "environment-refused"
+    shutil.copytree(EVALS / "cases" / "environment-refused", case)
+    junit = case / "junit.xml"
+    junit.write_text(
+        junit.read_text().replace("wallet/ledger.py:12", "https://ci:hunter2pass@ledger.internal")
+    )
+    requests: list[dict[str, Any]] = []
+    fake_anthropic(monkeypatch, requests)
+
+    result = runner.invoke(app, ["eval", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert requests
+    assert "hunter2pass" not in json.dumps(requests)
+
+
+def test_eval_never_prints_the_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_anthropic(monkeypatch, [], status=401)
+
+    result = runner.invoke(app, ["eval", str(EVALS)])
+
+    assert result.exit_code == 0
+    assert KEY not in result.output + result.stderr
+    assert "Classified by heuristics instead of the LLM: 5" in result.output
 
 
 def test_eval_reports_a_dataset_that_cannot_be_scored(tmp_path: Path) -> None:

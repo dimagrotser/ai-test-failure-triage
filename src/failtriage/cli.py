@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import re
@@ -15,7 +16,7 @@ from failtriage.classify.anthropic_provider import AnthropicProvider
 from failtriage.classify.llm import GroupClassifications, answer_schema, classify_groups
 from failtriage.classify.payload import Limits
 from failtriage.classify.pricing import cost_usd
-from failtriage.evaluate import EvalError, evaluate, render_eval
+from failtriage.evaluate import EvalError, EvalReport, EvalRun, evaluate, render_eval
 from failtriage.github.client import GitHubClient, GitHubError
 from failtriage.github.history_artifacts import fetch_history
 from failtriage.github.pr_comment import comment_body, upsert_comment
@@ -33,6 +34,7 @@ from failtriage.report.json_output import AnalysisReport, Cost, DiffInfo, build_
 from failtriage.report.markdown import render_markdown
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
+EVAL_MODELS = (DEFAULT_MODEL, "claude-haiku-4-5")
 DEFAULT_HISTORY_RUNS = 10
 DEFAULT_COMMENT_KEY = "default"
 
@@ -217,16 +219,40 @@ def analyze(
 @app.command(name="eval")
 def eval_(
     evals_dir: Annotated[Path, typer.Argument(help="Directory with a cases/ folder of Lab cases.")],
+    model: Annotated[
+        list[str] | None,
+        typer.Option(help="LLM to score next to the heuristics, repeat for several."),
+    ] = None,
+    json_path: Annotated[
+        Path | None, typer.Option("--json", help="Write the scored runs to this file.")
+    ] = None,
 ) -> None:
-    """Score the heuristics-only classifier against the labeled Lab cases."""
+    """Score the heuristics alone and, with ANTHROPIC_API_KEY, the heuristics plus the LLM."""
     try:
-        typer.echo(render_eval(evaluate(evals_dir)), nl=False)
+        runs = _eval_runs(evals_dir, model or list(EVAL_MODELS))
+        if json_path:
+            report = EvalReport(
+                date=datetime.datetime.now(datetime.UTC).date().isoformat(), runs=runs
+            )
+            json_path.parent.mkdir(parents=True, exist_ok=True)
+            json_path.write_text(report.model_dump_json(indent=2))
+        typer.echo(render_eval(runs), nl=False)
     except EvalError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
     except Exception as exc:
         typer.echo(f"internal error: {type(exc).__name__}", err=True)
         raise typer.Exit(code=1) from None
+
+
+def _eval_runs(evals_dir: Path, models: list[str]) -> list[EvalRun]:
+    runs = [evaluate(evals_dir)]
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        typer.echo("ANTHROPIC_API_KEY not set, scoring the heuristics only", err=True)
+        return runs
+    for name in models:
+        runs.append(evaluate(evals_dir, AnthropicProvider(_client(), name, answer_schema())))
+    return runs
 
 
 def _client() -> anthropic.Anthropic:
