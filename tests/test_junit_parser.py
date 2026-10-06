@@ -125,3 +125,58 @@ def test_rerun_errors_keep_the_error_status() -> None:
 
     assert result.status is Status.ERROR
     assert [a.status for a in result.attempts] == [Status.ERROR, Status.ERROR]
+
+
+def test_a_rerun_that_pytest_rerunfailures_wrote_as_a_plain_testcase_is_a_failed_attempt() -> None:
+    results = {r.test_id: r for r in parse_junit(FIXTURES / "pytest_rerunfailures.xml")}
+
+    once = results["tests.test_once::test_fails_once"]
+    assert once.status is Status.PASSED_ON_RETRY
+    assert [a.status for a in once.attempts] == [Status.FAILED, Status.PASSED]
+    assert once.attempts[0].message is None
+    always = results["tests.test_once::test_always_fails"]
+    assert always.status is Status.FAILED
+    assert [a.status for a in always.attempts] == [Status.FAILED, Status.FAILED]
+    assert always.attempts[1].message == "AssertionError: never works\nassert False"
+    plain = results["tests.test_once::test_plain"]
+    assert [a.status for a in plain.attempts] == [Status.PASSED]
+
+
+def test_a_rerun_written_by_the_flaky_plugin_is_a_failed_attempt() -> None:
+    [result] = parse_junit(FIXTURES / "pytest_flaky_plugin.xml")
+
+    assert result.status is Status.PASSED_ON_RETRY
+    assert [a.status for a in result.attempts] == [Status.FAILED, Status.PASSED]
+
+
+def write_report(tmp_path: Path, suite_attributes: str, cases: list[str]) -> Path:
+    body = "".join(f'<testcase classname="app.Spec" name="{name}" />' for name in cases)
+    path = tmp_path / "report.xml"
+    path.write_text(f"<testsuites><testsuite {suite_attributes}>{body}</testsuite></testsuites>")
+    return path
+
+
+def test_repeated_testcases_that_the_suite_counts_are_not_retries(tmp_path: Path) -> None:
+    report = write_report(tmp_path, 'tests="2"', ["same title", "same title"])
+
+    [result] = parse_junit(report)
+
+    assert result.status is Status.PASSED
+    assert [a.status for a in result.attempts] == [Status.PASSED, Status.PASSED]
+
+
+def test_a_surplus_that_the_repeats_do_not_explain_is_left_alone(tmp_path: Path) -> None:
+    report = write_report(tmp_path, 'tests="1"', ["a", "a", "b", "c"])
+
+    results = {r.test_id: r for r in parse_junit(report)}
+
+    assert {r.status for r in results.values()} == {Status.PASSED}
+    assert [a.status for a in results["app.Spec::a"].attempts] == [Status.PASSED, Status.PASSED]
+
+
+def test_a_suite_without_a_test_count_is_left_alone(tmp_path: Path) -> None:
+    report = write_report(tmp_path, 'name="x"', ["a", "a"])
+
+    [result] = parse_junit(report)
+
+    assert result.status is Status.PASSED

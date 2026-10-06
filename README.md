@@ -177,6 +177,8 @@ Fork pull requests get no comment and no LLM, because GitHub gives them a read-o
 
 The LLM sees the diff of the pull request files that the stack trace names. When none is named, as in an end-to-end test that only names its own file, it gets the first 150 lines of the whole diff instead. A large pull request can push the relevant file out of those lines, and a diff that has nothing to do with the failure costs tokens and can mislead, as with `environment-ledger-on-every-transfer` in [docs/lab.md](docs/lab.md).
 
+Retries show up in a JUnit report only when the framework writes them down. failtriage reads Surefire's `flakyFailure` and `rerunFailure`, repeated testcases that carry the failure, and the output of `pytest-rerunfailures` and `flaky`, which write a failed attempt as a testcase with no outcome. For those two the failure text is gone, so the flaky group has evidence that the test passed on attempt 2 and nothing else. `pytest-retry` leaves the failed attempt out of the report, so a test it retried looks like a plain pass and is never called flaky from that run.
+
 History has gaps. A repository needs a few runs on main before history signals appear, artifacts expire after the retention period, and fork runs cannot read them. Until then the report says `History: none` and nothing is called flaky from history, so a truly intermittent failure with no retry can come out as `unknown`.
 
 The accuracy numbers are a rough guide. The dataset is small and written by me, it has one real failure, and Sonnet scores 73% on it.

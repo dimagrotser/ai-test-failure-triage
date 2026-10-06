@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="3" time="0.013" timestamp="2026-10-06T15:00:00+00:00" hostname="runner"><testcase classname="tests.test_once" name="test_plain" time="0.000" /><testcase classname="tests.test_once" name="test_fails_once" time="0.000" /><testcase classname="tests.test_once" name="test_fails_once" time="0.000" /><testcase classname="tests.test_once" name="test_always_fails" time="0.000" /><testcase classname="tests.test_once" name="test_always_fails" time="0.000"><failure message="AssertionError: never works&#10;assert False">def test_always_fails():
+&gt;       assert False, "never works"
+E       AssertionError: never works
+E       assert False
+
+tests/test_once.py:17: AssertionError</failure></testcase></testsuite></testsuites>

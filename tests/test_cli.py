@@ -16,7 +16,7 @@ from failtriage import cli
 from failtriage.cli import app
 from failtriage.evaluate import EvalReport
 from failtriage.github.client import GitHubClient
-from failtriage.models import Category, ClassifiedBy, SignalName
+from failtriage.models import Category, ClassifiedBy, Confidence, SignalName
 from failtriage.report.json_output import AnalysisReport
 
 runner = CliRunner()
@@ -90,6 +90,16 @@ def test_analyze_lists_passed_on_retry_with_last_failure_and_counts_it() -> None
     assert "Expected: 3 but was: 1" in result.output
     assert "shouldListOrders" not in result.output
     assert "1 failed, 1 passed on retry, 3 tests total" in result.output
+
+
+def test_a_retry_that_pytest_rerunfailures_hid_in_a_plain_testcase_makes_a_flaky_group() -> None:
+    report = analyze_json(FIXTURES / "pytest_rerunfailures.xml")
+
+    by_test = {g.tests[0].test_id: g.classification for g in report.groups}
+    flaky = by_test["tests.test_once::test_fails_once"]
+    assert (flaky.category, flaky.confidence) == (Category.FLAKY, Confidence.HIGH)
+    assert "failed, then passed on attempt 2" in flaky.evidence[0]
+    assert by_test["tests.test_once::test_always_fails"].category is not Category.FLAKY
 
 
 def test_analyze_prints_redacted_text_only() -> None:
