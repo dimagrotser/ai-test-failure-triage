@@ -79,7 +79,7 @@ The case goes to `evals/lab/real/<id>/` with a `junit.xml` and a `label.yaml` wh
 
 `make lab` copies the filled cases into `evals/cases/` next to the built ones and runs the redaction check on them again. A case stops the build if its category is empty or unknown, if `scenario` or `notes` is blank, or if redaction would still change its text.
 
-A real case has no counterfactual, since the app is not here to revert ([ADR 0007](adr/0007-real-cases-labeled-by-hand.md)). Its label is my judgment, and the `real` row in the eval output keeps those groups apart from the verified ones. It has no `history.json` or `diff.patch` either, so only JUnit reports can be imported.
+A real case has no counterfactual, since the app is not here to revert ([ADR 0007](adr/0007-real-cases-labeled-by-hand.md)). Its label is my judgment, and the `real` row in the eval output keeps those groups apart from the verified ones. It has no `history.json`, and the importer only reads JUnit reports. A `diff.patch` can be added by hand next to `label.yaml`, in the redacted form, since the LLM gets the diff in the eval. `make lab` copies it after checking that redaction would not change it.
 
 ## Running the evals
 
@@ -144,4 +144,25 @@ Compared group by group, Sonnet got 5 right that the heuristics missed and lost 
 
 The run cost $0.35: 48 calls, 108,156 input tokens and 13,295 output tokens, about $0.007 and 2,250 input tokens per group. One run is one sample, and I did not repeat it, so I cannot say how much of the difference between 29 and 28 is noise. I read it as no clear gain overall.
 
-Two cautions apply to any number in this section. The dataset is small, 48 groups, so one case moves a category by several points. And `real` has one case, added after the model run, so almost nothing here says how the classifier does on failures I did not write myself ([adoption.md](adoption.md)). The weak categories are `product_bug` (44%, with or without the LLM) and `test_bug` (22% for the heuristics, 56% with Sonnet), both because an assertion failure is left as `unknown` on purpose. The heuristics answered `high` for 7 groups and were right 7 times, but flaky is the only category that can reach `high`, so that says little about the other four.
+Two cautions apply to any number in this section. The dataset is small, 48 groups, so one case moves a category by several points. And `real` has one case, so almost nothing here says how the classifier does on failures I did not write myself ([adoption.md](adoption.md)). The weak categories are `product_bug` (44%, with or without the LLM) and `test_bug` (22% for the heuristics, 56% with Sonnet), both because an assertion failure is left as `unknown` on purpose. The heuristics answered `high` for 7 groups and were right 7 times, but flaky is the only category that can reach `high`, so that says little about the other four.
+
+### The diff when the trace names no changed file
+
+The run above showed where the LLM had little to go on. The payload carries only the diff of files that the stack trace names, and the trace of an assertion in a test names the test file, not the code that changed. 13 of the 38 cases with a diff had no file in common with their trace, and the real failure from [adoption.md](adoption.md) was one of them. Since the change for issue 75, a group whose trace names no changed file gets the start of the whole diff instead, at most 150 lines, behind a first line that says so. A diff that matches by path is sent as before.
+
+I ran the `eval` workflow twice on the same 39 cases and 49 groups, once before the change and once after. The cases now include `real-preview-item-title` with its diff. Both files are in `evals/results/`: `2026-10-06-before-diff-fallback.json` and `2026-10-06-after-diff-fallback.json`. The heuristics do not read the diff and score 28 of 49 in both runs. Sonnet:
+
+| Category | Groups | Sonnet before | Sonnet after |
+|---|---|---|---|
+| product_bug | 17 | 7 | 13 |
+| test_bug | 9 | 5 | 9 |
+| environment | 9 | 7 | 6 |
+| flaky | 7 | 4 | 4 |
+| unknown | 7 | 4 | 4 |
+| all | 49 | 27 (55%) | 36 (73%) |
+
+By source, the injected groups went from 23 to 31 of 40, the mutation groups stayed at 4 of 8, and the `real` group went from `unknown` with low confidence to `product_bug` with high confidence. Answers of `unknown` fell from 18 to 8. Its `high` answers were right 12 times out of 15 before and 19 out of 22 after.
+
+Ten groups turned from wrong to right and one turned from right to wrong. The gains are `product-bug-fee-rate-typo` (3 groups), `product-bug-fee-rounding`, `product-bug-funds-check-ignores-fee`, `test-bug-fixture-leak` (4 groups) and the real group. The loss is `environment-ledger-on-every-transfer`: the diff adds the ledger call to every transfer, and the model now blames that change instead of the unreachable ledger.
+
+Read these numbers with care. Each configuration ran once. That one group went the other way in the first run on this page, was right in the run before the change and wrong in the run after, so it flips between runs on its own. Seven of the ten gained groups belong to two cases, and no mutation group changed its result, although seven mutation cases had no path match. The dataset has 39 cases, so I would trust the direction more than the size. The change cost about 4,300 input tokens over 49 groups: $0.358 before and $0.370 after, so $0.0076 per group. `claude-haiku-4-5` again made no successful call in either run.

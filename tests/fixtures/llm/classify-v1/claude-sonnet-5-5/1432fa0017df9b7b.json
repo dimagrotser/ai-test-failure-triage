@@ -1,0 +1,10 @@
+{
+  "prompt_version": "classify-v1",
+  "model": "claude-sonnet-5-5",
+  "payload": "{\n  \"signature\": {\n    \"exception_type\": \"TimeoutError\",\n    \"message\": \"payment gateway did not respond in <NUM>s\",\n    \"frame\": \"tests/test_checkout.py:\"\n  },\n  \"tests\": [\n    \"tests/test_checkout.py::test_pay_with_card\"\n  ],\n  \"message\": \"TimeoutError: payment gateway did not respond in 5s\",\n  \"stack_trace\": \"tests/test_checkout.py:33: TimeoutError\",\n  \"stdout\": null,\n  \"stderr\": null,\n  \"signals\": [\n    {\n      \"name\": \"passed_on_retry\",\n      \"quote\": \"tests/test_checkout.py::test_pay_with_card: failed, then passed on attempt 2\"\n    },\n    {\n      \"name\": \"timeout\",\n      \"quote\": \"TimeoutError: payment gateway did not respond in 5s\"\n    },\n    {\n      \"name\": \"frame_in_test_code\",\n      \"quote\": \"tests/test_checkout.py:33: TimeoutError\"\n    }\n  ],\n  \"heuristic_verdict\": \"flaky\",\n  \"diff\": \"# No file of this diff is named in the stack trace, so this is the start of the whole diff.\\ndiff --git a/shop/cart.py b/shop/cart.py\\n--- a/shop/cart.py\\n+++ b/shop/cart.py\\n@@ -19,3 +19,3 @@\\n-    return self.subtotal - self.discount\\n+    return self.subtotal\"\n}",
+  "response": "{\"category\":\"flaky\",\"confidence\":\"high\",\"summary\":\"The payment gateway call timed out after 5s, but the test passed on the second attempt, so the failure is nondeterministic. The diff touches cart totals in shop/cart.py, not the gateway call or the timeout.\",\"evidence\":[\"tests/test_checkout.py::test_pay_with_card: failed, then passed on attempt 2\",\"TimeoutError: payment gateway did not respond in 5s\"],\"next_step\":\"Check whether the test calls a real or slow payment gateway; mock it or raise the timeout. Separately, review the shop/cart.py change that drops the discount from the total.\",\"disagreement_reason\":null}",
+  "usage": {
+    "input_tokens": 1774,
+    "output_tokens": 223
+  }
+}

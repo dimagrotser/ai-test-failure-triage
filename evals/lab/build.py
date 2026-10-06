@@ -156,10 +156,16 @@ def build_real_case(case_dir: Path, cases_dir: Path) -> Path:
         if not isinstance(label.get(field), str) or not label[field].strip():
             raise LabError(f"real case {case_dir.name} has no {field}, fill label.yaml by hand")
     check_redacted(case_dir / "junit.xml")
+    names = ["junit.xml", "label.yaml"]
+    diff = case_dir / "diff.patch"
+    if diff.exists():
+        if redact(diff.read_text()) != diff.read_text():
+            raise LabError(f"{case_dir.name}: diff.patch still contains redactable text")
+        names.append("diff.patch")
     case = cases_dir / case_dir.name
     shutil.rmtree(case, ignore_errors=True)
     case.mkdir(parents=True)
-    for name in ("junit.xml", "label.yaml"):
+    for name in names:
         shutil.copy(case_dir / name, case / name)
     return case
 

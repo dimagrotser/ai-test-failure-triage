@@ -124,6 +124,32 @@ def test_build_all_keeps_a_filled_real_case_next_to_the_scenarios(tmp_path: Path
 
 
 @pytest.mark.usefixtures("_no_scenarios")
+def test_build_all_copies_the_diff_of_a_real_case(tmp_path: Path) -> None:
+    real = tmp_path / "real"
+    case = import_case(REPORT, "real-checkout-card", real)
+    _fill_label(case)
+    diff = "diff --git a/app.py b/app.py\n--- a/app.py\n+++ b/app.py\n@@ -1 +1 @@\n-a\n+b\n"
+    (case / "diff.patch").write_text(diff)
+
+    build_all(tmp_path / "scenarios", tmp_path / "cases", real)
+
+    assert (tmp_path / "cases" / "real-checkout-card" / "diff.patch").read_text() == diff
+
+
+@pytest.mark.usefixtures("_no_scenarios")
+def test_build_all_rejects_a_real_case_diff_with_a_secret(tmp_path: Path) -> None:
+    real = tmp_path / "real"
+    case = import_case(REPORT, "real-checkout-card", real)
+    _fill_label(case)
+    (case / "diff.patch").write_text("+GITHUB_TOKEN=ghp_a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8\n")
+
+    with pytest.raises(LabError, match="diff.patch still contains redactable text") as exc:
+        build_all(tmp_path / "scenarios", tmp_path / "cases", real)
+
+    assert "ghp_" not in str(exc.value)
+
+
+@pytest.mark.usefixtures("_no_scenarios")
 def test_build_all_rejects_a_real_case_nobody_labeled(tmp_path: Path) -> None:
     real = tmp_path / "real"
     import_case(REPORT, "real-checkout-card", real)

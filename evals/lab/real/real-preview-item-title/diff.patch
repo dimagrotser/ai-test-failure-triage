@@ -1,0 +1,31 @@
+diff --git a/.github/workflows/pr-preview.yml b/.github/workflows/pr-preview.yml
+index e3d9995..a8a5c88 100644
+--- a/.github/workflows/pr-preview.yml
++++ b/.github/workflows/pr-preview.yml
+@@ -87,6 +87,13 @@ jobs:
+           comment: ${{ env.SAME_REPO }}
+           anthropic-api-key: <SECRET> secrets.ANTHROPIC_API_KEY }}
+ 
++      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
++        if: always()
++        with:
++          name: junit-pr-${{ env.PR }}
++          path: e2e/results.xml
++          retention-days: 7
++
+       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+         if: always()
+         with:
+diff --git a/apps/web/public/app.js b/apps/web/public/app.js
+index a62e46a..f812afe 100644
+--- a/apps/web/public/app.js
++++ b/apps/web/public/app.js
+@@ -19,7 +19,7 @@ async function render() {
+     ...data.items.map((item) => {
+       const li = document.createElement('li');
+       li.dataset.status = item.status;
+-      li.textContent = item.name;
++      li.textContent = item.title;
+       return li;
+     }),
+   );
