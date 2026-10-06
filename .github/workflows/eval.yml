@@ -1,0 +1,31 @@
+name: eval
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.11.6"
+      - run: uv sync --locked
+      - name: Score the heuristics and the LLM on the Lab cases
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "The ANTHROPIC_API_KEY secret is not set, there is nothing to compare" >&2
+            exit 1
+          fi
+          uv run failtriage eval evals/ --json "evals/results/$(date -u +%F).json" > eval.txt
+          { echo '```'; cat eval.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: eval-results
+          path: evals/results/
