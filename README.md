@@ -136,26 +136,26 @@ uv run failtriage analyze --allure tests/fixtures/allure/mixed --markdown
 
 ## Accuracy
 
-I scored the classifier on 38 failing runs of a small wallet app, 48 failure groups in all. Every label was verified by a counterfactual run, for example by reverting the patch that broke the app ([docs/lab.md](docs/lab.md) explains how). The numbers below come from one run of the `eval` workflow on 2026-10-06, committed as `evals/results/2026-10-06.json`.
+I scored the classifier on 39 failing runs, 49 failure groups in all. 48 groups come from a small wallet app, and every label there was verified by a counterfactual run, for example by reverting the patch that broke the app ([docs/lab.md](docs/lab.md) explains how). The 49th is a failure from another repository ([docs/adoption.md](docs/adoption.md)), labeled by me. The numbers below come from one run of the `eval` workflow on 2026-10-06, committed as `evals/results/2026-10-06-after-diff-fallback.json`.
 
 | Category | Groups | Heuristics | Heuristics and Sonnet |
 |---|---|---|---|
-| product_bug | 16 | 7 | 7 |
-| test_bug | 9 | 2 | 5 |
-| environment | 9 | 8 | 7 |
-| flaky | 7 | 7 | 6 |
+| product_bug | 17 | 7 | 13 |
+| test_bug | 9 | 2 | 9 |
+| environment | 9 | 8 | 6 |
+| flaky | 7 | 7 | 4 |
 | unknown | 7 | 4 | 4 |
-| all | 48 | 28 (58%) | 29 (60%) |
+| all | 49 | 28 (57%) | 36 (73%) |
 
-By source, the 40 injected groups score 23 with the heuristics and 25 with Sonnet. The 8 mutation groups score 5 and 4. The one `real` group, a failure from another repository ([docs/adoption.md](docs/adoption.md)), is not in these numbers, because the model run happened before I imported it. The heuristics call it a test bug. One group says nothing about accuracy.
+By source, the 40 injected groups score 23 with the heuristics and 31 with Sonnet. The 8 mutation groups score 5 and 4. The one `real` group scores 0 and 1. One group says nothing about accuracy.
 
-Sonnet barely beats the rules: it gets 5 groups right that the rules missed and loses 4 they had right. Most of its gains are `test_bug`. `product_bug` is the weak spot in both columns, at 44%: when a test fails on an assertion, nobody can tell from the log alone whether the test or the product is wrong, so the tool says `unknown` on purpose. Of its `high` confidence answers Sonnet got 14 of 16 right.
+Sonnet beats the rules, but the margin comes from the diff. An earlier run of the same dataset, before the LLM got the whole diff for groups whose trace names no changed file, gave Sonnet 27 of 49, one fewer than the rules. The details are in [docs/lab.md](docs/lab.md). The rules do well on `environment` and `flaky`, where Sonnet is worse: it lost 3 of the 7 flaky groups, which have passed-on-retry evidence the rules read correctly. `product_bug` stays the weak spot for the rules at 41%: when a test fails on an assertion, nobody can tell from the log alone whether the test or the product is wrong, so they say `unknown` on purpose. Of its `high` confidence answers Sonnet got 19 of 22 right.
 
-I could not compare models. `claude-haiku-4-5` made no successful call in that run, every group fell back to the heuristics, and I have not found out why. With 48 groups, one case moves a category by several points, and I ran it once.
+I could not compare models. `claude-haiku-4-5` made no successful call in that run, every group fell back to the heuristics, and I have not found out why. With 49 groups, one case moves a category by several points, and I ran each configuration once.
 
 ## Cost
 
-The same run cost $0.35 for Sonnet: 48 calls, 108,156 input tokens and 13,295 output tokens, about $0.007 per group. A run sends at most 10 groups to the LLM, so a pull request costs up to about $0.07 and usually less, because groups with the same cause are classified once. Every run logs its tokens and cost. Without `anthropic-api-key` it costs nothing and uses the rules only.
+The same run cost $0.37 for Sonnet: 49 calls, 115,016 input tokens and 14,027 output tokens, about $0.0076 per group. A run sends at most 10 groups to the LLM, so a pull request costs up to about $0.07 and usually less, because groups with the same cause are classified once. Every run logs its tokens and cost. Without `anthropic-api-key` it costs nothing and uses the rules only.
 
 ## Design decisions
 
@@ -175,8 +175,8 @@ Only JUnit XML, Playwright JSON and Allure result files are read, and Allure ste
 
 Fork pull requests get no comment and no LLM, because GitHub gives them a read-only token and no secrets. The report goes to the job summary and the verdicts come from the rules.
 
-The LLM sees only the part of the pull request diff that touches files named in the stack trace. An end-to-end test names the test file, so for those failures the changed application code is not sent and the answer is often `unknown`. [docs/adoption.md](docs/adoption.md) shows an example.
+The LLM sees the diff of the pull request files that the stack trace names. When none is named, as in an end-to-end test that only names its own file, it gets the first 150 lines of the whole diff instead. A large pull request can push the relevant file out of those lines, and a diff that has nothing to do with the failure costs tokens and can mislead, as with `environment-ledger-on-every-transfer` in [docs/lab.md](docs/lab.md).
 
 History has gaps. A repository needs a few runs on main before history signals appear, artifacts expire after the retention period, and fork runs cannot read them. Until then the report says `History: none` and nothing is called flaky from history, so a truly intermittent failure with no retry can come out as `unknown`.
 
-The accuracy numbers are a rough guide. The dataset is small and written by me, it has one real failure, and Sonnet scores 60% on it.
+The accuracy numbers are a rough guide. The dataset is small and written by me, it has one real failure, and Sonnet scores 73% on it.
