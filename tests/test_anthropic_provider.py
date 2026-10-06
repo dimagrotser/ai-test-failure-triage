@@ -55,6 +55,23 @@ def test_the_payload_is_sent_under_the_prompt_with_a_json_schema() -> None:
     assert sent["output_config"]["format"] == {"type": "json_schema", "schema": SCHEMA}
 
 
+def test_low_effort_is_asked_for_on_a_model_that_takes_it() -> None:
+    requests: list[dict[str, Any]] = []
+
+    AnthropicProvider(client(requests), MODEL, SCHEMA).complete(PROMPT, "payload")
+
+    assert requests[0]["output_config"]["effort"] == "low"
+
+
+@pytest.mark.parametrize("haiku", ["claude-haiku-4-5", "claude-haiku-4-5-20251001"])
+def test_haiku_is_not_sent_the_effort_parameter_it_rejects(haiku: str) -> None:
+    requests: list[dict[str, Any]] = []
+
+    AnthropicProvider(client(requests), haiku, SCHEMA).complete(PROMPT, "payload")
+
+    assert requests[0]["output_config"] == {"format": {"type": "json_schema", "schema": SCHEMA}}
+
+
 def test_the_answer_text_is_returned() -> None:
     provider = AnthropicProvider(client([]), MODEL, SCHEMA)
 

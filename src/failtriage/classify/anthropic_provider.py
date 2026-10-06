@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any
 
 import anthropic
+from anthropic.types import OutputConfigParam
 
 from failtriage.classify.provider import ProviderError, Usage, write_recording
 from failtriage.prompts import Prompt
@@ -26,6 +27,14 @@ class AnthropicProvider:
         self._record_dir = record_dir
         self.usage = Usage()
 
+    def _output_config(self) -> OutputConfigParam:
+        config: OutputConfigParam = {"format": {"type": "json_schema", "schema": self._schema}}
+        # Without it the default effort is high, which costs more than this answer needs. Haiku
+        # rejects the parameter with a 400.
+        if not self.model.startswith("claude-haiku"):
+            config["effort"] = "low"
+        return config
+
     def complete(self, prompt: Prompt, payload: str) -> str:
         try:
             response = self._client.messages.create(
@@ -33,10 +42,7 @@ class AnthropicProvider:
                 max_tokens=MAX_ANSWER_TOKENS,
                 system=prompt.text,
                 messages=[{"role": "user", "content": payload}],
-                output_config={
-                    "effort": "low",
-                    "format": {"type": "json_schema", "schema": self._schema},
-                },
+                output_config=self._output_config(),
             )
         except anthropic.APIError as exc:
             # Only the type and the status: the SDK message can quote the request.
