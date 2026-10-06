@@ -28,7 +28,7 @@ Two runs on the same machine give byte-identical files. Timings, temp paths, por
 5. Add a test to `tests/test_lab_build.py` that names the test which must fail and a phrase from its message.
 6. Commit the scenario and the rebuilt `evals/cases/` together.
 
-`scenario.yaml` needs four fields. `category` is one of `product_bug`, `test_bug`, `flaky`, `environment`, `unknown`. `source` is `injected` for everything written by hand and `mutation` for the cases `make lab-mutants` generates. `scenario` is one line saying what is wrong. `notes` explains why the label is right, and for `unknown` why nobody can tell. Some categories take one more field, listed below.
+`scenario.yaml` needs four fields. `category` is one of `product_bug`, `test_bug`, `flaky`, `environment`, `unknown`. `source` is `injected` for everything written by hand and `mutation` for the cases `make lab-mutants` generates. `real` is not a scenario source, see below. `scenario` is one line saying what is wrong. `notes` explains why the label is right, and for `unknown` why nobody can tell. Some categories take one more field, listed below.
 
 ## What the build checks
 
@@ -64,6 +64,22 @@ This is optional and `make lab` does not need `mutmut`. The command runs `mutmut
 Only killed mutants are used. A surviving mutant is either equivalent (it changes nothing a test could see) or a gap in the wallet tests, and neither gives a failing run to label, so those are skipped. Timeouts and suspicious results are skipped too. Each candidate also has to pass the normal check: applied as a plain patch it fails the tests, and reverting it turns them green.
 
 From each function the generator takes the killed mutant with the lowest number. The wallet has 7 mutated functions, so this gives 7 cases, far fewer than the mutants `mutmut` kills. The cases are a sample, and they follow whatever mutations `mutmut` happens to try: `quantize(None)` in the fee calculation is a real crash but not a bug anyone would write.
+
+## Real cases
+
+Injected and mutated bugs only cover what I thought of or what `mutmut` tried. A failing report from another project shows how the heuristics do on logs nobody wrote for them.
+
+```
+uv run python -m evals.lab.real path/to/junit.xml real-checkout-card
+```
+
+The command reads a JUnit XML report, redacts every text and attribute value in it and runs a second pass over the result. If that pass still changes anything, nothing is written. Only the redacted file is ever on disk, and the command prints the number of tests, the first message line of each Failure group and nothing else from the report. It refuses an existing case id and a report without failures.
+
+The case goes to `evals/lab/real/<id>/` with a `junit.xml` and a `label.yaml` whose `category`, `scenario` and `notes` are empty. Read the redacted `junit.xml`, decide the category yourself and fill in the three fields. No LLM is involved, because a label that a model made up would only measure the model against itself. Redaction can miss things, so read the file for anything private before you commit it.
+
+`make lab` copies the filled cases into `evals/cases/` next to the built ones and runs the redaction check on them again. A case with an empty or unknown category, a missing `scenario` or `notes`, or text that redaction would still change stops the build.
+
+A real case has no counterfactual, since the app is not here to revert ([ADR 0007](adr/0007-real-cases-labeled-by-hand.md)). Its label is my judgment, and the `real` row in the eval output keeps those groups apart from the verified ones. It has no `history.json` or `diff.patch` either, so only JUnit reports can be imported.
 
 ## Running the evals
 
