@@ -86,6 +86,8 @@ uv run failtriage analyze --allure tests/fixtures/allure/mixed --markdown
 
 `--junit`, `--playwright` and `--allure` exclude each other and can be repeated for several files or directories of one format.
 
+`uv run failtriage eval evals/` scores the classifier against the labeled failures in `evals/cases/`. With `ANTHROPIC_API_KEY` set it compares the heuristics alone with the heuristics plus the LLM for Sonnet and Haiku, and reports tokens and cost. [docs/lab.md](docs/lab.md) has the details and the current numbers. The `eval` workflow runs it on demand and is never part of CI.
+
 ## Limitations
 
-Only JUnit XML, Playwright JSON and Allure result files are read. Allure steps and attachments are kept in the parsed data but do not reach the LLM yet. A repository needs a few runs on main before history signals appear.
+Only JUnit XML, Playwright JSON and Allure result files are read. Allure steps and attachments are kept in the parsed data but do not reach the LLM yet. A repository needs a few runs on main before history signals appear. The eval dataset has 48 failure groups and no real failures yet, so its accuracy numbers are a rough guide and say nothing about your own tests.

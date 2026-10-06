@@ -87,7 +87,21 @@ A real case has no counterfactual, since the app is not here to revert ([ADR 000
 uv run failtriage eval evals/
 ```
 
-The command classifies every Failure group of every case with the heuristics only, compares it with the case's label and prints accuracy per category and per source, a confusion matrix and the list of misses. It needs no API key. A case with several groups counts once per group, so `test-bug-fixture-leak` contributes four rows. A case that cannot be scored (no label, a missing or broken `junit.xml`, no failures at all) stops the run and is named in the message.
+Without a key the command classifies every Failure group of every case with the heuristics only. It compares each answer with the label of the case and prints accuracy per category and per source, a confusion matrix and the list of misses. It also prints the share of groups the heuristics left as `unknown`, and how many of their `high` confidence answers were right. A case with several groups counts once per group, so `test-bug-fixture-leak` contributes four rows. A case that cannot be scored (no label, a missing or broken `junit.xml` or `history.json`, no failures at all) stops the run and is named in the message.
+
+With `ANTHROPIC_API_KEY` set, the same cases are scored again for each model, by default `claude-sonnet-5-5` and `claude-haiku-4-5`. Pass `--model` once per model to pick others. Both configurations get the `history.json` of a case, and the LLM also gets `diff.patch`, the way a real run on a pull request would. Every payload is redacted before it is sent, as in `analyze`. A group whose call fails keeps the heuristics answer, and the output counts those so a flaky API cannot pass for a good model. Tokens and cost are printed for each model and in total, and `--json` writes everything to a file:
+
+```
+uv run failtriage eval evals/ --json evals/results/$(date -u +%F).json
+```
+
+This spends real money, so regular CI never runs it. The `eval` workflow does it on demand:
+
+```
+gh workflow run eval.yml
+```
+
+It needs the `ANTHROPIC_API_KEY` repository secret and fails without it. The tables go to the job summary and the JSON is uploaded as the `eval-results` artifact. I commit the JSON of a run to `evals/results/` by hand once I have read it.
 
 Baseline on the current 38 cases, 48 groups. 40 groups have source `injected` and 8 have source `mutation`:
 
@@ -114,4 +128,6 @@ The rules also go wrong where the frame is not the place of the mistake, and the
 
 Some `unknown` cases get a verdict they should not have. `unknown-amount-with-comma` raises from source code, so it comes out as a product bug. `unknown-confirmation-window-boundary` says "timed out" about the product's own 900 second rule, which the timeout pattern takes for a slow service. `unknown-account-tier-keyword` fails with a TypeError in the test file and is called a test bug, although the product could just as well have been meant to use the other name. `unknown-amount-formatting` and the two oldest unknown cases stay undecided, as they should.
 
-The heuristics never see the diff or the history yet, which is where the LLM is expected to help.
+The heuristics read the history of a case but never its diff, so the diff is where the LLM is expected to help. I have not scored the LLM yet. Its numbers will go here after the first run of the `eval` workflow, whatever they turn out to be.
+
+Two cautions apply to any number in this section. The dataset is small, 48 groups, so one case moves a category by several points. And `real` has no cases at all, so nothing here says how the classifier does on failures I did not write myself. The weak categories are `product_bug` (44%) and `test_bug` (22%), both because an assertion failure is left as `unknown` on purpose. The heuristics answered `high` for 7 groups and were right 7 times, but flaky is the only category that can reach `high`, so that says little about the other four.
