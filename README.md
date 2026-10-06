@@ -32,14 +32,24 @@ This is group 2 of the 3 that `failtriage analyze --junit tests/fixtures/junit/m
 Add this step after your tests, in a job that has the report on disk:
 
 ```yaml
-- uses: dimagrotser/ai-test-failure-triage@main
+- uses: dimagrotser/ai-test-failure-triage@v1
   if: ${{ !cancelled() }}
   with:
     junit: reports/junit.xml
     anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-Without `anthropic-api-key` the groups are classified by heuristics only. There is no release tag yet, so the example follows `main`.
+Without `anthropic-api-key` the groups are classified by heuristics only.
+
+## Pinning
+
+`@v1` is a floating tag. It moves to each 1.x release, so you get fixes without touching the workflow. If you want a fixed version, use `@v1.0.0`. If your policy asks for immutable references, use the full commit SHA of the release and keep the version in a comment:
+
+```yaml
+- uses: dimagrotser/ai-test-failure-triage@<full commit sha>  # v1.0.0
+```
+
+Dependabot bumps a SHA or an exact version when a new release comes out. The inputs, outputs and known limits of each release are in [docs/releases](docs/releases/v1.0.0.md).
 
 ## Permissions
 
