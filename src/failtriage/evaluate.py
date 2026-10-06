@@ -1,3 +1,4 @@
+import re
 from collections import Counter
 from collections.abc import Mapping
 from enum import StrEnum
@@ -7,17 +8,23 @@ import yaml
 from pydantic import BaseModel, ValidationError
 
 from failtriage.classify.heuristics import classify_with_heuristics
+from failtriage.classify.llm import classify_groups
+from failtriage.classify.payload import Limits
+from failtriage.classify.pricing import cost_usd
+from failtriage.classify.provider import Provider
 from failtriage.grouping import group_failures
 from failtriage.history import HistoryEntry, HistoryError, load_history
-from failtriage.models import Category, ClassifiedBy, Confidence
+from failtriage.models import Category, Classification, ClassifiedBy, Confidence, FailureGroup
 from failtriage.parsers import ReportParseError
 from failtriage.parsers.junit import parse_junit
+from failtriage.prompts import load_prompt
 from failtriage.redaction import redact_result
 from failtriage.report.json_output import Cost
 
 # Below this many groups a source says little about real-world accuracy.
 _ENOUGH_REAL_GROUPS = 30
 _WEAK_BELOW = 0.5
+_DIFF_TARGET = re.compile(r"^\+\+\+ b/(.+)$", re.MULTILINE)
 
 
 class EvalError(Exception):
@@ -65,16 +72,28 @@ class EvalReport(BaseModel):
     runs: list[EvalRun]
 
 
-def evaluate(evals_dir: Path) -> EvalRun:
-    """Classify every failure group of every Lab case with heuristics only and score it."""
+def evaluate(evals_dir: Path, provider: Provider | None = None) -> EvalRun:
+    """Classify every failure group of every Lab case and score it. Without a provider the
+    heuristics classify alone, with one the LLM gets the heuristic signals, the diff and the
+    history of the case, as in a real run."""
     case_dirs = sorted(p for p in (evals_dir / "cases").glob("*") if p.is_dir())
     if not case_dirs:
         raise EvalError(f"no cases found in {evals_dir / 'cases'}")
-    groups = [group for case_dir in case_dirs for group in _score_case(case_dir)]
-    return EvalRun(cases=len(case_dirs), groups=groups)
+    groups = [group for case_dir in case_dirs for group in _score_case(case_dir, provider)]
+    if provider is None:
+        return EvalRun(cases=len(case_dirs), groups=groups)
+    usage = provider.usage
+    cost = Cost(
+        model=provider.model,
+        llm_calls=usage.calls,
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        usd=cost_usd(provider.model, usage),
+    )
+    return EvalRun(model=provider.model, cases=len(case_dirs), groups=groups, cost=cost)
 
 
-def _score_case(case_dir: Path) -> list[ScoredGroup]:
+def _score_case(case_dir: Path, provider: Provider | None) -> list[ScoredGroup]:
     label = _read_label(case_dir)
     try:
         results = [redact_result(r) for r in parse_junit(case_dir / "junit.xml")]
@@ -84,20 +103,41 @@ def _score_case(case_dir: Path) -> list[ScoredGroup]:
     if not groups:
         raise EvalError(f"case {case_dir.name}: junit.xml has no failures to classify")
     history = _read_history(case_dir)
-    scored = []
-    for group in groups:
-        classification = classify_with_heuristics(group, history)
-        scored.append(
-            ScoredGroup(
-                case_id=case_dir.name,
-                source=label.source,
-                expected=label.category,
-                predicted=classification.category,
-                confidence=classification.confidence,
-                classified_by=classification.classified_by,
-            )
+    return [
+        ScoredGroup(
+            case_id=case_dir.name,
+            source=label.source,
+            expected=label.category,
+            predicted=c.category,
+            confidence=c.confidence,
+            classified_by=c.classified_by,
         )
-    return scored
+        for c in _classify(case_dir, groups, history, provider)
+    ]
+
+
+def _classify(
+    case_dir: Path,
+    groups: list[FailureGroup],
+    history: list[HistoryEntry],
+    provider: Provider | None,
+) -> list[Classification]:
+    if provider is None:
+        return [classify_with_heuristics(group, history) for group in groups]
+    diff = _read_diff(case_dir)
+    changed = _DIFF_TARGET.findall(diff) if diff else []
+    return classify_groups(
+        groups, provider, load_prompt(), Limits(), diff, changed, history
+    ).classifications
+
+
+def _read_diff(case_dir: Path) -> str | None:
+    try:
+        return (case_dir / "diff.patch").read_text()
+    except FileNotFoundError:
+        return None
+    except (OSError, UnicodeDecodeError) as exc:
+        raise EvalError(f"case {case_dir.name}: diff.patch cannot be read") from exc
 
 
 def _read_history(case_dir: Path) -> list[HistoryEntry]:
@@ -121,6 +161,7 @@ def render_eval(runs: list[EvalRun]) -> str:
     lines: list[str] = []
     for run in runs:
         lines += [*_render_run(run), ""]
+    lines += _total_cost(runs)
     lines += _real_note(runs[0].groups if runs else [])
     return "\n".join(lines) + "\n"
 
@@ -138,6 +179,7 @@ def _render_run(run: EvalRun) -> list[str]:
         f"Predicted unknown: {unknown}/{len(groups)} ({_percent(unknown, len(groups))})",
         _high_confidence(high),
         _weak_categories(by_category),
+        *_fallbacks(run),
         "",
         *_accuracy_table("Category", by_category),
         "",
@@ -147,6 +189,28 @@ def _render_run(run: EvalRun) -> list[str]:
         "",
         *_misses(groups),
     ]
+
+
+def _fallbacks(run: EvalRun) -> list[str]:
+    if run.model is None:
+        return []
+    fell_back = sum(g.classified_by is ClassifiedBy.HEURISTICS for g in run.groups)
+    cost = run.cost
+    price = f"${cost.usd:.4f}" if cost.usd is not None else "cost unknown, no price for this model"
+    return [
+        f"LLM: {cost.llm_calls} calls, {cost.input_tokens} input tokens, "
+        f"{cost.output_tokens} output tokens, {price}",
+        f"Classified by heuristics instead of the LLM: {fell_back}",
+    ]
+
+
+def _total_cost(runs: list[EvalRun]) -> list[str]:
+    costs = [run.cost for run in runs if run.model is not None]
+    if not costs:
+        return []
+    known = [c.usd for c in costs if c.usd is not None]
+    total = f"${sum(known):.4f}" if len(known) == len(costs) else "unknown"
+    return [f"Total LLM cost: {total}", ""]
 
 
 def _title(run: EvalRun) -> str:

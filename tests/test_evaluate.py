@@ -4,8 +4,10 @@ from pathlib import Path
 
 import pytest
 
+from failtriage.classify.provider import ProviderError, Usage
 from failtriage.evaluate import EvalError, evaluate, render_eval
 from failtriage.models import Category, ClassifiedBy, Confidence
+from failtriage.prompts import Prompt
 
 DATASET = Path(__file__).parent / "fixtures" / "evals"
 
@@ -199,3 +201,161 @@ def test_a_dataset_without_real_cases_says_nothing_is_known_about_real_failures(
     output = render_eval([evaluate(tmp_path)])
 
     assert "The real source has no cases yet" in output
+
+
+REFUSED_QUOTE = "ConnectionRefusedError: [Errno 111] Connection refused"
+
+
+class FakeProvider:
+    """Answers every group as a confident environment problem and counts like the real one."""
+
+    def __init__(self, model: str = "claude-sonnet-5-5", fail: bool = False) -> None:
+        self.model = model
+        self.fail = fail
+        self.usage = Usage()
+        self.payloads: list[str] = []
+
+    def complete(self, prompt: Prompt, payload: str) -> str:
+        self.payloads.append(payload)
+        self.usage.add(Usage(calls=1, input_tokens=1000, output_tokens=200))
+        if self.fail:
+            raise ProviderError("down")
+        return json.dumps(
+            {
+                "category": "environment",
+                "confidence": "high",
+                "summary": "The service refused the connection.",
+                "evidence": [REFUSED_QUOTE],
+                "next_step": "Check the service",
+                "disagreement_reason": None,
+            }
+        )
+
+
+def _one_case(tmp_path: Path, name: str = "environment-refused") -> Path:
+    shutil.copytree(DATASET / "cases" / name, tmp_path / "cases" / name)
+    return tmp_path
+
+
+def test_the_llm_classifies_every_group_and_the_run_names_the_model(tmp_path: Path) -> None:
+    run = evaluate(_one_case(tmp_path), FakeProvider())
+
+    assert run.model == "claude-sonnet-5-5"
+    assert [(g.predicted, g.classified_by) for g in run.groups] == [
+        (Category.ENVIRONMENT, ClassifiedBy.LLM)
+    ]
+
+
+def test_tokens_and_cost_of_the_run_are_recorded(tmp_path: Path) -> None:
+    run = evaluate(DATASET, FakeProvider())
+
+    assert run.cost.model == "claude-sonnet-5-5"
+    assert run.cost.llm_calls == 5
+    assert (run.cost.input_tokens, run.cost.output_tokens) == (5000, 1000)
+    assert run.cost.usd == pytest.approx(0.02)
+
+
+def test_a_model_without_a_price_has_an_unknown_cost(tmp_path: Path) -> None:
+    run = evaluate(_one_case(tmp_path), FakeProvider(model="home-made"))
+
+    assert run.cost.usd is None
+
+
+def test_a_group_the_llm_fails_on_keeps_the_heuristics_answer(tmp_path: Path) -> None:
+    run = evaluate(_one_case(tmp_path), FakeProvider(fail=True))
+
+    assert [(g.predicted, g.classified_by) for g in run.groups] == [
+        (Category.ENVIRONMENT, ClassifiedBy.HEURISTICS)
+    ]
+    assert run.cost.llm_calls == 1
+
+
+def test_the_run_says_how_many_groups_fell_back_to_the_heuristics(tmp_path: Path) -> None:
+    output = render_eval([evaluate(_one_case(tmp_path), FakeProvider(fail=True))])
+
+    assert "Classified by heuristics instead of the LLM: 1" in output
+
+
+def test_the_diff_of_a_case_reaches_the_llm(tmp_path: Path) -> None:
+    root = _one_case(tmp_path)
+    (root / "cases" / "environment-refused" / "diff.patch").write_text(
+        "diff --git a/wallet/ledger.py b/wallet/ledger.py\n"
+        "--- a/wallet/ledger.py\n+++ b/wallet/ledger.py\n@@ -1 +1 @@\n-old\n+retry_budget = 3\n"
+    )
+    provider = FakeProvider()
+
+    evaluate(root, provider)
+
+    assert "retry_budget = 3" in provider.payloads[0]
+    assert "wallet/ledger.py" in provider.payloads[0]
+
+
+def test_the_history_of_a_case_reaches_the_llm(tmp_path: Path) -> None:
+    root = _one_case(tmp_path)
+    history = [
+        {
+            "test_id": "tests.test_ledger::test_records_transfer",
+            "status": "failed",
+            "attempts": 1,
+            "sha": "c" * 40,
+            "run_id": 7,
+        }
+    ]
+    (root / "cases" / "environment-refused" / "history.json").write_text(json.dumps(history))
+    provider = FakeProvider()
+
+    evaluate(root, provider)
+
+    assert "failed on main in run 7" in provider.payloads[0]
+
+
+def test_secrets_of_a_case_never_reach_the_llm(tmp_path: Path) -> None:
+    root = _one_case(tmp_path)
+    case = root / "cases" / "environment-refused"
+    junit = (case / "junit.xml").read_text()
+    leaky = junit.replace(
+        "wallet/ledger.py:12: ConnectionRefusedError",
+        "https://ci:hunter2pass@ledger.internal/api ConnectionRefusedError",
+    )
+    (case / "junit.xml").write_text(leaky)
+    (case / "diff.patch").write_text(
+        "diff --git a/.env b/.env\n--- a/.env\n+++ b/.env\n@@ -1 +1 @@\n"
+        "-X=1\n+DB_URL=postgres://admin:s3cretpw@db.internal/app\n"
+    )
+    provider = FakeProvider()
+
+    evaluate(root, provider)
+
+    assert provider.payloads
+    sent = "".join(provider.payloads)
+    assert "hunter2pass" not in sent
+    assert "s3cretpw" not in sent
+
+
+def test_the_report_lists_tokens_and_cost_per_run_and_in_total() -> None:
+    sonnet = evaluate(DATASET, FakeProvider("claude-sonnet-5-5"))
+    haiku = evaluate(DATASET, FakeProvider("claude-haiku-4-5"))
+
+    output = render_eval([evaluate(DATASET), sonnet, haiku])
+
+    assert "Heuristics and LLM (claude-sonnet-5-5)" in output
+    assert "Heuristics and LLM (claude-haiku-4-5)" in output
+    assert "LLM: 5 calls, 5000 input tokens, 1000 output tokens, $0.0200" in output
+    assert "LLM: 5 calls, 5000 input tokens, 1000 output tokens, $0.0100" in output
+    assert "Total LLM cost: $0.0300" in output
+
+
+def test_an_unpriced_model_makes_the_total_unknown() -> None:
+    run = evaluate(DATASET, FakeProvider("home-made"))
+
+    output = render_eval([run])
+
+    assert "cost unknown, no price for this model" in output
+    assert "Total LLM cost: unknown" in output
+
+
+def test_a_heuristics_only_report_has_no_llm_cost_lines() -> None:
+    output = render_eval([evaluate(DATASET)])
+
+    assert "LLM:" not in output
+    assert "Total LLM cost" not in output
