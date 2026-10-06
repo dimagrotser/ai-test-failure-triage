@@ -24,19 +24,52 @@ def parse_junit(path: Path) -> list[TestResult]:
     except (OSError, ET.ParseError) as exc:
         raise ReportParseError(f"cannot read {path}: {exc}") from exc
     attempts_by_case: dict[tuple[str, str, str], list[Attempt]] = {}
+    reruns = _plain_reruns(root)
     for case in root.iter("testcase"):
-        key = (case.get("file") or "", case.get("classname") or "", case.get("name") or "")
-        attempts_by_case.setdefault(key, []).extend(_parse_attempts(case))
+        attempts_by_case.setdefault(_key(case), []).extend(_parse_attempts(case, case in reruns))
     return [
         TestResult(test_id=_test_id(*key), status=final_status(attempts), attempts=attempts)
         for key, attempts in attempts_by_case.items()
     ]
 
 
-def _parse_attempts(case: ET.Element) -> list[Attempt]:
+def _key(case: ET.Element) -> tuple[str, str, str]:
+    return (case.get("file") or "", case.get("classname") or "", case.get("name") or "")
+
+
+def _plain_reruns(root: ET.Element) -> set[ET.Element]:
+    """Testcases that pytest-rerunfailures or flaky wrote for a failed attempt they then retried.
+
+    Such an attempt is a testcase with no outcome that the suite leaves out of its `tests` count.
+    A suite with more testcases than it counts proves retries only when the extra ones are exactly
+    the earlier copies of repeated testcases. Any other mismatch says nothing, so nothing changes.
+    """
+    reruns: set[ET.Element] = set()
+    for suite in root.iter("testsuite"):
+        declared = suite.get("tests")
+        cases = suite.findall("testcase")
+        if declared is None or not declared.isdigit() or len(cases) <= int(declared):
+            continue
+        copies: dict[tuple[str, str, str], list[ET.Element]] = {}
+        for case in cases:
+            copies.setdefault(_key(case), []).append(case)
+        earlier = [case for group in copies.values() for case in group[:-1]]
+        if len(earlier) == len(cases) - int(declared) and not any(map(_has_outcome, earlier)):
+            reruns.update(earlier)
+    return reruns
+
+
+def _has_outcome(case: ET.Element) -> bool:
+    return any(case.find(tag) is not None for tag in (*OUTCOME_TAGS, *FLAKY_TAGS, *RERUN_TAGS))
+
+
+def _parse_attempts(case: ET.Element, was_rerun: bool) -> list[Attempt]:
     before = [_parse_retry(el, st) for tag, st in FLAKY_TAGS.items() for el in case.findall(tag)]
     after = [_parse_retry(el, st) for tag, st in RERUN_TAGS.items() for el in case.findall(tag)]
-    return [*before, _parse_attempt(case), *after]
+    attempt = _parse_attempt(case)
+    if was_rerun:
+        attempt = attempt.model_copy(update={"status": Status.FAILED})
+    return [*before, attempt, *after]
 
 
 def _parse_retry(element: ET.Element, status: Status) -> Attempt:
