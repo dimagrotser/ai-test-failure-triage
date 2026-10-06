@@ -1,0 +1,4 @@
+category: product_bug
+source: real
+scenario: The web app renders item.title while the API returns item.name, so every list item is empty.
+notes: Failure from a deliberate demo pull request in pr-preview-environments, run by its Playwright suite. The diff changes one line in apps/web/public/app.js from item.name to item.title, and the API response did not change. The test is right to expect the name, and the list has the right number of items, only their text is empty. The stack trace points at the test file, so the changed file never appears in it.
