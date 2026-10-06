@@ -25,7 +25,13 @@ This is group 2 of the 3 that `failtriage analyze --junit tests/fixtures/junit/m
 >
 > Next step: Check the service or setting in the quote, then rerun
 
-<!-- screenshot of the comment on a real pull request goes here -->
+This is the comment on a pull request in the [demo repository](https://github.com/dimagrotser/failtriage-demo), with an API key set. The pull request breaks three things at once.
+
+![failtriage comment with three failure groups](docs/screenshots/demo-comment.png)
+
+## Try it without your own tests
+
+[failtriage-demo](https://github.com/dimagrotser/failtriage-demo) is a template repository with a tiny app, its tests and this action already wired in. Make a copy, run `scripts/demo.sh all-at-once` and read the comment on the pull request it opens. It works without an API key, with rule-based verdicts only, and a key adds the LLM. The demo README lists what each breakage should produce.
 
 ## Quickstart
 
