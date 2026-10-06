@@ -34,7 +34,7 @@ def test_version_prints_package_version() -> None:
     result = runner.invoke(app, ["version"])
 
     assert result.exit_code == 0
-    assert result.output.strip() == "0.1.0"
+    assert result.output.strip() == "1.0.0"
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "junit"

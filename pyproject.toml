@@ -1,6 +1,6 @@
 [project]
 name = "failtriage"
-version = "0.1.0"
+version = "1.0.0"
 description = "Groups and classifies CI test failures and reports them on the pull request"
 license = "MIT"
 requires-python = "==3.12.*"
