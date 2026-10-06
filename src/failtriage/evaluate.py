@@ -8,6 +8,7 @@ from pydantic import BaseModel, ValidationError
 
 from failtriage.classify.heuristics import classify_with_heuristics
 from failtriage.grouping import group_failures
+from failtriage.history import HistoryEntry, HistoryError, load_history
 from failtriage.models import Category
 from failtriage.parsers import ReportParseError
 from failtriage.parsers.junit import parse_junit
@@ -63,15 +64,26 @@ def _score_case(case_dir: Path) -> list[ScoredGroup]:
     groups = group_failures(results)
     if not groups:
         raise EvalError(f"case {case_dir.name}: junit.xml has no failures to classify")
+    history = _read_history(case_dir)
     return [
         ScoredGroup(
             case_id=case_dir.name,
             source=label.source,
             expected=label.category,
-            predicted=classify_with_heuristics(group).category,
+            predicted=classify_with_heuristics(group, history).category,
         )
         for group in groups
     ]
+
+
+def _read_history(case_dir: Path) -> list[HistoryEntry]:
+    path = case_dir / "history.json"
+    if not path.exists():
+        return []
+    try:
+        return load_history(path)
+    except HistoryError as exc:
+        raise EvalError(f"case {case_dir.name}: history.json is not valid") from exc
 
 
 def _read_label(case_dir: Path) -> Label:

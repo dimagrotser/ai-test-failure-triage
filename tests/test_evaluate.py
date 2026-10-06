@@ -1,3 +1,4 @@
+import json
 import shutil
 from pathlib import Path
 
@@ -119,3 +120,33 @@ def test_a_broken_case_stops_the_run_and_is_named(
 def test_a_dataset_without_cases_is_an_error(tmp_path: Path) -> None:
     with pytest.raises(EvalError, match="no cases"):
         evaluate(tmp_path)
+
+
+def _with_history(tmp_path: Path, history: str) -> Path:
+    case = tmp_path / "cases" / "product-bug-assert"
+    shutil.copytree(DATASET / "cases" / "product-bug-assert", case)
+    (case / "history.json").write_text(history)
+    return tmp_path
+
+
+def test_the_history_of_a_case_reaches_the_heuristics(tmp_path: Path) -> None:
+    test_id = "tests.test_fees::test_fee_rounds_half_up"
+    runs = [
+        {"test_id": test_id, "status": status, "attempts": 1, "sha": "a" * 40, "run_id": run}
+        for run, status in enumerate(["passed", "failed"], start=1)
+    ]
+
+    result = evaluate(_with_history(tmp_path, json.dumps(runs)))
+
+    assert [g.predicted for g in result.groups] == [Category.FLAKY]
+
+
+def test_a_case_without_history_is_scored_cold(tmp_path: Path) -> None:
+    result = evaluate(_with_history(tmp_path, "[]"))
+
+    assert [g.predicted for g in result.groups] == [Category.UNKNOWN]
+
+
+def test_an_invalid_history_stops_the_run_and_is_named(tmp_path: Path) -> None:
+    with pytest.raises(EvalError, match="product-bug-assert.*history.json"):
+        evaluate(_with_history(tmp_path, "not json"))
