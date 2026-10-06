@@ -1,0 +1,11 @@
+--- a/wallet/transfers.py
++++ b/wallet/transfers.py
+@@ -15,7 +15,7 @@
+ 
+ 
+ def transfer(source: Account, target: Account, amount: Decimal) -> None:
+-    if amount <= 0:
++    if amount < 0:
+         raise InvalidAmount(f"amount must be positive, got {amount}")
+     if amount > TRANSFER_LIMIT:
+         raise LimitExceeded(f"{amount} is above the limit of {TRANSFER_LIMIT}")

@@ -1,0 +1,5 @@
+category: product_bug
+source: mutation
+scenario: mutmut changes record transfer in wallet/ledger.py
+notes: mutmut mutant wallet.ledger.x_record_transfer__mutmut_1. The wallet tests kill it, so they fail
+  on the changed code and pass again once the patch is reverted.

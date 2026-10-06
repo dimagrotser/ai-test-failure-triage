@@ -1,0 +1,11 @@
+# wallet.receipt.x_render_receipt__mutmut_1: killed
+--- wallet/receipt.py
++++ wallet/receipt.py
+@@ -2,6 +2,6 @@
+     return (
+         f"<h1>Transfer to {target.owner}</h1>\n"
+         f'<p>Amount: <span data-testid="transfer-amount">{amount}</span></p>\n'
+-        f'<p>Fee: <span data-testid="transfer-fee">{transfer_fee(amount)}</span></p>\n'
++        f'<p>Fee: <span data-testid="transfer-fee">{transfer_fee(None)}</span></p>\n'
+         f'<p>Balance: <span data-testid="sender-balance">{source.balance}</span></p>\n'
+     )

@@ -1,0 +1,7 @@
+# wallet.fees.x_transfer_fee__mutmut_1: killed
+--- wallet/fees.py
++++ wallet/fees.py
+@@ -1,2 +1,2 @@
+ def transfer_fee(amount: Decimal) -> Decimal:
+-    return (amount * FEE_RATE).quantize(CENT, rounding=ROUND_HALF_UP)
++    return (amount * FEE_RATE).quantize(None, rounding=ROUND_HALF_UP)

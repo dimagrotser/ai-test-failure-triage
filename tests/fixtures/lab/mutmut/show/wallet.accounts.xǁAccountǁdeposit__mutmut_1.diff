@@ -1,0 +1,9 @@
+# wallet.accounts.xǁAccountǁdeposit__mutmut_1: killed
+--- wallet/accounts.py
++++ wallet/accounts.py
+@@ -1,4 +1,4 @@
+ def deposit(self, amount: Decimal) -> None:
+-    if amount <= 0:
++    if amount < 0:
+         raise InvalidAmount(f"amount must be positive, got {amount}")
+     self.balance += amount

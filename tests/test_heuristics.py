@@ -300,6 +300,15 @@ LAB_VERDICTS = {
     # Known miss: DID NOT RAISE is reported in the test file, the broken check is in the app.
     "product-bug-funds-check-ignores-fee": Category.TEST_BUG,
     "product-bug-limit-off-by-one": Category.PRODUCT_BUG,
+    "product-bug-mutant-fees-transfer-fee": Category.PRODUCT_BUG,
+    "product-bug-mutant-ledger-record-transfer": Category.PRODUCT_BUG,
+    "product-bug-mutant-receipt-render-receipt": Category.PRODUCT_BUG,
+    "product-bug-mutant-statements-export-statement": Category.PRODUCT_BUG,
+    # Known misses: DID NOT RAISE in the test file reads as a test bug, an assertion
+    # mismatch stays undecided.
+    "product-bug-mutant-transfers-transfer": Category.TEST_BUG,
+    "product-bug-mutant-accounts-account-deposit": Category.TEST_BUG,
+    "product-bug-mutant-accounts-account-init": None,
     "test-bug-expected-value": None,
     "test-bug-fixture-leak": None,
     # Known miss: the fixture is set up with too little money and the app raises the error.
