@@ -2,7 +2,7 @@
 
 After a CI run, failtriage reads the JUnit or Playwright JSON report, removes secrets and personal data, groups the failures by root cause and classifies each group as `product_bug`, `test_bug`, `flaky`, `environment` or `unknown`. It posts one report on the pull request. Fixed rules go first and an LLM second, and every verdict quotes its evidence.
 
-A red CI run with forty failures rarely has forty causes. Usually it is two or three: a service that was down, one wrong constant, a test that depends on order. Reading the logs to find that out costs more than the fix. failtriage does the grouping and the first guess, and it shows the lines it based the guess on, so you can check it in seconds.
+A red CI run with forty failures rarely has forty causes. Usually it is two or three causes, say a service that was down and one wrong constant. Reading the logs to find that out costs more than the fix. failtriage does the grouping and the first guess, and it shows the lines it based the guess on, so you can check it in seconds.
 
 ## Example report
 
@@ -161,4 +161,4 @@ Fork pull requests get no comment and no LLM, because GitHub gives them a read-o
 
 History has gaps. A repository needs a few runs on main before history signals appear, artifacts expire after the retention period, and fork runs cannot read them. Until then the report says `History: none` and nothing is called flaky from history, so a truly intermittent failure with no retry can come out as `unknown`.
 
-The accuracy numbers are a rough guide. The dataset is small and written by me, it has no real failures, and Sonnet scores 60% on it. Treat every verdict as a lead with evidence attached, not as a ruling.
+The accuracy numbers are a rough guide. The dataset is small and written by me, it has no real failures, and Sonnet scores 60% on it.
