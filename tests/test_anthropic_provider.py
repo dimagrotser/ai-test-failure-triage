@@ -95,13 +95,40 @@ def test_a_recording_replays_the_answer_and_its_usage(tmp_path: Path) -> None:
     assert replay.usage == Usage(calls=1, input_tokens=120, output_tokens=30)
 
 
-def test_an_api_error_names_its_type_and_does_not_quote_the_key() -> None:
-    error_body = {"type": "error", "error": {"type": "authentication_error", "message": "bad key"}}
-    provider = AnthropicProvider(client([], httpx2.Response(401, json=error_body)), MODEL, SCHEMA)
+@pytest.mark.parametrize(
+    ("status", "error_type", "name"),
+    [
+        (401, "authentication_error", "AuthenticationError"),
+        (429, "rate_limit_error", "RateLimitError"),
+    ],
+)
+def test_an_api_error_names_its_type_and_status_and_does_not_quote_the_key(
+    status: int, error_type: str, name: str
+) -> None:
+    error_body = {"type": "error", "error": {"type": error_type, "message": "bad key"}}
+    provider = AnthropicProvider(
+        client([], httpx2.Response(status, json=error_body)), MODEL, SCHEMA
+    )
 
     with pytest.raises(ProviderError) as error:
         provider.complete(PROMPT, "payload")
 
-    assert "AuthenticationError" in str(error.value)
+    assert str(error.value) == f"the request failed: {name}, HTTP {status}"
     assert "test-key" not in str(error.value)
     assert "bad key" not in str(error.value)
+
+
+def test_a_connection_error_has_no_status() -> None:
+    def refuse(request: httpx2.Request) -> httpx2.Response:
+        raise httpx2.ConnectError("refused", request=request)
+
+    unreachable = anthropic.Anthropic(
+        api_key="test-key",
+        max_retries=0,
+        http_client=anthropic.DefaultHttpxClient(transport=httpx2.MockTransport(refuse)),
+    )
+
+    with pytest.raises(ProviderError) as error:
+        AnthropicProvider(unreachable, MODEL, SCHEMA).complete(PROMPT, "payload")
+
+    assert str(error.value) == "the request failed: APIConnectionError"

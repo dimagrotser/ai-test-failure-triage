@@ -39,8 +39,11 @@ class AnthropicProvider:
                 },
             )
         except anthropic.APIError as exc:
-            # Only the type: the SDK message can quote the request.
-            raise ProviderError(f"the request failed: {type(exc).__name__}") from None
+            # Only the type and the status: the SDK message can quote the request.
+            status = (
+                f", HTTP {exc.status_code}" if isinstance(exc, anthropic.APIStatusError) else ""
+            )
+            raise ProviderError(f"the request failed: {type(exc).__name__}{status}") from None
         call = Usage(
             calls=1,
             input_tokens=response.usage.input_tokens,

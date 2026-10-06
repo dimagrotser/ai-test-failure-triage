@@ -43,7 +43,8 @@ def answer_schema() -> dict[str, Any]:
 class GroupClassifications(BaseModel):
     # In the order of the groups that were passed in.
     classifications: list[Classification]
-    # Group index to the type of the error that sent the group to heuristics.
+    # Group index to why the group went to heuristics: the redacted reason of a failed call,
+    # or the error type when the answer was unusable.
     failed: dict[int, str]
 
 
@@ -69,7 +70,10 @@ def classify_groups(
             continue
         try:
             classifications.append(classify_with_llm(payload, provider, prompt))
-        except (ProviderError, InvalidAnswerError, UnredactedPayloadError) as exc:
+        except ProviderError as exc:
+            classifications.append(classify_with_heuristics(group, history))
+            failed[index] = redact(str(exc))
+        except (InvalidAnswerError, UnredactedPayloadError) as exc:
             classifications.append(classify_with_heuristics(group, history))
             failed[index] = type(exc).__name__
     return GroupClassifications(classifications=classifications, failed=failed)
