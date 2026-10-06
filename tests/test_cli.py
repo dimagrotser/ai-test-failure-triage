@@ -345,9 +345,39 @@ def test_eval_never_prints_the_key(monkeypatch: pytest.MonkeyPatch) -> None:
 
     result = runner.invoke(app, ["eval", str(EVALS)])
 
-    assert result.exit_code == 0
     assert KEY not in result.output + result.stderr
     assert "Classified by heuristics instead of the LLM: 5" in result.output
+
+
+def test_eval_exits_with_3_when_no_model_made_a_successful_call(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake_anthropic(monkeypatch, [], status=401)
+    out = tmp_path / "result.json"
+
+    result = runner.invoke(app, ["eval", str(EVALS), "--json", str(out)])
+
+    assert result.exit_code == 3
+    assert result.output.startswith("WARNING: claude-sonnet-5-5 made no successful call")
+    assert "WARNING: claude-haiku-4-5 made no successful call" in result.output
+    assert "5 x the request failed: AuthenticationError, HTTP 401" in result.output
+    assert "made no successful call" in result.stderr
+    report = EvalReport.model_validate_json(out.read_text())
+    assert [run.fallbacks for run in report.runs[1:]] == [
+        {"the request failed: AuthenticationError, HTTP 401": 5}
+    ] * 2
+
+
+def test_eval_checks_only_the_models_that_are_asked_for_when_it_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_anthropic(monkeypatch, [], status=401)
+
+    result = runner.invoke(app, ["eval", str(EVALS), "--model", "claude-haiku-4-5"])
+
+    assert result.exit_code == 3
+    assert "WARNING: claude-haiku-4-5 made no successful call" in result.output
+    assert "claude-sonnet-5-5" not in result.output + result.stderr
 
 
 def test_eval_reports_a_dataset_that_cannot_be_scored(tmp_path: Path) -> None:

@@ -103,6 +103,18 @@ gh workflow run eval.yml
 
 It needs the `ANTHROPIC_API_KEY` repository secret and fails without it. The tables go to the job summary and the JSON is uploaded as the `eval-results` artifact. I commit the JSON of a run to `evals/results/` by hand once I have read it.
 
+Two things can go wrong with the key or the model, and both used to look like a normal run. A key that is out of date, or a model that rejects the request, makes every call fail and every group falls back to the rules, so that column scores exactly like the heuristics. `eval` now says so. Under `Classified by heuristics instead of the LLM` it counts the reasons, the same ones the log of `analyze` shows:
+
+```
+Heuristics and LLM (claude-haiku-4-5): 39 cases, 49 failure groups
+...
+LLM: 0 calls, 0 input tokens, 0 output tokens, $0.0000
+Classified by heuristics instead of the LLM: 49
+  49 x the request failed: BadRequestError, HTTP 400
+```
+
+When every group of a model fell back, the output starts with `WARNING: <model> made no successful call, every group was classified by the heuristics, so its scores repeat the baseline.`, once per model. The report and the JSON are still written, then the command exits with code 3. The workflow keeps the summary and uploads `eval-results` even then, so a red run still has its numbers and its reason. A run where only some calls failed lists the reasons and exits with 0, so look at the counts before trusting it. The artifact holds the whole `evals/results/` directory, including the files already committed, and the new file is the one named after today's date.
+
 Baseline on the current 38 cases, 48 groups. 40 groups have source `injected` and 8 have source `mutation`:
 
 | Category | Groups | Correct |
