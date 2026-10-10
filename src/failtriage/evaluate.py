@@ -40,6 +40,8 @@ class Source(StrEnum):
 class Label(BaseModel):
     category: Category
     source: Source
+    # False when the failing mechanism is already on main and the diff is about something else.
+    diff_shows_cause: bool = True
 
 
 class ScoredGroup(BaseModel):
@@ -49,6 +51,7 @@ class ScoredGroup(BaseModel):
     predicted: Category
     confidence: Confidence
     classified_by: ClassifiedBy
+    diff_shows_cause: bool = True
 
     @property
     def correct(self) -> bool:
@@ -131,6 +134,7 @@ def _score_case(
             predicted=c.category,
             confidence=c.confidence,
             classified_by=c.classified_by,
+            diff_shows_cause=label.diff_shows_cause,
         )
         for c in _classify(case_dir, groups, history, provider, fallbacks)
     ]
@@ -211,6 +215,7 @@ def _render_run(run: EvalRun) -> list[str]:
         *_accuracy_table("Category", by_category),
         "",
         *_accuracy_table("Source", by_source),
+        *_flaky_by_cause(groups),
         "",
         *_confusion_matrix(groups),
         "",
@@ -288,6 +293,18 @@ def _accuracy_table(title: str, rows: Mapping[str, list[ScoredGroup]]) -> list[s
         hits = sum(g.correct for g in found)
         lines.append(f"{key:<13}{len(found):>7}{hits:>9}{_percent(hits, len(found)):>10}")
     return lines
+
+
+def _flaky_by_cause(groups: list[ScoredGroup]) -> list[str]:
+    """Only when a flaky case keeps its cause out of the diff, else there is nothing to split."""
+    flaky = [g for g in groups if g.expected is Category.FLAKY]
+    if all(g.diff_shows_cause for g in flaky):
+        return []
+    rows = {
+        "in the diff": [g for g in flaky if g.diff_shows_cause],
+        "not in diff": [g for g in flaky if not g.diff_shows_cause],
+    }
+    return ["", *_accuracy_table("Flaky, cause", rows)]
 
 
 def _confusion_matrix(groups: list[ScoredGroup]) -> list[str]:
