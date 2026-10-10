@@ -138,26 +138,26 @@ uv run failtriage analyze --allure tests/fixtures/allure/mixed --markdown
 
 ## Accuracy
 
-I scored the classifier on 39 failing runs, 49 failure groups in all. 48 groups come from a small wallet app, and every label there was verified by a counterfactual run, for example by reverting the patch that broke the app ([docs/lab.md](docs/lab.md) explains how). The 49th is a failure from another repository ([docs/adoption.md](docs/adoption.md)), labeled by me. The numbers below come from one run of the `eval` workflow on 2026-10-06, committed as `evals/results/2026-10-06-with-haiku.json`.
+I scored the classifier on 42 failing runs, 52 failure groups in all. 51 groups come from a small wallet app, and every label there was verified by a counterfactual run, for example by reverting the patch that broke the app ([docs/lab.md](docs/lab.md) explains how). The 52nd is a failure from another repository ([docs/adoption.md](docs/adoption.md)), labeled by me. The numbers below come from the first of two runs of the `eval` workflow on 2026-10-10, committed as `evals/results/2026-10-10-hidden-flaky-run1.json`.
 
 | Category | Groups | Heuristics | Heuristics and Sonnet | Heuristics and Haiku |
 |---|---|---|---|---|
 | product_bug | 17 | 7 | 13 | 16 |
 | test_bug | 9 | 2 | 9 | 5 |
 | environment | 9 | 8 | 6 | 8 |
-| flaky | 7 | 7 | 4 | 4 |
+| flaky | 10 | 10 | 7 | 6 |
 | unknown | 7 | 4 | 4 | 1 |
-| all | 49 | 28 (57%) | 36 (73%) | 34 (69%) |
+| all | 52 | 31 (60%) | 39 (75%) | 36 (69%) |
 
-By source, the 40 injected groups score 23 with the heuristics, 31 with Sonnet and 26 with Haiku. The 8 mutation groups score 5, 4 and 7. The one `real` group scores 0, 1 and 1. One group says nothing about accuracy.
+By source, the 43 injected groups score 26 with the heuristics, 34 with Sonnet and 27 with Haiku. The 8 mutation groups score 5, 4 and 8. The one `real` group scores 0, 1 and 1. One group says nothing about accuracy.
 
-Sonnet beats the rules, but the margin comes from the diff. An earlier run of the same dataset, before the LLM got the whole diff for groups whose trace names no changed file, gave Sonnet 27 of 49, one fewer than the rules. The details are in [docs/lab.md](docs/lab.md). The rules do well on `environment` and `flaky`, where Sonnet is worse: it lost 3 of the 7 flaky groups, which have passed-on-retry evidence the rules read correctly. In each of them the model argues that the diff shows a bug of the change that a retry hides, and ADR 0001 does not forbid that, see [docs/lab.md](docs/lab.md). Its answer is capped at `medium` when it overrules such a group. `product_bug` stays the weak spot for the rules at 41%: when a test fails on an assertion, nobody can tell from the log alone whether the test or the product is wrong, so they say `unknown` on purpose. Of its `high` confidence answers Sonnet got 18 of 21 right in the run above, and 17 of 18 in a later run with the cap on its confidence.
+Sonnet beats the rules, but the margin comes from the diff. An earlier run of the same dataset, before the LLM got the whole diff for groups whose trace names no changed file, gave Sonnet 27 of 49, one fewer than the rules. The details are in [docs/lab.md](docs/lab.md). The rules do well on `environment` and `flaky`, where Sonnet is worse. For the 7 flaky groups whose diff shows the cause it lost 2, the model arguing that the diff shows a bug of the change that a retry hides, and ADR 0001 does not forbid that, see [docs/lab.md](docs/lab.md). Its answer is capped at `medium` when it overrules such a group. For the 3 flaky groups whose cause is on main and not in the diff, the rules and Haiku get all of them and Sonnet 2. With so few groups I read that as a direction only. `product_bug` stays the weak spot for the rules at 41%: when a test fails on an assertion, nobody can tell from the log alone whether the test or the product is wrong, so they say `unknown` on purpose. Of its `high` confidence answers Sonnet got 23 of 24 right.
 
-Haiku is two groups behind Sonnet at 37% of the cost, but I would not trust its confidence. It answered `high` for 47 of 49 groups and was right 33 times, 70%. It said `unknown` only twice, so for 6 of the 7 groups that are labeled `unknown` it named a cause anyway. Sonnet's `high` answers hold up better, and it keeps the default. Haiku never worked in the first runs because the request carried an `effort` parameter that Haiku rejects with a 400, see [docs/lab.md](docs/lab.md). With 49 groups, one case moves a category by several points, and I ran Haiku once and Sonnet twice, with 36 right both times.
+Haiku is three groups behind Sonnet at 38% of the cost, but I would not trust its confidence. It answered `high` for 46 of 52 groups and was right 35 times, 76%. It said `unknown` only once, so for 6 of the 7 groups that are labeled `unknown` it named a cause anyway. Sonnet's `high` answers hold up better, and it keeps the default. Haiku never worked in the first runs because the request carried an `effort` parameter that Haiku rejects with a 400, see [docs/lab.md](docs/lab.md). With 52 groups, one case moves a category by several points. Sonnet gave the same answer on every group in both runs, 39 of 52 right each time. Haiku got 36 and 35 right, and in each run one group fell back to the rules through an unusable answer.
 
 ## Cost
 
-The same run cost $0.37 for Sonnet: 49 calls, 115,016 input tokens and 14,247 output tokens, about $0.0076 per group. Haiku cost $0.14 for the same 49 calls, about $0.0028 per group. A run sends at most 10 groups to the LLM, so a pull request costs up to about $0.07 and usually less, because groups with the same cause are classified once. Every run logs its tokens and cost. Without `anthropic-api-key` it costs nothing and uses the rules only.
+The same run cost $0.39 for Sonnet: 52 calls, 120,945 input tokens and 15,091 output tokens, about $0.0076 per group. Haiku cost $0.15 for the same 52 calls, about $0.0028 per group. A run sends at most 10 groups to the LLM, so a pull request costs up to about $0.07 and usually less, because groups with the same cause are classified once. Every run logs its tokens and cost. Without `anthropic-api-key` it costs nothing and uses the rules only.
 
 ## Design decisions
 
@@ -183,4 +183,4 @@ Retries show up in a JUnit report only when the framework writes them down. fail
 
 History has gaps. A repository needs a few runs on main before history signals appear, artifacts expire after the retention period, and fork runs cannot read them. Until then the report says `History: none` and nothing is called flaky from history, so a truly intermittent failure with no retry can come out as `unknown`.
 
-The accuracy numbers are a rough guide. The dataset is small and written by me, it has one real failure, and Sonnet scores 73% on it.
+The accuracy numbers are a rough guide. The dataset is small and written by me, it has one real failure, and Sonnet scores 75% on it.
