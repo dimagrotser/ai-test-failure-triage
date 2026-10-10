@@ -403,6 +403,57 @@ def test_flaky_scenario_that_cannot_be_trusted_is_rejected(
     assert list(tmp_path.iterdir()) == []
 
 
+HIDDEN_TEST = "tests.test_ids::test_three_transfers_get_different_ids"
+
+
+def test_a_flaky_case_can_keep_its_instability_out_of_the_pull_request_diff(
+    tmp_path: Path,
+) -> None:
+    case = build_case(FIXTURES / "flaky-hidden", tmp_path)
+
+    results = {r.test_id: r for r in parse_junit(case / "junit.xml")}
+    assert results[HIDDEN_TEST].status is Status.PASSED_ON_RETRY
+    diff = (case / "diff.patch").read_text()
+    assert "wallet/fees.py" in diff
+    assert "ids" not in diff
+    history = json.loads((case / "history.json").read_text())
+    entries = [e for e in history if e["test_id"] == HIDDEN_TEST]
+    assert sorted((e["run_id"], e["status"]) for e in entries) == [
+        (1, "failed"),
+        (2, "passed_on_retry"),
+    ]
+    assert len({e["sha"] for e in entries}) == 1
+    assert yaml.safe_load((case / "label.yaml").read_text())["diff_shows_cause"] is False
+    assert not (case / "base.patch").exists()
+
+
+def test_a_case_with_a_base_patch_is_byte_identical_across_builds(tmp_path: Path) -> None:
+    first = build_case(FIXTURES / "flaky-hidden", tmp_path / "first")
+    second = build_case(FIXTURES / "flaky-hidden", tmp_path / "second")
+
+    for name in ["junit.xml", "diff.patch", "history.json", "label.yaml"]:
+        assert (first / name).read_bytes() == (second / name).read_bytes(), name
+
+
+@pytest.mark.parametrize(
+    ("fixture", "message"),
+    [
+        ("flaky-hidden-on-product-bug", "only a flaky scenario may have a base.patch"),
+        ("flaky-hidden-diff-in-trace", "shows the cause"),
+        ("flaky-hidden-cured", "cures the instability"),
+        ("flaky-hidden-flag-true", "diff_shows_cause"),
+        ("flaky-flag-without-base", "diff_shows_cause"),
+    ],
+)
+def test_a_flaky_case_whose_diff_could_show_the_cause_is_rejected(
+    tmp_path: Path, fixture: str, message: str
+) -> None:
+    with pytest.raises(LabError, match=message):
+        build_case(FIXTURES / fixture, tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_order_dependent_test_passes_without_retries_only_after_the_failing_one(
     tmp_path: Path,
 ) -> None:

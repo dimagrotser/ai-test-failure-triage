@@ -8,6 +8,7 @@ import sysconfig
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -59,11 +60,25 @@ def build_case(scenario_dir: Path, cases_dir: Path) -> Path:
         if any(entry["status"] != "passed" for entry in history):
             raise LabError(f"the wallet tests fail without {scenario_dir.name} applied")
 
+        # The instability main already has, so the pull request diff does not show its cause.
+        base = scenario_dir / "base.patch"
+        unstable: set[str] | None = None
+        if base.exists():
+            _check_patch_scope(base, label["category"], editable)
+            _git_apply(app, base)
+            history = _check_flaky(app, Path(tmp) / "base.xml", scenario_dir.name)
+            unstable = {
+                str(e["test_id"]) for e in history if e["run_id"] == 1 and e["status"] != "passed"
+            }
+
         _git_apply(app, patch)
         junit = Path(tmp) / "junit.xml"
         condition = label.get("condition")
         if label["category"] == "flaky":
-            history = _check_flaky(app, junit, scenario_dir.name)
+            checked = _check_flaky(app, junit, scenario_dir.name, unstable)
+            history = history if unstable is not None else checked
+            if unstable is not None:
+                _check_diff_hides_cause(patch, junit)
         elif _run_pytest(app, junit, condition).returncode != 1:
             raise LabError(f"scenario {scenario_dir.name} does not fail the wallet tests")
         elif label["category"] == "unknown":
@@ -189,7 +204,7 @@ def build_all(
         raise
 
 
-def _load_label(scenario_dir: Path) -> dict[str, str]:
+def _load_label(scenario_dir: Path) -> dict[str, Any]:
     label = yaml.safe_load((scenario_dir / "scenario.yaml").read_text())
     for field in LABEL_FIELDS:
         if not isinstance(label.get(field), str) or not label[field].strip():
@@ -206,6 +221,15 @@ def _load_label(scenario_dir: Path) -> dict[str, str]:
         raise LabError(f"scenario {scenario_dir.name} has unsupported kind {label.get('kind')}")
     if label.get("history", "none") != "none":
         raise LabError(f"scenario {scenario_dir.name} has unsupported history {label['history']}")
+    has_base = (scenario_dir / "base.patch").exists()
+    if has_base and label["category"] != "flaky":
+        raise LabError(f"scenario {scenario_dir.name}: only a flaky scenario may have a base.patch")
+    shows = label.get("diff_shows_cause", True)
+    if not isinstance(shows, bool) or shows is has_base:
+        raise LabError(
+            f"scenario {scenario_dir.name}: diff_shows_cause must be false with a base.patch "
+            "and left out or true without one"
+        )
     return dict(label)
 
 
@@ -232,18 +256,23 @@ def _run_baseline(app: Path, junit: Path) -> list[dict[str, object]]:
     return _history_entries(junit, _tree_sha(app), run_id=1)
 
 
-def _check_flaky(app: Path, junit: Path, name: str) -> list[dict[str, object]]:
+def _check_flaky(
+    app: Path, junit: Path, name: str, unstable: set[str] | None = None
+) -> list[dict[str, object]]:
     """Run the patched tree twice and return both runs as history.
 
     Without retries the flaky tests fail; with one retry they pass on the second Attempt.
+    `unstable` are the tests that failed before the pull request: it must leave them as they are.
     """
     sha = _tree_sha(app)
     first = junit.with_name("no-retries.xml")
     if _run_pytest(app, first).returncode != 1:
-        raise LabError(f"scenario {name} does not fail the wallet tests")
+        raise LabError(_does_not_fail(name, unstable))
     failed = {r.test_id for r in parse_junit(first) if r.status in (Status.FAILED, Status.ERROR)}
     if not failed:
-        raise LabError(f"scenario {name} does not fail the wallet tests")
+        raise LabError(_does_not_fail(name, unstable))
+    if unstable is not None and failed != unstable:
+        raise LabError(f"the pull request of {name} changes which tests are unstable")
 
     if _run_pytest(app, junit, retries=1).returncode != 0:
         raise LabError(f"scenario {name} does not pass on retry")
@@ -251,6 +280,22 @@ def _check_flaky(app: Path, junit: Path, name: str) -> list[dict[str, object]]:
     if any(results[test_id] is not Status.PASSED_ON_RETRY for test_id in failed):
         raise LabError(f"scenario {name} does not pass on retry")
     return [*_history_entries(first, sha, run_id=1), *_history_entries(junit, sha, run_id=2)]
+
+
+def _does_not_fail(name: str, unstable: set[str] | None) -> str:
+    if unstable is not None:
+        return f"the pull request of {name} cures the instability"
+    return f"scenario {name} does not fail the wallet tests"
+
+
+def _check_diff_hides_cause(patch: Path, junit: Path) -> None:
+    trace = junit.read_text()
+    for line in patch.read_text().splitlines():
+        if line.startswith("+++ b/") and line[6:] in trace:
+            raise LabError(
+                f"the diff of {patch.parent.name} touches {line[6:]}, which the failing trace "
+                "names, so it shows the cause"
+            )
 
 
 def _check_not_flaky(app: Path, junit: Path, name: str) -> None:

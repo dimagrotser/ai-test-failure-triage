@@ -1,0 +1,6 @@
+category: flaky
+source: injected
+kind: randomness
+scenario: ids repeat on main, the pull request changes a fee comment
+notes: The ids test was already unstable on main. The pull request only touches the fee module.
+diff_shows_cause: false
