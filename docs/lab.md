@@ -201,3 +201,28 @@ Haiku is two groups behind Sonnet. It is better on `product_bug` (16 of 17 again
 The confidence is what worries me. Haiku answered `high` for 47 of 49 groups and was right on 33 of them, 70%. Sonnet answered `high` for 21 groups and was right on 18, 86%. Haiku said `unknown` for 2 groups and Sonnet for 8, and 6 of the 7 groups labeled `unknown` got a confident verdict from Haiku. The prompt asks for `unknown` with low confidence when the evidence is weak, and Haiku mostly does not follow it. That makes a `high` from Haiku nearly meaningless, so Sonnet stays the default.
 
 The cost is the other side. Haiku used 87,857 input and 10,280 output tokens for $0.139, about $0.0028 per group. Sonnet used 115,016 and 14,247 for $0.373, about $0.0076. Haiku ran once. Read the 2-group gap as no difference in accuracy and the confidence problem as the finding.
+
+### Why Sonnet overrules the rules on flaky and environment
+
+Sonnet scores 4 of 7 on `flaky` and 6 of 9 on `environment`, where the rules get 7 and 8. The lost groups are the same in every run, and three of them were lost before the whole-diff fallback existed, so the fallback explains at most one. I asked the model for its answer on each of them with the current code. All four answers quote the signal `failed, then passed on attempt 2`, see the rules' verdict and give a reason for disagreeing:
+
+| Group | Rules | Sonnet | Its reason |
+|---|---|---|---|
+| `flaky-ledger-stale-connection` | flaky | product_bug, high | the diff makes `record_transfer` raise `ConnectionResetError` on the first call of a process, the retry passes because the flag is set, so the failure is deterministic |
+| `flaky-rates-cache-order` | flaky | product_bug, high | `convert()` raises `RatesNotLoaded` on a cache miss and fills the cache, so the retry passes |
+| `flaky-rate-limit-window` | flaky | product_bug, medium | a module level counter that resets only after raising, so the result depends on earlier calls |
+| `environment-ledger-on-every-transfer` (2 groups) | environment | product_bug, medium | the diff adds a blocking call to `transfer()`, and tests that never touch the ledger time out on it |
+
+These are not mistakes in reading the signals. The Lab makes a flaky case by putting state that depends on the attempt number into the changed code, so the diff shows the mechanism, and the model calls it what it looks like: a bug of the change that a retry hides. ADR 0001 says a group is flaky only if there is evidence of nondeterminism. It does not say that a retry that passes settles it, so the model's answer does not contradict the ADR. The labels and the answers disagree about what to call a test that fails once because of state the change introduced. So these cases cannot tell whether the model would keep `flaky` when the diff shows no such mechanism.
+
+I did not run the two variants that change what the model sees or is told. Hiding the diff from groups with a strong rule signal would fix the second `environment-ledger-on-every-transfer` group only by hiding what the first group's answer rests on. A prompt rule that a retry that passes means `flaky` would raise the score by the three flaky groups and make the tool call a bug of the change a flaky test, which helps the developer less.
+
+The one variant I ran changes only how sure the answer sounds. When the model gives a category other than flaky for a group that passed on retry, its confidence is capped at `medium`, because two answers that both say `high` and contradict each other should not both read as certain. The category is never changed. The `eval` workflow ran it once, result in `evals/results/2026-10-06-confidence-cap.json`:
+
+| Sonnet | Right | `high` answers right | `medium` answers right | Cost |
+|---|---|---|---|---|
+| before, first run | 36 of 49 | 18 of 21 | 14 of 20 | $0.373 |
+| before, second run | 36 of 49 | 19 of 22 | 13 of 19 | $0.370 |
+| with the cap | 36 of 49 | 17 of 18 | 15 of 23 | $0.372 |
+
+No category and no group changed its verdict because of the cap. The two `high` answers on `flaky-ledger-stale-connection` and `flaky-rates-cache-order`, both against proven nondeterminism, became `medium`. The share of right `high` answers went from 86% to 94%, but the counts are small, and a third `high` dropped to `medium` through the model's own variation (`flaky-cold-settlement-clock`, where it agreed with the rules). Read it as the cap doing what it is meant to do and not as a measured gain of eight points.
