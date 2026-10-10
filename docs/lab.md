@@ -39,12 +39,14 @@ Two runs on the same machine give byte-identical files. Timings, temp paths, por
 | `product_bug` | `wallet/` only | The run fails. Reverting the patch turns it green. |
 | `test_bug` | `tests/` only | The run fails. Reverting the patch turns it green. |
 | `environment` | `wallet/` only | The run fails under `condition`. The same tree passes in a healthy environment. |
-| `flaky` | `wallet/` and `tests/` | Fails without retries, passes on the first retry. Needs `kind`. |
+| `flaky` | `wallet/` and `tests/` | Fails without retries, passes on the first retry. Needs `kind`. May have a `base.patch`, see below. |
 | `unknown` | either | Fails and does not pass on retry. No counterfactual exists, by design. |
 
 An `environment` scenario needs a `condition` from `evals/lab/environment.py`: `service_down`, `dns_failure`, `timeout`, `missing_env_var` or `read_only_dir`. A `flaky` scenario needs a `kind` that says where the nondeterminism comes from: `timing`, `randomness` or `order_dependence`. An `unknown` scenario can set `history: none` to model a cold start, with no earlier runs to compare against.
 
 The build also rejects a patch that touches a directory its category must leave alone, and a wallet that already fails before the patch is applied.
+
+A flaky scenario can keep its cause out of the diff. Put the instability that is already on main into `base.patch`, next to `diff.patch`, and set `diff_shows_cause: false` in `scenario.yaml`. `diff.patch` is then a pull request that changes something else. The build applies `base.patch`, checks that the tree fails without retries and passes on the retry, and keeps those two runs as the history of main, both on one tree. Then it applies `diff.patch` and checks that the same tests are still unstable, so the pull request neither cures the instability nor changes which tests have it. It also refuses a diff that touches a file named in the failing trace, because that would show the cause. `base.patch` is not written into the case: it is the part a model never sees. A `base.patch` on a scenario of any other category is an error, and `diff_shows_cause` must be false exactly when there is a `base.patch`. [ADR 0008](adr/0008-flaky-label-rests-on-the-retry.md) says why the label stays `flaky` and why the eval reports the two kinds apart. In the eval output, `Flaky, cause` shows the groups whose diff shows the cause and the groups whose diff does not.
 
 ## When a scenario is rejected
 
