@@ -39,12 +39,14 @@ Two runs on the same machine give byte-identical files. Timings, temp paths, por
 | `product_bug` | `wallet/` only | The run fails. Reverting the patch turns it green. |
 | `test_bug` | `tests/` only | The run fails. Reverting the patch turns it green. |
 | `environment` | `wallet/` only | The run fails under `condition`. The same tree passes in a healthy environment. |
-| `flaky` | `wallet/` and `tests/` | Fails without retries, passes on the first retry. Needs `kind`. |
+| `flaky` | `wallet/` and `tests/` | Fails without retries, passes on the first retry. Needs `kind`. May have a `base.patch`, see below. |
 | `unknown` | either | Fails and does not pass on retry. No counterfactual exists, by design. |
 
 An `environment` scenario needs a `condition` from `evals/lab/environment.py`: `service_down`, `dns_failure`, `timeout`, `missing_env_var` or `read_only_dir`. A `flaky` scenario needs a `kind` that says where the nondeterminism comes from: `timing`, `randomness` or `order_dependence`. An `unknown` scenario can set `history: none` to model a cold start, with no earlier runs to compare against.
 
 The build also rejects a patch that touches a directory its category must leave alone, and a wallet that already fails before the patch is applied.
+
+A flaky scenario can keep its cause out of the diff. Put the instability that is already on main into `base.patch`, next to `diff.patch`, and set `diff_shows_cause: false` in `scenario.yaml`. `diff.patch` is then a pull request that changes something else. The build applies `base.patch`, checks that the tree fails without retries and passes on the retry, and keeps those two runs as the history of main, both on one tree. Then it applies `diff.patch` and checks that the same tests are still unstable, so the pull request neither cures the instability nor changes which tests have it. It also refuses a diff that touches a file named in the failing trace, because that would show the cause. `base.patch` is not written into the case: it is the part a model never sees. A `base.patch` on a scenario of any other category is an error, and `diff_shows_cause` must be false exactly when there is a `base.patch`. [ADR 0008](adr/0008-flaky-label-rests-on-the-retry.md) says why the label stays `flaky` and why the eval reports the two kinds apart. In the eval output, `Flaky, cause` shows the groups whose diff shows the cause and the groups whose diff does not.
 
 ## When a scenario is rejected
 
@@ -226,3 +228,22 @@ The one variant I ran changes only how sure the answer sounds. When the model gi
 | with the cap | 36 of 49 | 17 of 18 | 15 of 23 | $0.372 |
 
 No category and no group changed its verdict because of the cap. The two `high` answers on `flaky-ledger-stale-connection` and `flaky-rates-cache-order`, both against proven nondeterminism, became `medium`. The share of right `high` answers went from 86% to 94%, but the counts are small, and a third `high` dropped to `medium` through the model's own variation (`flaky-cold-settlement-clock`, where it agreed with the rules). Read it as the cap doing what it is meant to do and not as a measured gain of eight points.
+
+### Flaky when the diff does not show the cause
+
+The six older flaky cases put the instability into the changed code. Three newer ones, `flaky-hidden-slow-refund-confirmation`, `flaky-hidden-repeated-reference` and `flaky-hidden-tier-table-warmup`, have it on main already and a pull request that changes something else (a fee comment, a statement docstring, an account docstring). Their kinds are `timing`, `randomness` and `order_dependence`. The rules read the retry and the history of main, where each test passed and failed on one commit, so they get all three right. [ADR 0008](adr/0008-flaky-label-rests-on-the-retry.md) says why the label stays `flaky` and why the eval reports the two kinds apart.
+
+The `eval` workflow ran twice on the extended dataset, 42 cases and 52 groups, results in `evals/results/2026-10-10-hidden-flaky-run1.json` and `...-run2.json`:
+
+| Flaky groups | Rules | Sonnet | Haiku |
+|---|---|---|---|
+| diff shows the cause (7) | 7 | 5 | 3 and 4 |
+| diff does not show it (3) | 3 | 2 | 3 and 3 |
+
+Where Haiku has two numbers they are the two runs. Sonnet gave the same answer and confidence on all 52 groups in both runs, 39 of 52 right, $0.393 and $0.393. Haiku got 36 and 35 of 52 right, with 5 groups answered differently, for $0.148 and $0.149.
+
+With the cause hidden, both models mostly keep `flaky`. Sonnet kept it for the slow confirmation and the repeated reference, both with `high` confidence. Haiku kept it for all three in both runs. Sonnet called `flaky-hidden-tier-table-warmup` a product bug with `medium` confidence in both runs. That case raises `TiersNotLoaded` from `wallet/tiers.py` on the first lookup, so the failing line is in the code even though the diff does not touch it. I did not ask for its reason.
+
+What this does and does not show. It supports the reading from #84: with the mechanism in the diff, Sonnet lost 2 of 7 flaky groups here (it lost 3 in the earlier runs, so that count moves) and Haiku lost 3 or 4, and with the mechanism out of the diff Sonnet lost 1 of 3 and Haiku none. But three groups per side say little, and Sonnet's one miss shows that hiding the diff does not hide a cause that the stack trace shows. The visible and the hidden cases also differ in more than the diff: the new mechanisms are small copies of the old ones, written by the same person.
+
+Two side results. Sonnet's `high` answers were right 23 times out of 24 (96%), with the confidence cap from #84 in place. And Haiku fell back to the rules on one group in each run through an `InvalidAnswerError`, a different group each time (`product-bug-funds-check-ignores-fee`, then `real-preview-item-title`), which the eval now reports as a fallback with its reason (#83).

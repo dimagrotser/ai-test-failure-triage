@@ -1,0 +1,22 @@
+diff --git a/wallet/ids.py b/wallet/ids.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/ids.py
+@@ -0,0 +1,5 @@
++import random
++
++
++def new_transfer_id() -> str:
++    return f"tx-{random.randrange(10)}"
+diff --git a/tests/test_ids.py b/tests/test_ids.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_ids.py
+@@ -0,0 +1,7 @@
++from wallet.ids import new_transfer_id
++
++
++def test_three_transfers_get_different_ids() -> None:
++    ids = {new_transfer_id() for _ in range(3)}
++
++    assert len(ids) == 3

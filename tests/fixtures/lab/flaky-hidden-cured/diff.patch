@@ -1,0 +1,8 @@
+--- a/wallet/ids.py
++++ b/wallet/ids.py
+@@ -2,4 +2,4 @@
+ 
+ 
+ def new_transfer_id() -> str:
+-    return f"tx-{random.randrange(10)}"
++    return f"tx-{random.randrange(10**6)}"

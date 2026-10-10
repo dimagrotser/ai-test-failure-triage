@@ -53,6 +53,42 @@ def test_accuracy_is_reported_per_source() -> None:
     assert _row(output, "real") == ["real", "2", "1", "50%"]
 
 
+def _dataset_with_a_hidden_flaky_case(tmp_path: Path) -> Path:
+    shutil.copytree(DATASET, tmp_path / "evals")
+    cases = tmp_path / "evals" / "cases"
+    shutil.copytree(cases / "flaky-retry", cases / "flaky-retry-hidden")
+    label = cases / "flaky-retry-hidden" / "label.yaml"
+    label.write_text(label.read_text() + "diff_shows_cause: false\n")
+    return tmp_path / "evals"
+
+
+def test_a_case_shows_its_cause_in_the_diff_unless_its_label_says_otherwise(
+    tmp_path: Path,
+) -> None:
+    run = evaluate(_dataset_with_a_hidden_flaky_case(tmp_path))
+
+    by_case = {g.case_id: g.diff_shows_cause for g in run.groups}
+    assert by_case["flaky-retry-hidden"] is False
+    assert [case for case, shows in by_case.items() if shows] == [
+        "environment-refused",
+        "flaky-retry",
+        "product-bug-assert",
+        "test-bug-two-groups",
+    ]
+
+
+def test_flaky_is_split_by_whether_the_diff_shows_the_cause(tmp_path: Path) -> None:
+    output = render_eval([evaluate(_dataset_with_a_hidden_flaky_case(tmp_path))])
+
+    assert _row(output, "in")[:3] == ["in", "the", "diff"]
+    assert _row(output, "not")[:3] == ["not", "in", "diff"]
+    assert "Flaky, cause" in output
+
+
+def test_the_split_is_left_out_when_no_flaky_case_hides_its_cause() -> None:
+    assert "Flaky, cause" not in render_eval([evaluate(DATASET)])
+
+
 def test_a_source_without_cases_is_listed_with_a_dash(tmp_path: Path) -> None:
     shutil.copytree(DATASET / "cases" / "flaky-retry", tmp_path / "cases" / "flaky-retry")
 

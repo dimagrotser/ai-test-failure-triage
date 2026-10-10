@@ -44,6 +44,9 @@ _Avoid_: Type, label (label is the ground truth in the failure lab)
 **Flaky**:
 A Category assigned only with evidence of nondeterminism: Passed on retry, or both pass and fail on the same commit in history. Without that evidence a group is never flaky.
 
+**Diff shows the cause**:
+For a Lab case, whether the failing mechanism is in the diff. True by default. A flaky case can set it to false when the instability is already on main and the diff is about something else (ADR 0008). The eval reports flaky for both.
+
 **Evidence**:
 A quote from logs or the diff that supports a claim in the report. A classification without evidence must be `unknown`.
 

@@ -1,0 +1,22 @@
+diff --git a/wallet/references.py b/wallet/references.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/references.py
+@@ -0,0 +1,5 @@
++import random
++
++
++def new_reference() -> str:
++    return f"ref-{random.randrange(16)}"
+diff --git a/tests/test_references.py b/tests/test_references.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_references.py
+@@ -0,0 +1,7 @@
++from wallet.references import new_reference
++
++
++def test_four_refunds_get_different_references() -> None:
++    references = {new_reference() for _ in range(4)}
++
++    assert len(references) == 4
