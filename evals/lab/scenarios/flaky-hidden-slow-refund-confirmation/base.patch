@@ -1,0 +1,45 @@
+diff --git a/wallet/refunds.py b/wallet/refunds.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/refunds.py
+@@ -0,0 +1,19 @@
++from typing import Protocol
++
++DEADLINE = 0.5
++
++_warm = False
++
++
++class Clock(Protocol):
++    def now(self) -> float: ...
++
++    def sleep(self, seconds: float) -> None: ...
++
++
++def refund_confirmed_in_time(clock: Clock) -> bool:
++    global _warm
++    started = clock.now()
++    clock.sleep(0.04 if _warm else 0.7)
++    _warm = True
++    return clock.now() - started <= DEADLINE
+diff --git a/tests/test_refunds.py b/tests/test_refunds.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_refunds.py
+@@ -0,0 +1,16 @@
++from wallet.refunds import refund_confirmed_in_time
++
++
++class FakeClock:
++    def __init__(self) -> None:
++        self.time = 0.0
++
++    def now(self) -> float:
++        return self.time
++
++    def sleep(self, seconds: float) -> None:
++        self.time += seconds
++
++
++def test_refund_is_confirmed_before_the_deadline() -> None:
++    assert refund_confirmed_in_time(FakeClock())

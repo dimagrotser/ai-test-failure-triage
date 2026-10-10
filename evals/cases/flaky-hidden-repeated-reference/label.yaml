@@ -1,0 +1,7 @@
+category: flaky
+source: injected
+kind: randomness
+scenario: refund references are drawn from sixteen values on main, a pull request adds a statement docstring
+notes: >-
+  new_reference picks a number with random.randrange(16) and the test expects four references to differ. The lab seeds each Attempt with a fixed seed: the first Attempt draws a repeat and fails, the second does not and passes. This is already true on main. The pull request only adds a docstring to the statement module.
+diff_shows_cause: false

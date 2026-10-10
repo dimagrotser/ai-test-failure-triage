@@ -403,6 +403,44 @@ def test_flaky_scenario_that_cannot_be_trusted_is_rejected(
     assert list(tmp_path.iterdir()) == []
 
 
+HIDDEN_FLAKY_CASES = [
+    ("flaky-hidden-slow-refund-confirmation", "timing", "tests.test_refunds"),
+    ("flaky-hidden-repeated-reference", "randomness", "tests.test_references"),
+    ("flaky-hidden-tier-table-warmup", "order_dependence", "tests.test_tiers"),
+]
+
+
+@pytest.mark.parametrize(("scenario", "kind", "module"), HIDDEN_FLAKY_CASES)
+def test_a_hidden_flaky_scenario_is_unstable_on_main_and_not_because_of_its_diff(
+    tmp_path: Path, scenario: str, kind: str, module: str
+) -> None:
+    case = build_case(SCENARIOS / scenario, tmp_path)
+
+    results = [r for r in parse_junit(case / "junit.xml") if r.test_id.startswith(module)]
+    assert any(r.status is Status.PASSED_ON_RETRY for r in results)
+    history = json.loads((case / "history.json").read_text())
+    unstable = [e for e in history if e["test_id"].startswith(module) and e["status"] != "passed"]
+    assert sorted((e["run_id"], e["status"]) for e in unstable)[:2] == [
+        (1, "failed"),
+        (2, "passed_on_retry"),
+    ]
+    assert len({e["sha"] for e in history}) == 1
+    label = yaml.safe_load((case / "label.yaml").read_text())
+    assert (label["kind"], label["diff_shows_cause"]) == (kind, False)
+    assert module.split(".")[1] not in (case / "diff.patch").read_text()
+
+
+@pytest.mark.parametrize("scenario", [case[0] for case in HIDDEN_FLAKY_CASES])
+def test_a_hidden_flaky_scenario_is_byte_identical_across_builds(
+    tmp_path: Path, scenario: str
+) -> None:
+    first = build_case(SCENARIOS / scenario, tmp_path / "first")
+    second = build_case(SCENARIOS / scenario, tmp_path / "second")
+
+    for name in ["junit.xml", "diff.patch", "history.json", "label.yaml"]:
+        assert (first / name).read_bytes() == (second / name).read_bytes(), name
+
+
 HIDDEN_TEST = "tests.test_ids::test_three_transfers_get_different_ids"
 
 

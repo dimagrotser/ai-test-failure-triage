@@ -329,6 +329,9 @@ LAB_VERDICTS = {
     "unknown-amount-with-comma": Category.PRODUCT_BUG,
     # Known miss: an e2e assertion on rendered text looks like a test bug, the cause is in the app.
     "real-preview-item-title": Category.TEST_BUG,
+    "flaky-hidden-repeated-reference": Category.FLAKY,
+    "flaky-hidden-slow-refund-confirmation": Category.FLAKY,
+    "flaky-hidden-tier-table-warmup": Category.FLAKY,
 }
 
 

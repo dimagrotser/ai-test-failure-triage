@@ -1,0 +1,7 @@
+category: flaky
+source: injected
+kind: order_dependence
+scenario: the tier table must be warm on main, a pull request adds an account docstring
+notes: >-
+  limit_for loads a tier on its first lookup but raises on that same call. The first test to ask for the basic tier fails and the retry passes. The second test passes without retries only because the first ran before it, so the outcome depends on test order. This is already true on main. The pull request only adds a docstring to the account class.
+diff_shows_cause: false

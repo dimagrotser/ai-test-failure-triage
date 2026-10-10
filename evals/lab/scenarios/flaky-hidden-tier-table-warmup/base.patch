@@ -1,0 +1,33 @@
+diff --git a/wallet/tiers.py b/wallet/tiers.py
+new file mode 100644
+--- /dev/null
++++ b/wallet/tiers.py
+@@ -0,0 +1,14 @@
++TIERS = {"basic": 100, "plus": 1000}
++
++_loaded: dict[str, int] = {}
++
++
++class TiersNotLoaded(Exception):
++    pass
++
++
++def limit_for(tier: str) -> int:
++    if tier not in _loaded:
++        _loaded[tier] = TIERS[tier]
++        raise TiersNotLoaded(tier)
++    return _loaded[tier]
+diff --git a/tests/test_tiers.py b/tests/test_tiers.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_tiers.py
+@@ -0,0 +1,9 @@
++from wallet.tiers import limit_for
++
++
++def test_basic_limit() -> None:
++    assert limit_for("basic") == 100
++
++
++def test_basic_limit_again() -> None:
++    assert limit_for("basic") == 100
