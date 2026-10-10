@@ -16,7 +16,7 @@ from failtriage import cli
 from failtriage.cli import app
 from failtriage.evaluate import EvalReport
 from failtriage.github.client import GitHubClient
-from failtriage.models import Category, ClassifiedBy, Confidence, SignalName
+from failtriage.models import Category, ClassifiedBy, Confidence, LlmSkip, SignalName
 from failtriage.report.json_output import AnalysisReport
 
 runner = CliRunner()
@@ -552,6 +552,68 @@ def test_the_key_is_never_printed_or_recorded(
 
     written = "".join(p.read_text() for p in tmp_path.rglob("*") if p.is_file())
     assert KEY not in result.stdout + result.stderr + written
+
+
+NO_KEY_LINE = "Classified by heuristics: no API key was available, so the LLM was not asked."
+
+
+def test_a_report_without_a_key_says_that_no_key_was_the_reason(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--markdown"])
+
+    assert result.exit_code == 0
+    assert NO_KEY_LINE in result.stdout
+    assert "not sent to LLM" not in result.stdout
+
+
+def test_the_json_report_carries_the_reason_for_a_group_without_the_llm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--json"])
+
+    report = AnalysisReport.model_validate_json(result.stdout)
+    assert report.groups[0].classification.llm_skip == LlmSkip(reason="no_key")
+
+
+def test_a_report_says_why_a_failed_call_was_left_to_the_heuristics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_anthropic(monkeypatch, [], status=401)
+
+    result = runner.invoke(app, ["analyze", "--junit", str(LEDGER_DOWN), "--markdown"])
+
+    assert (
+        "Classified by heuristics: the LLM call failed "
+        "(the request failed: AuthenticationError, HTTP 401)." in result.stdout
+    )
+    assert KEY not in result.stdout + result.stderr
+
+
+def test_a_report_names_the_cap_for_exactly_the_groups_over_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    words = "alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo".split()
+    cases = "".join(
+        f'<testcase classname="t" name="test_{w}"><failure message="{w} broke">'
+        f"t.py:1: AssertionError</failure></testcase>"
+        for w in words
+    )
+    junit = tmp_path / "many.xml"
+    junit.write_text(f'<testsuites><testsuite name="t" tests="11">{cases}</testsuite></testsuites>')
+    fake_anthropic(monkeypatch, [])
+
+    result = runner.invoke(app, ["analyze", "--junit", str(junit), "--json"])
+
+    report = AnalysisReport.model_validate_json(result.stdout)
+    skips = [g.classification.llm_skip for g in report.groups]
+    assert len(report.groups) == 11
+    assert skips.count(LlmSkip(reason="group_cap")) == 1
+    assert skips.count(None) == 10
 
 
 def test_the_text_output_does_not_call_the_llm(monkeypatch: pytest.MonkeyPatch) -> None:
