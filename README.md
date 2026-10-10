@@ -6,7 +6,7 @@ A red CI run with forty failures rarely has forty causes. Usually it is two or t
 
 ## Example report
 
-This is group 2 of the 3 that `failtriage analyze --junit tests/fixtures/junit/mixed.xml --markdown` prints with no API key set, so the verdicts come from the rules alone (the report adds a line saying so under each group):
+This is group 2 of the 3 that `failtriage analyze --junit tests/fixtures/junit/mixed.xml --markdown` prints with no API key set, so the verdicts come from the rules alone (the report adds the line `Classified by heuristics: no API key was available, so the LLM was not asked.` under each group, left out here):
 
 > **3 failure groups**: 3 failed tests, 0 passed on retry, 6 tests total.
 >
@@ -46,6 +46,8 @@ Add this step after your tests, in a job that has the report on disk:
 ```
 
 Without `anthropic-api-key` the groups are classified by heuristics only.
+
+A group that does not reach the LLM says why in one line under it. Either no key was available, which is also the case for fork and Dependabot runs, or the run sends only its 10 largest groups and this one was left out, or the call failed, and then the line names the reason, for example `the request failed: AuthenticationError, HTTP 401`. That is the error class and the status, never a message of the API, and the log has the same text. In the JSON report the same is `llm_skip` on the classification of the group.
 
 ## Pinning
 
