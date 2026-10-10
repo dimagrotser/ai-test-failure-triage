@@ -26,6 +26,7 @@ from failtriage.models import (
     ClassifiedBy,
     Confidence,
     FailureGroup,
+    LlmSkip,
     SignalName,
     Status,
     TestResult,
@@ -431,6 +432,45 @@ def test_a_secret_in_the_reason_of_a_failing_call_is_redacted() -> None:
 
     assert len(result.failed) == 3
     assert token not in "".join(result.failed.values())
+
+
+def test_groups_over_the_cap_say_that_the_cap_left_them_out() -> None:
+    groups = group_failures(parse_junit(MIXED))
+    provider = StubProvider(NO_PROOF)
+
+    result = classify_groups(groups, provider, load_prompt(), Limits(max_groups=1))
+
+    skips = [c.llm_skip for c in result.classifications]
+    assert skips.count(LlmSkip(reason="group_cap")) == 2
+    assert skips.count(None) == 1
+
+
+def test_a_failed_call_says_why_on_the_classification() -> None:
+    groups = group_failures(parse_junit(MIXED))
+
+    result = classify_groups(groups, FailingProvider(NO_PROOF), load_prompt(), Limits())
+
+    assert [c.llm_skip for c in result.classifications] == [
+        LlmSkip(reason="call_failed", detail="down")
+    ] * 3
+
+
+def test_an_unusable_answer_names_the_error_type_as_the_detail() -> None:
+    groups = group_failures(parse_junit(MIXED))
+
+    result = classify_groups(groups, StubProvider("not json"), load_prompt(), Limits())
+
+    assert [c.llm_skip for c in result.classifications] == [
+        LlmSkip(reason="call_failed", detail="InvalidAnswerError")
+    ] * 3
+
+
+def test_a_group_the_llm_classified_has_no_skip() -> None:
+    groups = group_failures(parse_junit(MIXED))
+
+    result = classify_groups(groups, StubProvider(NO_PROOF), load_prompt(), Limits())
+
+    assert [c.llm_skip for c in result.classifications] == [None] * 3
 
 
 def test_an_invalid_answer_falls_back_for_that_group_only() -> None:
