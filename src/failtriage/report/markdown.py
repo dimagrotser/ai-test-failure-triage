@@ -1,6 +1,6 @@
 import re
 
-from failtriage.models import ClassifiedBy
+from failtriage.models import ClassifiedBy, LlmSkip
 from failtriage.report.json_output import AnalysisReport, DiffInfo, GroupReport
 
 _NAMES_SHOWN = 5
@@ -71,8 +71,19 @@ def _group_section(number: int, group: GroupReport) -> str:
         lines.append("No evidence found, so the category is unknown.")
     lines.append(f"Next step: {result.next_step}")
     if result.classified_by is ClassifiedBy.HEURISTICS:
-        lines.append("Classified by heuristics, not sent to LLM.")
+        lines.append(_heuristics_note(result.llm_skip))
     return "\n\n".join(lines)
+
+
+def _heuristics_note(skip: LlmSkip | None) -> str:
+    if skip is None:
+        return "Classified by heuristics, not sent to LLM."
+    if skip.reason == "no_key":
+        return "Classified by heuristics: no API key was available, so the LLM was not asked."
+    if skip.reason == "group_cap":
+        return "Classified by heuristics: not sent to the LLM, a run sends only its largest groups."
+    detail = f" ({skip.detail})" if skip.detail else ""
+    return f"Classified by heuristics: the LLM call failed{detail}."
 
 
 def _code(text: str) -> str:

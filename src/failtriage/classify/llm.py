@@ -14,6 +14,7 @@ from failtriage.models import (
     ClassifiedBy,
     Confidence,
     FailureGroup,
+    LlmSkip,
     SignalName,
 )
 from failtriage.prompts import Prompt
@@ -73,17 +74,23 @@ def classify_groups(
     for index, group in enumerate(groups):
         payload = payloads.get(group.signature)
         if payload is None:
-            classifications.append(classify_with_heuristics(group, history))
+            classifications.append(_by_heuristics(group, history, LlmSkip(reason="group_cap")))
             continue
         try:
             classifications.append(classify_with_llm(payload, provider, prompt))
-        except ProviderError as exc:
-            classifications.append(classify_with_heuristics(group, history))
-            failed[index] = redact(str(exc))
-        except (InvalidAnswerError, UnredactedPayloadError) as exc:
-            classifications.append(classify_with_heuristics(group, history))
-            failed[index] = type(exc).__name__
+        except (ProviderError, InvalidAnswerError, UnredactedPayloadError) as exc:
+            failed[index] = (
+                redact(str(exc)) if isinstance(exc, ProviderError) else type(exc).__name__
+            )
+            skip = LlmSkip(reason="call_failed", detail=failed[index])
+            classifications.append(_by_heuristics(group, history, skip))
     return GroupClassifications(classifications=classifications, failed=failed)
+
+
+def _by_heuristics(
+    group: FailureGroup, history: Collection[HistoryEntry], skip: LlmSkip
+) -> Classification:
+    return classify_with_heuristics(group, history).model_copy(update={"llm_skip": skip})
 
 
 def classify_with_llm(payload: GroupPayload, provider: Provider, prompt: Prompt) -> Classification:

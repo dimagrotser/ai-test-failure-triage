@@ -13,6 +13,7 @@ import typer
 from pydantic import TypeAdapter, ValidationError
 
 from failtriage.classify.anthropic_provider import AnthropicProvider
+from failtriage.classify.heuristics import classify_with_heuristics
 from failtriage.classify.llm import GroupClassifications, answer_schema, classify_groups
 from failtriage.classify.payload import Limits
 from failtriage.classify.pricing import cost_usd
@@ -30,7 +31,7 @@ from failtriage.github.pr_comment import comment_body, upsert_comment
 from failtriage.github.pr_files import list_pr_files, to_unified_diff
 from failtriage.grouping import group_failures
 from failtriage.history import HistoryEntry, HistoryError, history_schema, load_history
-from failtriage.models import FailureGroup, Status, TestResult
+from failtriage.models import FailureGroup, LlmSkip, Status, TestResult
 from failtriage.parsers import ReportParseError
 from failtriage.parsers.allure import parse_allure
 from failtriage.parsers.junit import parse_junit
@@ -395,7 +396,7 @@ def _analyze(
             [str(path) for path in paths],
             results,
             groups,
-            classified.classifications if classified else None,
+            classified.classifications,
             cost,
             diff_info,
             history,
@@ -428,11 +429,16 @@ def _classify(
     diff: str | None,
     changed_files: list[str],
     history: list[HistoryEntry],
-) -> tuple[GroupClassifications | None, Cost]:
-    """Classify with the LLM when there is a key, else leave it to the heuristics."""
+) -> tuple[GroupClassifications, Cost]:
+    """Classify with the LLM when there is a key, else with the heuristics alone."""
     if not os.environ.get("ANTHROPIC_API_KEY"):
         typer.echo("ANTHROPIC_API_KEY not set, classifying with heuristics only", err=True)
-        return None, Cost()
+        no_key = LlmSkip(reason="no_key")
+        by_rules = [
+            classify_with_heuristics(g, history).model_copy(update={"llm_skip": no_key})
+            for g in groups
+        ]
+        return GroupClassifications(classifications=by_rules, failed={}), Cost()
     provider = AnthropicProvider(_client(), model, answer_schema(), record)
     classified = classify_groups(
         groups, provider, load_prompt(), Limits(), diff, changed_files, history

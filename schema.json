@@ -69,6 +69,17 @@
           ],
           "default": null,
           "title": "Disagreement Reason"
+        },
+        "llm_skip": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LlmSkip"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -243,6 +254,37 @@
         "tests"
       ],
       "title": "HistoryInfo",
+      "type": "object"
+    },
+    "LlmSkip": {
+      "description": "Why a group was classified by the heuristics when an LLM could have classified it.",
+      "properties": {
+        "reason": {
+          "enum": [
+            "no_key",
+            "group_cap",
+            "call_failed"
+          ],
+          "title": "Reason",
+          "type": "string"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "LlmSkip",
       "type": "object"
     },
     "RunInfo": {

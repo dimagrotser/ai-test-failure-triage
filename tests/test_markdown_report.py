@@ -5,7 +5,7 @@ import pytest
 
 from failtriage.grouping import group_failures
 from failtriage.history import load_history
-from failtriage.models import ClassifiedBy, SignalName
+from failtriage.models import ClassifiedBy, LlmSkip, SignalName
 from failtriage.parsers.junit import parse_junit
 from failtriage.report.json_output import AnalysisReport, DiffInfo, build_report
 from failtriage.report.markdown import render_markdown
@@ -94,6 +94,53 @@ def test_only_groups_the_llm_did_not_classify_are_marked_as_not_sent() -> None:
 
     assert markdown.count("not sent to LLM") == 2
     assert markdown.split("### 2.")[0].count("not sent to LLM") == 0
+
+
+def render_with_skip(skip: LlmSkip | None) -> str:
+    report = report_for(JUNIT / "minimal.xml")
+    [group] = report.groups
+    classification = group.classification.model_copy(update={"llm_skip": skip})
+    report.groups = [group.model_copy(update={"classification": classification})]
+    return render_markdown(report)
+
+
+def test_a_group_left_without_a_key_says_so() -> None:
+    markdown = render_with_skip(LlmSkip(reason="no_key"))
+
+    assert "Classified by heuristics: no API key was available, so the LLM was not asked." in (
+        markdown
+    )
+    assert "not sent to LLM" not in markdown
+
+
+def test_a_group_left_out_by_the_cap_says_so() -> None:
+    markdown = render_with_skip(LlmSkip(reason="group_cap"))
+
+    assert (
+        "Classified by heuristics: not sent to the LLM, a run sends only its largest groups."
+        in markdown
+    )
+
+
+def test_a_group_whose_call_failed_says_why() -> None:
+    skip = LlmSkip(reason="call_failed", detail="the request failed: AuthenticationError, HTTP 401")
+
+    markdown = render_with_skip(skip)
+
+    assert (
+        "Classified by heuristics: the LLM call failed "
+        "(the request failed: AuthenticationError, HTTP 401)." in markdown
+    )
+
+
+def test_a_failed_call_without_a_detail_still_says_it_failed() -> None:
+    markdown = render_with_skip(LlmSkip(reason="call_failed"))
+
+    assert "Classified by heuristics: the LLM call failed." in markdown
+
+
+def test_a_group_with_no_recorded_reason_keeps_the_generic_line() -> None:
+    assert "Classified by heuristics, not sent to LLM." in render_with_skip(None)
 
 
 def test_a_long_test_list_is_cut_after_five_tests() -> None:

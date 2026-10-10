@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -89,6 +90,14 @@ class ClassifiedBy(StrEnum):
     LLM = "llm"
 
 
+class LlmSkip(BaseModel):
+    """Why a group was classified by the heuristics when an LLM could have classified it."""
+
+    reason: Literal["no_key", "group_cap", "call_failed"]
+    # For a failed call, the redacted reason of the call, never a message of the API.
+    detail: str | None = None
+
+
 class Classification(BaseModel):
     category: Category
     confidence: Confidence
@@ -101,6 +110,7 @@ class Classification(BaseModel):
     # or they had no verdict.
     agrees_with_heuristics: bool | None
     disagreement_reason: str | None = None
+    llm_skip: LlmSkip | None = None
 
     @model_validator(mode="after")
     def _no_evidence_means_unknown(self) -> "Classification":
